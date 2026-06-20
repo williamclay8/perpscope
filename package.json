@@ -5,8 +5,9 @@
   "type": "module",
   "description": "Read-only Percolator risk cockpit and terminal adapter kit.",
   "scripts": {
+    "build": "node scripts/build-static.mjs",
     "start": "node scripts/serve.mjs",
-    "check": "node scripts/check-static.mjs && npm test",
+    "check": "node scripts/check-static.mjs && npm test && npm run build",
     "test": "node --test"
   },
   "keywords": [
