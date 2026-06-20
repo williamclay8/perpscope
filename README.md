@@ -8,6 +8,30 @@ Live demo: [williamclay8.github.io/perpscope](https://williamclay8.github.io/per
 
 ![PerpScope desktop cockpit](docs/screenshots/perpscope-desktop.png)
 
+## 30-Second Value
+
+For traders, PerpScope turns decoded perps state into scan-friendly risk: liquidation runway, oracle/crank freshness, funding and OI skew pressure, execution quality, impact, solvency, and receipt history.
+
+For terminal builders, it provides a read-only adapter package that turns Percolator-like decoded output into a stable DTO you can render in your own frontend.
+
+```js
+import {
+  buildWatchtowerSignals,
+  normalizeFundingSkewHistory,
+  normalizePercolatorSnapshot,
+  simulatePriceShock
+} from "@perpscope/percolator-adapter";
+
+const snapshot = normalizePercolatorSnapshot(decodedPercolatorOutput);
+const market = snapshot.markets[0];
+const stress = simulatePriceShock(market, -5);
+
+const signals = buildWatchtowerSignals(market, stress);
+const carryHistory = normalizeFundingSkewHistory(market.history.fundingSkew, market);
+```
+
+No wallet adapter. No signing. No order entry. Just observability, simulation, and frontend-ready data.
+
 ![PerpScope healthy-to-risk demo](docs/screenshots/perpscope-demo.gif)
 
 ![PerpScope CLI adapter demo](docs/screenshots/perpscope-adapter.png)
@@ -34,6 +58,19 @@ Star PerpScope if you are building a Solana perps terminal, risk dashboard, or a
 - import fixtures for CLI logs, captured stdout, read-only RPC fixtures, carry history, and terminal adapter demos
 - a visual reference for presenting risk without turning the screen into protocol JSON
 - a read-only safety boundary you can copy into your own frontend
+- a package-consumer example you can run before wiring a real terminal
+
+## External Consumer Example
+
+`examples/adapter-consumer/` is a tiny outside-terminal package that imports `@perpscope/percolator-adapter` by package name and prints the normalized fields a frontend would usually consume first.
+
+```bash
+cd examples/adapter-consumer
+npm install
+npm run demo
+```
+
+It is intentionally boring in the best way: load a read-only fixture, normalize it, compute Watchtower signals, return carry history and provenance.
 
 ## Watchtower
 
@@ -98,6 +135,7 @@ examples/read-only-rpc.fetch.json
 examples/percolator-mainnet-sol.readonly-rpc.json
 examples/percolator-devnet-wif.readonly-rpc.json
 examples/funding-skew-history.stdout.json
+examples/adapter-consumer/
 examples/terminal-recipes.json
 examples/terminal-dto-export.json
 ```
@@ -209,6 +247,7 @@ Use the normalized DTO to render your own terminal modules without coupling the 
 - market directory import from `examples/percolator-list-markets.stdout.json`
 - injected read-only RPC from `examples/percolator-mainnet-sol.readonly-rpc.json`
 - carry-history stdout from `examples/funding-skew-history.stdout.json`
+- external package consumer from `examples/adapter-consumer/`
 - DTO export using `examples/terminal-dto-export.json`
 
 The export shape keeps source provenance with `source.label`, `source.mode`, `source.commandSet`, `cluster`, `currentSlot`, `market.slab`, and `market.program` so a terminal can show where the risk state came from.
@@ -261,6 +300,8 @@ The normalized market DTO includes:
 - `src/lib/read-only-rpc-fetcher.js` validates read-only RPC slab fixtures and injected account fetches.
 - `src/lib/watchtower-signals.js` and `src/lib/funding-history.js` power the embeddable package and cockpit panels.
 - `packages/percolator-adapter/` is the package boundary for terminal builders.
+- `examples/adapter-consumer/` shows the package from an outside-terminal point of view.
+- `docs/feedback-loop.md` is the public intake loop for decoded Percolator shapes and missing terminal fields.
 - `src/fixtures/percolator-market.js` contains sample decoded market/account state plus execution receipt history.
 - `src/app.js` renders the read-only cockpit.
 - `schemas/` contains the public input contracts.
@@ -294,6 +335,7 @@ Current public site: [williamclay8.github.io/perpscope](https://williamclay8.git
 
 ## Roadmap
 
-- Publish-ready npm packaging for `@perpscope/percolator-adapter`.
+- v0.4 real Percolator capture intake: paste/drop unknown decoded outputs, normalize what is known, and show compatibility warnings for missing fields.
 - More deployment fixtures as Percolator terminal teams share read-only shapes.
 - Field-level compatibility notes for terminal import/export adapters.
+- npm publication for `@perpscope/percolator-adapter` once package ownership/auth is confirmed.

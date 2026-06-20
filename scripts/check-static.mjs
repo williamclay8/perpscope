@@ -11,6 +11,8 @@ const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
 const schemaDir = new URL("../schemas/", import.meta.url);
 const exampleDir = new URL("../examples/", import.meta.url);
 const packageEntry = readFileSync(new URL("../packages/percolator-adapter/index.js", import.meta.url), "utf8");
+const consumerPackage = readFileSync(new URL("../examples/adapter-consumer/package.json", import.meta.url), "utf8");
+const consumerDemo = readFileSync(new URL("../examples/adapter-consumer/demo.mjs", import.meta.url), "utf8");
 
 const failures = [];
 
@@ -81,6 +83,18 @@ if (!dto.markets.every((market) => market.history?.fundingSkew?.length >= 1)) {
 
 if (!/normalizePercolatorSnapshot/.test(packageEntry) || !/buildWatchtowerSignals/.test(packageEntry) || !/normalizeFundingSkewHistory/.test(packageEntry)) {
   failures.push("Adapter package should expose snapshot, Watchtower, and funding history helpers.");
+}
+
+if (!/"@perpscope\/percolator-adapter": "file:\.\.\/\.\.\/packages\/percolator-adapter"/.test(consumerPackage)) {
+  failures.push("Adapter consumer example should depend on the local package by package name.");
+}
+
+if (!/from "@perpscope\/percolator-adapter"/.test(consumerDemo) || !/buildTerminalSummary/.test(consumerDemo)) {
+  failures.push("Adapter consumer demo should import @perpscope/percolator-adapter and export a summary builder.");
+}
+
+if (!readme.includes("examples/adapter-consumer/") || !readme.includes("docs/feedback-loop.md")) {
+  failures.push("README should link the external consumer example and feedback loop.");
 }
 
 for (const match of readme.matchAll(/!\[([^\]]*)\]\(([^)]+)\)/g)) {

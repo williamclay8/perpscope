@@ -10,6 +10,7 @@ What is included:
 
 - cockpit UI with health, Watchtower signals, carry history, liquidation runway, protocol freshness, account risk, execution quality, receipt timeline, and flags
 - embeddable `packages/percolator-adapter` entrypoint for terminal teams
+- outside-terminal consumer example in `examples/adapter-consumer/`
 - low-friction `Try CLI` demo and drag/drop import path
 - JSON schemas for snapshots, CLI bundles, read-only RPC fixtures, and funding/skew history
 - read-only RPC fetcher scaffold with owner, data length, magic, and mutating-field validation
@@ -50,7 +51,11 @@ Repo: https://github.com/williamclay8/perpscope
 
 6. It also adds terminal import/export recipes for file import, drag/drop stdout, command bundles, `list-markets`, read-only RPC, carry history, and DTO export.
 
-7. No wallet connection. No signing. No sending. No routing. Just observability and simulation.
+7. There is also an outside-terminal consumer example that imports `@perpscope/percolator-adapter` by package name and prints a frontend-ready summary.
+
+8. No wallet connection. No signing. No sending. No routing. Just observability and simulation.
+
+9. Feedback ask: send one read-only decoded Percolator output shape and the trader-facing field you wish the adapter exposed.
 
 Live: https://williamclay8.github.io/perpscope/
 Repo: https://github.com/williamclay8/perpscope
@@ -64,14 +69,16 @@ It is meant for frontend/terminal teams that need to normalize decoded protocol 
 Live demo: https://williamclay8.github.io/perpscope/
 Repo: https://github.com/williamclay8/perpscope
 
-Feedback I want: what receipt/risk fields should a perps terminal adapter expose next?
+Feedback I want: send one read-only decoded Percolator output shape and the trader-facing field you wish the adapter exposed.
+
+Intake doc: https://github.com/williamclay8/perpscope/blob/main/docs/feedback-loop.md
 
 ## Manual Share Checklist
 
 - X: use the short post or thread above with `docs/screenshots/perpscope-watchtower.png`.
-- Solana/Percolator builder chats: use the community blurb and ask for missing adapter fields.
+- Solana/Percolator builder chats: use the community blurb and ask for one read-only decoded output shape.
 - GitHub profile/pinned repos: pin `williamclay8/perpscope` after v0.3.0.
-- Follow-up loop: watch stars, issues, and inbound comments for adapter-package requests, missing Percolator fields, and funding/skew history import shapes.
+- Follow-up loop: track inbound shapes against `docs/feedback-loop.md`, open one compatibility issue per reusable field/shape, and avoid accepting wallet/signature/transaction/order payloads.
 
 ## Safety Line
 

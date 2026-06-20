@@ -1,0 +1,13 @@
+{
+  "name": "perpscope-adapter-consumer-example",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Minimal outside-terminal example for @perpscope/percolator-adapter.",
+  "scripts": {
+    "demo": "node demo.mjs"
+  },
+  "dependencies": {
+    "@perpscope/percolator-adapter": "file:../../packages/percolator-adapter"
+  }
+}

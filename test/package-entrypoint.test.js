@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -24,6 +24,9 @@ const rpcFixture = JSON.parse(
   readFileSync(new URL("../examples/percolator-mainnet-sol.readonly-rpc.json", import.meta.url), "utf8")
 );
 const packageDir = fileURLToPath(new URL("../packages/percolator-adapter/", import.meta.url));
+const consumerDemo = fileURLToPath(new URL("../examples/adapter-consumer/demo.mjs", import.meta.url));
+const cliFixture = fileURLToPath(new URL("../examples/percolator-cli.bundle.json", import.meta.url));
+const fundingFixture = fileURLToPath(new URL("../examples/funding-skew-history.stdout.json", import.meta.url));
 
 test("adapter package exposes read-only terminal DTO helpers", () => {
   const snapshot = normalizePercolatorSnapshot(percolatorFixture);
@@ -77,6 +80,30 @@ test("adapter package can be packed and imported outside the monorepo", async ()
     assert.equal(snapshot.markets.length, 3);
     assert.equal(history.at(-1).oiSkewPct.toFixed(1), "8.6");
     assert.equal(typeof packed.buildWatchtowerSignals, "function");
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("adapter consumer example imports the package by name", async () => {
+  const tempDir = mkdtempSync(join(tmpdir(), "perpscope-adapter-consumer-"));
+  try {
+    const consumerDir = join(tempDir, "adapter-consumer");
+    const packageScopeDir = join(consumerDir, "node_modules", "@perpscope");
+    mkdirSync(packageScopeDir, { recursive: true });
+    copyFileSync(consumerDemo, join(consumerDir, "demo.mjs"));
+    copyFileSync(cliFixture, join(tempDir, "percolator-cli.bundle.json"));
+    copyFileSync(fundingFixture, join(tempDir, "funding-skew-history.stdout.json"));
+    symlinkSync(packageDir, join(packageScopeDir, "percolator-adapter"), "dir");
+
+    const consumer = await import(pathToFileURL(join(consumerDir, "demo.mjs")).href);
+    const summary = consumer.buildTerminalSummary();
+
+    assert.equal(summary.inputShape, "percolator-cli-bundle");
+    assert.equal(summary.market, "SOL-PERP");
+    assert.equal(summary.watchtower.length, 6);
+    assert.equal(summary.carryLatest.fundingBpsPerHour, 0.82);
+    assert.doesNotMatch(JSON.stringify(summary), /connect wallet|sign transaction|send transaction|place order|submit trade|trade now/i);
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
   }
