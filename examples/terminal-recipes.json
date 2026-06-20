@@ -1,0 +1,96 @@
+{
+  "label": "PerpScope terminal adapter recipes",
+  "version": "0.2.0",
+  "recipes": [
+    {
+      "id": "file-import",
+      "label": "File import",
+      "fixture": "examples/decoded-slab.snapshot.json",
+      "inputShape": "perpscope-snapshot",
+      "entry": "import-json",
+      "export": "PerpScopeTerminalExportV1",
+      "provenance": ["source.label", "source.mode", "cluster", "currentSlot"]
+    },
+    {
+      "id": "drag-drop-stdout",
+      "label": "Captured stdout",
+      "fixture": "examples/execution-receipts.stdout.json",
+      "inputShape": "percolator-cli-bundle",
+      "entry": "drag-drop",
+      "commands": ["execution:receipts"],
+      "export": "PerpScopeTerminalExportV1",
+      "provenance": ["source.commandSet", "market.slab", "market.program"]
+    },
+    {
+      "id": "command-bundle",
+      "label": "Command bundle",
+      "fixture": "examples/percolator-cli.bundle.json",
+      "inputShape": "percolator-cli-bundle",
+      "entry": "try-cli",
+      "commands": [
+        "slab:get",
+        "slab:params",
+        "slab:engine",
+        "best-price",
+        "execution:receipts",
+        "slab:account",
+        "slab:accounts",
+        "slab:bitmap"
+      ],
+      "export": "PerpScopeTerminalExportV1",
+      "provenance": ["source.label", "source.commandSet", "market.slab", "market.program"]
+    },
+    {
+      "id": "list-markets",
+      "label": "List markets",
+      "fixture": "examples/percolator-list-markets.stdout.json",
+      "inputShape": "percolator-cli-bundle",
+      "entry": "stdout-json",
+      "commands": ["list-markets"],
+      "export": "PerpScopeMarketDirectoryV1",
+      "provenance": ["source.commandSet", "cluster", "currentSlot"]
+    },
+    {
+      "id": "read-only-rpc",
+      "label": "Read-only RPC",
+      "fixture": "examples/percolator-mainnet-sol.readonly-rpc.json",
+      "inputShape": "read-only-rpc-fetch",
+      "entry": "injected-client",
+      "rpc": "getAccountInfo",
+      "export": "PerpScopeTerminalExportV1",
+      "provenance": ["source.deployment", "slab", "programId", "account.owner"]
+    },
+    {
+      "id": "dto-export",
+      "label": "DTO export",
+      "fixture": "examples/terminal-dto-export.json",
+      "inputShape": "perpscope-terminal-export",
+      "entry": "normalize",
+      "export": "PerpScopeTerminalExportV1",
+      "provenance": ["source.label", "source.mode", "source.commandSet", "cluster", "currentSlot"]
+    }
+  ],
+  "dtoExport": {
+    "name": "PerpScopeTerminalExportV1",
+    "shape": {
+      "source": ["label", "mode", "commandSet"],
+      "cluster": "string",
+      "currentSlot": "number",
+      "markets": [
+        {
+          "id": "string",
+          "name": "string",
+          "slab": "string",
+          "program": "string",
+          "status": "stable | watch | risk",
+          "price": ["mark", "index", "freshnessScore", "publishAgeSec"],
+          "crank": ["ageSlots", "freshnessScore", "catchupRequired"],
+          "account": ["side", "liquidationDistancePct", "marginBufferUsd"],
+          "execution": ["spreadBps", "impact10kBps", "impact50kBps", "markout5mBps", "receipts"],
+          "flags": ["label", "tone"]
+        }
+      ]
+    },
+    "provenanceFields": ["source.label", "source.mode", "source.commandSet", "cluster", "currentSlot", "market.slab", "market.program"]
+  }
+}

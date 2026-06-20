@@ -153,6 +153,8 @@ button {
 .spine-step strong,
 .impact-row strong,
 .watch-card b,
+.deployment-ledger strong,
+.recipe-card span,
 .receipt-tile strong,
 .receipt-step-head span,
 .receipt-bar strong,
@@ -426,6 +428,8 @@ h1 {
 .account-panel,
 .execution-panel,
 .watchtower-panel,
+.deployment-panel,
+.recipe-panel,
 .receipt-panel,
 .flags-panel,
 .adapter-panel {
@@ -1127,6 +1131,187 @@ h1 {
   gap: 8px;
 }
 
+.deployment-panel,
+.recipe-panel {
+  grid-column: span 3;
+}
+
+.deployment-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.deployment-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: var(--shadow-border);
+}
+
+.deployment-card.good {
+  background:
+    linear-gradient(135deg, rgba(67, 229, 155, 0.09), transparent 58%),
+    rgba(255, 255, 255, 0.04);
+}
+
+.deployment-card.warning {
+  background:
+    linear-gradient(135deg, rgba(242, 183, 91, 0.1), transparent 58%),
+    rgba(255, 255, 255, 0.04);
+}
+
+.deployment-card.danger {
+  background:
+    linear-gradient(135deg, rgba(255, 104, 99, 0.1), transparent 58%),
+    rgba(255, 255, 255, 0.04);
+}
+
+.deployment-title {
+  display: grid;
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.deployment-title span,
+.deployment-title i,
+.deployment-card small,
+.deployment-ledger span,
+.recipe-card p,
+.recipe-card small,
+.dto-strip span {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.deployment-title strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deployment-title i {
+  display: inline-grid;
+  min-height: 30px;
+  padding: 0 9px;
+  place-items: center;
+  border-radius: 7px;
+  background: rgba(115, 216, 255, 0.09);
+  color: var(--cyan);
+  font-style: normal;
+  font-weight: 800;
+  box-shadow: var(--shadow-border);
+}
+
+.deployment-ledger {
+  display: grid;
+  grid-template-columns: minmax(42px, 0.28fr) minmax(0, 1fr);
+  gap: 7px 10px;
+}
+
+.deployment-ledger strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.deployment-freshness {
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.deployment-freshness span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.deployment-card.good .deployment-freshness span {
+  background: var(--mint);
+}
+
+.deployment-card.warning .deployment-freshness span {
+  background: var(--amber);
+}
+
+.deployment-card.danger .deployment-freshness span {
+  background: var(--red);
+}
+
+.recipe-flow {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.recipe-card {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  min-height: 132px;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: var(--shadow-border);
+}
+
+.recipe-card span {
+  display: grid;
+  width: 34px;
+  height: 30px;
+  place-items: center;
+  border-radius: 7px;
+  background: rgba(115, 216, 255, 0.1);
+  color: var(--cyan);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.recipe-card strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.recipe-card p,
+.recipe-card small {
+  margin: 0;
+  line-height: 1.25;
+}
+
+.dto-strip {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.dto-strip span {
+  display: grid;
+  min-height: 38px;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(67, 229, 155, 0.08);
+  color: var(--mint);
+  font-weight: 800;
+  box-shadow: var(--shadow-border);
+}
+
 code {
   display: inline-flex;
   align-items: center;
@@ -1202,8 +1387,21 @@ code {
     grid-column: span 2;
   }
 
+  .deployment-panel,
+  .recipe-panel {
+    grid-column: span 2;
+  }
+
   .watchtower-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .recipe-flow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .dto-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .receipt-timeline {
@@ -1274,6 +1472,8 @@ code {
 
   .hero-panel,
   .watchtower-panel,
+  .deployment-panel,
+  .recipe-panel,
   .receipt-panel,
   .adapter-panel {
     grid-column: span 1;
@@ -1292,6 +1492,9 @@ code {
   .runway-metrics,
   .account-strip,
   .watchtower-grid,
+  .deployment-grid,
+  .recipe-flow,
+  .dto-strip,
   .receipt-summary,
   .receipt-timeline,
   .adapter-flow,
@@ -1315,6 +1518,10 @@ code {
 
   .receipt-bar {
     grid-template-columns: 44px minmax(0, 1fr) 62px;
+  }
+
+  .deployment-title {
+    grid-template-columns: 1fr;
   }
 }
 

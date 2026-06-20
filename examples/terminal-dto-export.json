@@ -1,0 +1,57 @@
+{
+  "name": "PerpScopeTerminalExportV1",
+  "source": {
+    "label": "Percolator CLI demo",
+    "mode": "read-only",
+    "commandSet": ["slab:get", "slab:params", "slab:engine", "best-price", "execution:receipts", "slab:account", "slab:accounts", "slab:bitmap"]
+  },
+  "cluster": "mainnet-beta",
+  "currentSlot": 346892110,
+  "markets": [
+    {
+      "id": "sol-perp",
+      "name": "SOL-PERP",
+      "slab": "PERCOLAT_SOL_8k4q...Qp2",
+      "program": "Perco1ator111111111111111111111111111111111",
+      "status": "stable",
+      "price": {
+        "mark": 181.61,
+        "index": 181.58,
+        "freshnessScore": 95,
+        "publishAgeSec": 2
+      },
+      "crank": {
+        "ageSlots": 20,
+        "freshnessScore": 92,
+        "catchupRequired": false
+      },
+      "account": {
+        "side": "long",
+        "liquidationDistancePct": 10.3,
+        "marginBufferUsd": 6020
+      },
+      "execution": {
+        "spreadBps": 10.5,
+        "impact10kBps": 8.4,
+        "impact50kBps": 31.8,
+        "markout5mBps": 0.3,
+        "receipts": [
+          {
+            "label": "fill 1",
+            "spreadBps": 10.5,
+            "impactBps": 8.4,
+            "markout1mBps": 4.2,
+            "markout5mBps": 11.8,
+            "routeLatencyMs": 132,
+            "priorityFeeMicrolamports": 2200,
+            "source": "percolator cli"
+          }
+        ]
+      },
+      "flags": [
+        { "label": "fresh oracle", "tone": "good" },
+        { "label": "crank ok", "tone": "good" }
+      ]
+    }
+  ]
+}

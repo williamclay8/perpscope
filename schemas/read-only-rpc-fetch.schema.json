@@ -8,10 +8,38 @@
   "properties": {
     "label": { "type": "string" },
     "cluster": { "type": "string" },
+    "fixtureKind": { "type": "string" },
+    "fixture": { "type": "string" },
+    "rpcRead": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "method": { "const": "getAccountInfo" },
+        "commitment": { "type": "string" },
+        "encoding": { "type": "string" },
+        "responsePath": { "type": "string" }
+      }
+    },
+    "source": { "type": "object" },
     "slab": { "type": "string" },
     "programId": { "type": "string" },
     "currentSlot": { "type": "number" },
     "market": { "type": "object" },
+    "expectations": {
+      "type": "object",
+      "required": ["owner", "dataLength", "magic", "maxOracleAgeSec"],
+      "additionalProperties": true,
+      "properties": {
+        "owner": { "type": "string" },
+        "dataLength": { "type": "number", "minimum": 128 },
+        "magic": { "type": "string", "pattern": "^(0x)?50455243$" },
+        "maxOracleAgeSec": { "type": "number", "minimum": 0 },
+        "requiredDecodedSections": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
     "account": {
       "type": "object",
       "required": ["owner", "dataLength", "magic", "decoded"],

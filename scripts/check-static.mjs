@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { normalizePercolatorSnapshot } from "../src/lib/percolator-adapter.js";
+import { summarizeReadOnlyRpcDeployment } from "../src/lib/read-only-rpc-fetcher.js";
 import { percolatorFixture } from "../src/fixtures/percolator-market.js";
 
 const css = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
@@ -51,6 +52,14 @@ if (!/watchtower-panel/.test(js) || !/buildWatchtowerSignals/.test(js)) {
   failures.push("Cockpit should expose the Watchtower read-only signal layer.");
 }
 
+if (!/deployment-panel/.test(js) || !/READ_ONLY_DEPLOYMENTS/.test(js)) {
+  failures.push("Cockpit should expose read-only deployment examples.");
+}
+
+if (!/recipe-panel/.test(js) || !/TERMINAL_RECIPES/.test(js)) {
+  failures.push("Cockpit should expose terminal import/export recipes.");
+}
+
 const dto = normalizePercolatorSnapshot(percolatorFixture);
 if (dto.markets.length < 3) {
   failures.push("Fixture should expose at least three markets for the cockpit.");
@@ -83,6 +92,32 @@ for (const filename of readdirSync(exampleDir).filter((name) => name.endsWith(".
   } catch (error) {
     failures.push(`Example JSON should parse: ${filename} (${error.message})`);
   }
+}
+
+for (const filename of [
+  "percolator-mainnet-sol.readonly-rpc.json",
+  "percolator-devnet-wif.readonly-rpc.json"
+]) {
+  try {
+    summarizeReadOnlyRpcDeployment(JSON.parse(readFileSync(new URL(filename, exampleDir), "utf8")));
+  } catch (error) {
+    failures.push(`Read-only deployment example should validate: ${filename} (${error.message})`);
+  }
+}
+
+try {
+  const recipeManifest = JSON.parse(readFileSync(new URL("terminal-recipes.json", exampleDir), "utf8"));
+  const recipeIds = new Set((recipeManifest.recipes || []).map((recipe) => recipe.id));
+  for (const expected of ["file-import", "drag-drop-stdout", "command-bundle", "list-markets", "read-only-rpc", "dto-export"]) {
+    if (!recipeIds.has(expected)) failures.push(`Terminal recipes should include ${expected}.`);
+  }
+  for (const recipe of recipeManifest.recipes || []) {
+    if (recipe.fixture && !existsSync(new URL(`../${recipe.fixture}`, import.meta.url))) {
+      failures.push(`Terminal recipe fixture is missing: ${recipe.fixture}`);
+    }
+  }
+} catch (error) {
+  failures.push(`Terminal recipe manifest should parse and validate (${error.message})`);
 }
 
 for (const schema of [

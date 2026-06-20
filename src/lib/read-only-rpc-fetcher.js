@@ -110,6 +110,65 @@ export function buildReadOnlyRpcSnapshot(request) {
   });
 }
 
+export function summarizeReadOnlyRpcDeployment(request) {
+  const checked = validateReadOnlyRpcRequest(request);
+  const account = request.account || request.accountInfo || {};
+  const decoded = account.decoded || {};
+  const expectations = request.expectations || {};
+  const requiredDecodedSections = Array.isArray(expectations.requiredDecodedSections)
+    ? expectations.requiredDecodedSections
+    : ["header", "config"];
+  const missingSections = requiredDecodedSections.filter((section) => !decoded[section]);
+  if (missingSections.length) {
+    throw new Error(`Read-only deployment fixture is missing decoded sections: ${missingSections.join(", ")}`);
+  }
+
+  const expectedOwner = stringOf(expectations.owner);
+  const expectedDataLength = numberOf(expectations.dataLength);
+  const expectedMagic = stringOf(expectations.magic);
+  if (expectedOwner && expectedOwner !== checked.owner) {
+    throw new Error("Read-only deployment owner expectation does not match account owner.");
+  }
+  if (expectedDataLength && expectedDataLength !== checked.dataLength) {
+    throw new Error("Read-only deployment data length expectation does not match account data length.");
+  }
+  if (expectedMagic && normalizeHex(expectedMagic) !== normalizeHex(checked.magic)) {
+    throw new Error("Read-only deployment magic expectation does not match account magic.");
+  }
+
+  const maxOracleAgeSec = firstNumber(
+    maybeNumber(expectations.maxOracleAgeSec),
+    maybeNumber(decoded.config?.maxStalenessSecs),
+    maybeNumber(decoded.config?.maxOracleAgeSec)
+  );
+  const oracleAgeSec = firstNumber(
+    maybeNumber(decoded.bestPrice?.oracle?.ageSecs),
+    maybeNumber(decoded.bestPrice?.oracle?.publishAgeSec),
+    maybeNumber(decoded.bestPrice?.oracle?.ageSec)
+  );
+  if (maxOracleAgeSec && oracleAgeSec > maxOracleAgeSec) {
+    throw new Error("Read-only deployment oracle freshness expectation failed.");
+  }
+
+  return {
+    label: request.label || "Read-only RPC slab fixture",
+    cluster: request.cluster || "rpc fixture",
+    slab: checked.slab,
+    programId: checked.programId,
+    owner: checked.owner,
+    dataLength: checked.dataLength,
+    magic: checked.magic,
+    market: request.market?.symbol || request.market?.name || "PERP",
+    method: request.rpcRead?.method || "getAccountInfo",
+    fixture: request.fixture || "",
+    maxOracleAgeSec,
+    oracleAgeSec,
+    freshness: maxOracleAgeSec
+      ? Math.max(0, Math.round((1 - oracleAgeSec / maxOracleAgeSec) * 100))
+      : 0
+  };
+}
+
 export async function fetchReadOnlyRpcSnapshot(request, client) {
   if (!client || typeof client.getAccountInfo !== "function") {
     throw new Error("Read-only RPC fetcher requires a client with getAccountInfo().");
@@ -150,6 +209,18 @@ function stringOf(value) {
 function numberOf(value) {
   const next = Number(value);
   return Number.isFinite(next) ? next : 0;
+}
+
+function maybeNumber(value) {
+  const next = Number(value);
+  return Number.isFinite(next) ? next : undefined;
+}
+
+function firstNumber(...values) {
+  for (const value of values) {
+    if (Number.isFinite(value)) return value;
+  }
+  return 0;
 }
 
 function normalizeHex(value) {

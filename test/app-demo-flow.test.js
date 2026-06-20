@@ -2,10 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
+  buildDeploymentSummaries,
+  buildTerminalRecipeSummaries,
   buildWatchtowerSignals,
   createImportedSnapshotState,
   DEMO_CLI_PATH,
-  fetchCliDemoSnapshot
+  fetchCliDemoSnapshot,
+  READ_ONLY_DEPLOYMENTS,
+  TERMINAL_RECIPES
 } from "../src/app.js";
 import {
   normalizePercolatorSnapshot,
@@ -73,4 +77,26 @@ test("Watchtower escalates degraded markets without action controls", () => {
   assert.ok(signals.filter((signal) => signal.tone === "danger").length >= 3);
   assert.equal(signals.find((signal) => signal.id === "solvency").tone, "danger");
   assert.match(signals.find((signal) => signal.id === "execution").detail, /ms route/);
+});
+
+test("builds deployment and recipe summaries for the cockpit", () => {
+  const deployments = buildDeploymentSummaries();
+  const recipes = buildTerminalRecipeSummaries();
+
+  assert.equal(deployments.length, READ_ONLY_DEPLOYMENTS.length);
+  assert.deepEqual(deployments.map((deployment) => deployment.id), ["mainnet-sol", "devnet-wif"]);
+  assert.ok(deployments.every((deployment) => deployment.ownerShort.includes("...")));
+  assert.ok(deployments.every((deployment) => Number.isFinite(deployment.freshnessPct)));
+  assert.deepEqual(recipes.map((recipe) => recipe.id), [
+    "file-import",
+    "drag-drop-stdout",
+    "command-bundle",
+    "list-markets",
+    "read-only-rpc",
+    "dto-export"
+  ]);
+  assert.equal(recipes[0].step, "01");
+  assert.equal(recipes.at(-1).step, "06");
+  assert.doesNotMatch(JSON.stringify({ deployments, recipes }), /connect wallet|sign transaction|send transaction|place order|submit trade|trade now/i);
+  assert.equal(TERMINAL_RECIPES.find((recipe) => recipe.id === "read-only-rpc").commands, "getAccountInfo");
 });

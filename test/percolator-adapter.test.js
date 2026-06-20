@@ -12,6 +12,7 @@ import {
 import {
   buildReadOnlyRpcSnapshot,
   fetchReadOnlyRpcSnapshot,
+  summarizeReadOnlyRpcDeployment,
   validateReadOnlyRpcRequest
 } from "../src/lib/read-only-rpc-fetcher.js";
 import { percolatorFixture } from "../src/fixtures/percolator-market.js";
@@ -27,6 +28,15 @@ const receiptStdout = JSON.parse(
 );
 const rpcFetchFixture = JSON.parse(
   readFileSync(new URL("../examples/read-only-rpc.fetch.json", import.meta.url), "utf8")
+);
+const mainnetSolDeployment = JSON.parse(
+  readFileSync(new URL("../examples/percolator-mainnet-sol.readonly-rpc.json", import.meta.url), "utf8")
+);
+const devnetWifDeployment = JSON.parse(
+  readFileSync(new URL("../examples/percolator-devnet-wif.readonly-rpc.json", import.meta.url), "utf8")
+);
+const terminalRecipes = JSON.parse(
+  readFileSync(new URL("../examples/terminal-recipes.json", import.meta.url), "utf8")
 );
 
 test("normalizes Percolator-like market state into terminal DTOs", () => {
@@ -391,6 +401,75 @@ test("builds snapshots from read-only RPC fixtures", () => {
   assert.equal(market.price.mark, 181.61);
   assert.equal(market.crank.activeAccounts, 72);
   assert.equal(market.account.label, "RPC observer");
+});
+
+test("validates documented read-only deployment examples", () => {
+  for (const fixture of [mainnetSolDeployment, devnetWifDeployment]) {
+    const summary = summarizeReadOnlyRpcDeployment(fixture);
+    const snapshot = buildReadOnlyRpcSnapshot(fixture);
+    const [market] = snapshot.markets;
+
+    assert.equal(summary.owner, fixture.expectations.owner);
+    assert.equal(summary.dataLength, fixture.expectations.dataLength);
+    assert.equal(summary.magic, fixture.expectations.magic);
+    assert.ok(summary.oracleAgeSec <= summary.maxOracleAgeSec);
+    assert.equal(market.slab, fixture.slab);
+    assert.equal(market.program, fixture.programId);
+  }
+});
+
+test("rejects deployment fixtures with stale oracle expectations", () => {
+  assert.throws(
+    () =>
+      summarizeReadOnlyRpcDeployment({
+        ...devnetWifDeployment,
+        account: {
+          ...devnetWifDeployment.account,
+          decoded: {
+            ...devnetWifDeployment.account.decoded,
+            bestPrice: {
+              ...devnetWifDeployment.account.decoded.bestPrice,
+              oracle: {
+                ...devnetWifDeployment.account.decoded.bestPrice.oracle,
+                ageSecs: 11
+              }
+            }
+          }
+        }
+      }),
+    /oracle freshness/
+  );
+});
+
+test("documents terminal import and export recipes with live fixtures", () => {
+  assert.deepEqual(
+    terminalRecipes.recipes.map((recipe) => recipe.id),
+    ["file-import", "drag-drop-stdout", "command-bundle", "list-markets", "read-only-rpc", "dto-export"]
+  );
+
+  for (const recipe of terminalRecipes.recipes) {
+    const fixture = JSON.parse(readFileSync(new URL(`../${recipe.fixture}`, import.meta.url), "utf8"));
+    const serialized = JSON.stringify(fixture);
+    assert.doesNotMatch(serialized, /connect wallet|sign transaction|send transaction|place order|submit trade|trade now/i);
+
+    if (recipe.inputShape === "read-only-rpc-fetch") {
+      const summary = summarizeReadOnlyRpcDeployment(fixture);
+      assert.equal(summary.method, "getAccountInfo");
+      assert.ok(summary.freshness > 0);
+      continue;
+    }
+
+    if (recipe.inputShape === "perpscope-terminal-export") {
+      assert.equal(fixture.name, terminalRecipes.dtoExport.name);
+      assert.ok(fixture.source.mode === "read-only");
+      assert.ok(Array.isArray(fixture.markets));
+      continue;
+    }
+
+    const snapshot = normalizePercolatorSnapshot(fixture);
+    assert.ok(snapshot.markets.length >= 1);
+    assert.equal(snapshot.source.mode, "read-only");
+  }
 });
 
 test("rejects mutating or invalid read-only RPC requests", () => {

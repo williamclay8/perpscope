@@ -1,0 +1,111 @@
+{
+  "label": "Devnet WIF Percolator read",
+  "cluster": "devnet",
+  "fixtureKind": "read-only-rpc-deployment",
+  "fixture": "examples/percolator-devnet-wif.readonly-rpc.json",
+  "rpcRead": {
+    "method": "getAccountInfo",
+    "commitment": "confirmed",
+    "encoding": "base64+zstd",
+    "responsePath": "account"
+  },
+  "source": {
+    "deployment": "selected-devnet-wif-slab",
+    "capture": "decoded account fixture",
+    "generatedAt": "2026-06-20T22:10:00Z"
+  },
+  "slab": "PERCOLAT_WIF_3m1d...Rk8",
+  "programId": "Perco1ator111111111111111111111111111111111",
+  "currentSlot": 346892260,
+  "market": {
+    "id": "wif-perp",
+    "symbol": "WIF-PERP",
+    "base": "WIF",
+    "quote": "USDC",
+    "status": "watch"
+  },
+  "expectations": {
+    "owner": "Perco1ator111111111111111111111111111111111",
+    "dataLength": 262400,
+    "magic": "50455243",
+    "maxOracleAgeSec": 8,
+    "requiredDecodedSections": ["header", "config", "engine", "bestPrice"]
+  },
+  "account": {
+    "owner": "Perco1ator111111111111111111111111111111111",
+    "dataLength": 262400,
+    "magic": "50455243",
+    "decoded": {
+      "header": {
+        "magic": "50455243",
+        "version": 16,
+        "nonce": "775031"
+      },
+      "config": {
+        "maxStalenessSecs": 8,
+        "confFilterBps": 85,
+        "unitScale": 6
+      },
+      "params": {
+        "maintenanceMarginBps": 640,
+        "initialMarginBps": 1080,
+        "maxAccounts": 2048,
+        "liquidationFeeBps": 45
+      },
+      "engine": {
+        "currentSlot": 346892260,
+        "lastMarketSlot": 346891946,
+        "openInterestUsd": 710000,
+        "longOpenInterestUsd": 512000,
+        "shortOpenInterestUsd": 198000,
+        "insuranceUsd": 18500,
+        "vaultUsd": 214000,
+        "claimUsd": 198000,
+        "socialLossUsd": 0,
+        "fundingRateBpsPerHour": 2.7,
+        "stressConsumedBps": 392,
+        "stressLimitBps": 500,
+        "catchupRequired": true
+      },
+      "bestPrice": {
+        "oracle": {
+          "price": "1462000",
+          "decimals": 6,
+          "ageSecs": 7.2
+        },
+        "bestBuy": {
+          "price": "1476000",
+          "decimals": 6
+        },
+        "bestSell": {
+          "price": "1449000",
+          "decimals": 6
+        },
+        "effectiveSpreadBps": 184
+      },
+      "accountUsd": {
+        "label": "RPC observer",
+        "side": "long",
+        "positionSize": 18000,
+        "positionNotionalUsd": 26316,
+        "collateralUsd": 2400,
+        "unrealizedPnlUsd": -820,
+        "realizedPnlUsd": 114,
+        "fundingPnlUsd": -66,
+        "liquidationPrice": 1.31
+      },
+      "accounts": {
+        "rows": [
+          { "idx": 4, "kind": "User", "stale": true },
+          { "idx": 12, "kind": "User", "stale": true },
+          { "idx": 19, "kind": "User", "stale": false }
+        ]
+      },
+      "bitmap": {
+        "numUsed": 316,
+        "maxAccounts": 2048,
+        "usedIndices": [4, 12, 19, 28, 41, 64]
+      }
+    }
+  }
+}

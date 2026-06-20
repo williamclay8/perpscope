@@ -7,6 +7,84 @@ import {
 } from "./lib/percolator-adapter.js";
 
 export const DEMO_CLI_PATH = "./examples/percolator-cli.bundle.json";
+export const READ_ONLY_DEPLOYMENTS = [
+  {
+    id: "mainnet-sol",
+    label: "mainnet SOL",
+    cluster: "mainnet-beta",
+    market: "SOL-PERP",
+    method: "getAccountInfo",
+    fixture: "percolator-mainnet-sol.readonly-rpc.json",
+    owner: "Perco1ator111111111111111111111111111111111",
+    dataLength: 524800,
+    magic: "50455243",
+    oracleAgeSec: 2,
+    maxOracleAgeSec: 8
+  },
+  {
+    id: "devnet-wif",
+    label: "devnet WIF",
+    cluster: "devnet",
+    market: "WIF-PERP",
+    method: "getAccountInfo",
+    fixture: "percolator-devnet-wif.readonly-rpc.json",
+    owner: "Perco1ator111111111111111111111111111111111",
+    dataLength: 262400,
+    magic: "50455243",
+    oracleAgeSec: 7.2,
+    maxOracleAgeSec: 8
+  }
+];
+export const TERMINAL_RECIPES = [
+  {
+    id: "file-import",
+    label: "file import",
+    fixture: "decoded-slab.snapshot.json",
+    entry: "Import",
+    output: "terminal DTO",
+    commands: "snapshot"
+  },
+  {
+    id: "drag-drop-stdout",
+    label: "stdout",
+    fixture: "execution-receipts.stdout.json",
+    entry: "Drop",
+    output: "receipt lane",
+    commands: "receipts"
+  },
+  {
+    id: "command-bundle",
+    label: "bundle",
+    fixture: "percolator-cli.bundle.json",
+    entry: "Try CLI",
+    output: "cockpit DTO",
+    commands: "8 commands"
+  },
+  {
+    id: "list-markets",
+    label: "directory",
+    fixture: "percolator-list-markets.stdout.json",
+    entry: "stdout",
+    output: "market rail",
+    commands: "list-markets"
+  },
+  {
+    id: "read-only-rpc",
+    label: "rpc read",
+    fixture: "percolator-mainnet-sol.readonly-rpc.json",
+    entry: "client",
+    output: "market dto",
+    commands: "getAccountInfo"
+  },
+  {
+    id: "dto-export",
+    label: "dto export",
+    fixture: "terminal-dto-export.json",
+    entry: "normalize",
+    output: "builder JSON",
+    commands: "provenance"
+  }
+];
 
 const state = {
   snapshot: normalizePercolatorSnapshot(percolatorFixture),
@@ -184,6 +262,10 @@ function render() {
               <code>simulatePriceShock()</code>
             </div>
           </article>
+
+          ${deploymentPanel()}
+
+          ${recipePanel()}
         </section>
       </section>
     </main>
@@ -662,6 +744,97 @@ function sourceStrip(snapshot) {
   `;
 }
 
+export function buildDeploymentSummaries(deployments = READ_ONLY_DEPLOYMENTS) {
+  return deployments.map((deployment) => {
+    const freshnessRatio = deployment.maxOracleAgeSec
+      ? deployment.oracleAgeSec / deployment.maxOracleAgeSec
+      : 1;
+    return {
+      ...deployment,
+      ownerShort: shortAddress(deployment.owner),
+      size: dataSize(deployment.dataLength),
+      freshnessPct: clamp((1 - freshnessRatio) * 100, 0, 100),
+      tone: freshnessRatio <= 0.55 ? "good" : freshnessRatio <= 1 ? "warning" : "danger"
+    };
+  });
+}
+
+export function buildTerminalRecipeSummaries(recipes = TERMINAL_RECIPES) {
+  return recipes.map((recipe, index) => ({
+    ...recipe,
+    step: String(index + 1).padStart(2, "0")
+  }));
+}
+
+function deploymentPanel() {
+  const deployments = buildDeploymentSummaries();
+  return `
+    <article class="deployment-panel panel stagger-item">
+      <div class="panel-head">
+        <span class="panel-label">deployment reads</span>
+        <strong>${deployments.length} examples</strong>
+      </div>
+      <div class="deployment-grid" aria-label="Read-only Percolator deployment examples">
+        ${deployments.map((deployment) => deploymentCard(deployment)).join("")}
+      </div>
+    </article>
+  `;
+}
+
+function deploymentCard(deployment) {
+  return `
+    <section class="deployment-card ${deployment.tone}" aria-label="${esc(deployment.label)} ${esc(deployment.market)} read example">
+      <div class="deployment-title">
+        <span>${esc(deployment.cluster)}</span>
+        <strong>${esc(deployment.market)}</strong>
+        <i>${esc(deployment.method)}</i>
+      </div>
+      <div class="deployment-ledger">
+        <span>owner</span><strong>${esc(deployment.ownerShort)}</strong>
+        <span>len</span><strong>${esc(deployment.size)}</strong>
+        <span>magic</span><strong>${esc(deployment.magic)}</strong>
+        <span>oracle</span><strong>${deployment.oracleAgeSec.toFixed(1)}s / ${deployment.maxOracleAgeSec}s</strong>
+      </div>
+      <div class="deployment-freshness" aria-hidden="true"><span style="width:${deployment.freshnessPct}%"></span></div>
+      <small>${esc(deployment.fixture)}</small>
+    </section>
+  `;
+}
+
+function recipePanel() {
+  const recipes = buildTerminalRecipeSummaries();
+  return `
+    <article class="recipe-panel panel stagger-item">
+      <div class="panel-head">
+        <span class="panel-label">terminal recipes</span>
+        <strong>${recipes.length} paths</strong>
+      </div>
+      <div class="recipe-flow" aria-label="Terminal import and export recipes">
+        ${recipes.map((recipe) => recipeCard(recipe)).join("")}
+      </div>
+      <div class="dto-strip" aria-label="DTO export provenance">
+        <span>source</span>
+        <span>cluster</span>
+        <span>slot</span>
+        <span>slab</span>
+        <span>program</span>
+        <span>watchtower</span>
+      </div>
+    </article>
+  `;
+}
+
+function recipeCard(recipe) {
+  return `
+    <section class="recipe-card" aria-label="${esc(recipe.label)} recipe">
+      <span>${esc(recipe.step)}</span>
+      <strong>${esc(recipe.label)}</strong>
+      <p>${esc(recipe.entry)} -> ${esc(recipe.output)}</p>
+      <small>${esc(recipe.commands)}</small>
+    </section>
+  `;
+}
+
 function shapeLabel(shape) {
   if (shape === "percolator-cli-bundle") return "cli bundle";
   if (shape === "perpscope-snapshot") return "snapshot";
@@ -697,6 +870,19 @@ function signedBps(value) {
 
 function fmtInt(value) {
   return Number(value).toLocaleString("en-US");
+}
+
+function dataSize(bytes) {
+  const value = Number(bytes) || 0;
+  if (value >= 1000000) return `${(value / 1000000).toFixed(1)}mb`;
+  if (value >= 1000) return `${Math.round(value / 1000)}kb`;
+  return `${value}b`;
+}
+
+function shortAddress(value) {
+  const text = String(value || "");
+  if (text.length <= 18) return text;
+  return `${text.slice(0, 8)}...${text.slice(-6)}`;
 }
 
 function mean(values) {

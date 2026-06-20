@@ -48,6 +48,17 @@ Watchtower is the trader-facing read-only signal layer inside PerpScope. It comp
 
 It is deliberately observational. It does not recommend a direction, place an order, connect a wallet, or submit a transaction.
 
+## Live Read-Only Deployment Examples
+
+PerpScope v0.2 adds deployment-style read fixtures that mirror how a terminal can validate a selected Percolator slab through an injected RPC client:
+
+| fixture | cluster | read | owner | data length | magic | oracle |
+| --- | --- | --- | --- | --- | --- | --- |
+| `examples/percolator-mainnet-sol.readonly-rpc.json` | `mainnet-beta` | `getAccountInfo` | `Perco1ator...111111` | `524800` | `50455243` | `2.0s / 8s` |
+| `examples/percolator-devnet-wif.readonly-rpc.json` | `devnet` | `getAccountInfo` | `Perco1ator...111111` | `262400` | `50455243` | `7.2s / 8s` |
+
+Each fixture carries `expectations` for owner, account data length, slab magic/discriminator, required decoded sections, and maximum oracle age. `summarizeReadOnlyRpcDeployment()` fails closed if those expectations drift.
+
 ## Run
 
 ```bash
@@ -72,6 +83,10 @@ examples/execution-receipts.stdout.json
 examples/percolator-cli.bundle.json
 examples/percolator-list-markets.stdout.json
 examples/read-only-rpc.fetch.json
+examples/percolator-mainnet-sol.readonly-rpc.json
+examples/percolator-devnet-wif.readonly-rpc.json
+examples/terminal-recipes.json
+examples/terminal-dto-export.json
 ```
 
 The import path accepts full PerpScope snapshots shaped as:
@@ -147,14 +162,31 @@ const stress = simulatePriceShock(market, -5);
 
 Use the normalized DTO to render your own terminal modules without coupling the terminal UI to raw Percolator CLI output. Today the adapter understands PerpScope snapshots plus captured stdout and read-only bundles from `list-markets`, `slab:get`, `slab:params`, `slab:engine`, `best-price`, `execution:receipts`, `slab:account`, `slab:accounts`, and `slab:bitmap`.
 
+## Terminal Import/Export Recipes
+
+`examples/terminal-recipes.json` documents six paths:
+
+- file import from `examples/decoded-slab.snapshot.json`
+- drag/drop captured stdout from `examples/execution-receipts.stdout.json`
+- command-bundle import from `examples/percolator-cli.bundle.json`
+- market directory import from `examples/percolator-list-markets.stdout.json`
+- injected read-only RPC from `examples/percolator-mainnet-sol.readonly-rpc.json`
+- DTO export using `examples/terminal-dto-export.json`
+
+The export shape keeps source provenance with `source.label`, `source.mode`, `source.commandSet`, `cluster`, `currentSlot`, `market.slab`, and `market.program` so a terminal can show where the risk state came from.
+
 ## Read-Only RPC Fetcher
 
 The RPC helper is intentionally injectable and read-only. It validates owner, data length, magic bytes, and mutating field names, then converts decoded account data through the same adapter:
 
 ```js
-import { buildReadOnlyRpcSnapshot } from "./src/lib/read-only-rpc-fetcher.js";
+import {
+  buildReadOnlyRpcSnapshot,
+  summarizeReadOnlyRpcDeployment
+} from "./src/lib/read-only-rpc-fetcher.js";
 
 const snapshot = buildReadOnlyRpcSnapshot(decodedFixture);
+const summary = summarizeReadOnlyRpcDeployment(decodedFixture);
 ```
 
 `fetchReadOnlyRpcSnapshot(request, client)` accepts a client with `getAccountInfo()`. It does not create wallets, sign, send, route, or place orders.
