@@ -113,7 +113,7 @@ function render() {
           <article class="account-panel panel stagger-item">
             <div class="panel-head">
               <span class="panel-label">account risk</span>
-              <strong>${esc(market.account.side)}</strong>
+              <strong>${esc(exposureLabel(market.account.side))}</strong>
             </div>
             <div class="account-strip">
               ${metric("equity", money(market.account.equityUsd, 0), market.account.equityUsd > 0 ? "good" : "danger")}
@@ -135,6 +135,8 @@ function render() {
               ${impactBar("5m", Math.abs(market.execution.markout5mBps), 100)}
             </div>
           </article>
+
+          ${receiptPanel(market)}
 
           <article class="flags-panel panel stagger-item">
             <div class="panel-head">
@@ -368,6 +370,144 @@ function impactBar(label, value, max) {
   `;
 }
 
+function receiptPanel(market) {
+  const receipts = market.execution.receipts || [];
+  const latest = receipts[0];
+  const averageLatency = receipts.length ? mean(receipts.map((receipt) => receipt.routeLatencyMs)) : market.execution.routeLatencyMs;
+  const averageFee = receipts.length ? mean(receipts.map((receipt) => receipt.priorityFeeMicrolamports)) : market.execution.priorityFeeMicrolamports;
+  const markoutPath = receipts.map((receipt) => receipt.markout5mBps);
+  const averageMarkout = receipts.length ? mean(markoutPath) : market.execution.markout5mBps;
+  return `
+    <article class="receipt-panel panel stagger-item">
+      <div class="panel-head">
+        <span class="panel-label">receipt timeline</span>
+        <strong>${receipts.length || "0"} fills</strong>
+      </div>
+      <div class="receipt-summary">
+        ${receiptTile("latest", latest ? timeLabel(latest.sourceTimestamp, latest.slot) : "waiting")}
+        ${receiptTile("latency", `${Math.round(averageLatency)} ms`, averageLatency <= 180 ? "good" : averageLatency <= 360 ? "warning" : "danger")}
+        ${receiptTile("priority", feeLabel(averageFee))}
+        ${receiptTile("5m markout", signedBps(averageMarkout), averageMarkout >= 0 ? "good" : "danger")}
+      </div>
+      ${receiptSparkline(markoutPath.length ? markoutPath : [market.execution.markout1mBps, market.execution.markout5mBps], averageMarkout)}
+      <div class="receipt-timeline" aria-label="Execution receipt timeline">
+        ${receipts.length ? receipts.map((receipt, index) => receiptStep(receipt, index)).join("") : emptyReceiptStep(market)}
+      </div>
+    </article>
+  `;
+}
+
+function receiptTile(label, value, tone = "neutral") {
+  return `<div class="receipt-tile ${tone}"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`;
+}
+
+function receiptStep(receipt, index) {
+  const qualityTone = receipt.fillQualityScore >= 72 ? "good" : receipt.fillQualityScore >= 48 ? "warning" : "danger";
+  return `
+    <section class="receipt-step ${qualityTone}" aria-label="${esc(receipt.label)} at ${esc(timeLabel(receipt.sourceTimestamp, receipt.slot))}">
+      <div class="receipt-step-head">
+        <span>${String(index + 1).padStart(2, "0")}</span>
+        <strong>${esc(receipt.label)}</strong>
+        <i>${esc(notionalLabel(receipt.notionalUsd))}</i>
+      </div>
+      <div class="receipt-chips">
+        <span>${esc(timeLabel(receipt.sourceTimestamp, receipt.slot))}</span>
+        <span>${Math.round(receipt.routeLatencyMs)} ms</span>
+        <span>${esc(feeLabel(receipt.priorityFeeMicrolamports))}</span>
+        <span>${esc(receipt.source)}</span>
+      </div>
+      <div class="receipt-bars">
+        ${receiptBar("spread", receipt.spreadBps, 130)}
+        ${receiptBar("impact", receipt.impactBps, 150)}
+        ${receiptBar("1m", receipt.markout1mBps, 70, true)}
+        ${receiptBar("5m", receipt.markout5mBps, 80, true)}
+      </div>
+    </section>
+  `;
+}
+
+function receiptBar(label, value, max, signed = false) {
+  const width = clamp((Math.abs(value) / max) * 100, 4, 100);
+  const tone = signed
+    ? value >= 0 ? "good" : Math.abs(value) > max * 0.45 ? "danger" : "warning"
+    : value > max * 0.65 ? "danger" : value > max * 0.35 ? "warning" : "good";
+  const display = signed ? signedBps(value) : `${Number(value).toFixed(1)}`;
+  return `
+    <div class="receipt-bar" aria-label="${esc(label)} ${display}">
+      <span>${esc(label)}</span>
+      <i><b class="${tone}" style="width:${width}%"></b></i>
+      <strong>${esc(display)}</strong>
+    </div>
+  `;
+}
+
+function receiptSparkline(points, averageMarkout) {
+  const cleanPoints = points.map(Number).filter(Number.isFinite);
+  if (!cleanPoints.length) return "";
+  const width = 420;
+  const height = 54;
+  const min = Math.min(...cleanPoints, 0);
+  const max = Math.max(...cleanPoints, 0);
+  const range = max - min || 1;
+  const path = cleanPoints.map((value, index) => {
+    const x = (index / (cleanPoints.length - 1 || 1)) * width;
+    const y = height - ((value - min) / range) * (height - 14) - 7;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  const zeroY = height - ((0 - min) / range) * (height - 14) - 7;
+  const tone = averageMarkout >= 0 ? "good" : "danger";
+  return `
+    <div class="receipt-pulse ${tone}">
+      <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="5 minute markout sparkline">
+        <line x1="0" y1="${zeroY.toFixed(1)}" x2="${width}" y2="${zeroY.toFixed(1)}"></line>
+        <polyline points="${path}"></polyline>
+      </svg>
+    </div>
+  `;
+}
+
+function emptyReceiptStep(market) {
+  return `
+    <section class="receipt-step neutral" aria-label="No execution receipts imported">
+      <div class="receipt-step-head">
+        <span>--</span>
+        <strong>adapter ready</strong>
+        <i>read</i>
+      </div>
+      <div class="receipt-chips">
+        <span>${Math.round(market.execution.routeLatencyMs)} ms</span>
+        <span>${esc(feeLabel(market.execution.priorityFeeMicrolamports))}</span>
+        <span>${signedBps(market.execution.markout5mBps)}</span>
+      </div>
+    </section>
+  `;
+}
+
+function timeLabel(timestamp, slot) {
+  const date = timestamp ? new Date(timestamp) : null;
+  if (date && !Number.isNaN(date.getTime())) {
+    return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+  }
+  return slot ? `slot ${fmtInt(slot)}` : "now";
+}
+
+function feeLabel(value) {
+  const amount = Number(value) || 0;
+  if (Math.abs(amount) >= 1000) return `${(amount / 1000).toFixed(amount >= 10000 ? 0 : 1)}k uLamports`;
+  return `${Math.round(amount)} uLamports`;
+}
+
+function notionalLabel(value) {
+  const amount = Number(value) || 0;
+  return amount > 0 ? money(amount, 0) : "fill";
+}
+
+function exposureLabel(side) {
+  if (side === "short") return "net -";
+  if (side === "long") return "net +";
+  return "flat";
+}
+
 function sparkline(points, tone) {
   if (!points.length) return "";
   const width = 280;
@@ -437,6 +577,12 @@ function signedBps(value) {
 
 function fmtInt(value) {
   return Number(value).toLocaleString("en-US");
+}
+
+function mean(values) {
+  const numbers = values.map(Number).filter(Number.isFinite);
+  if (!numbers.length) return 0;
+  return numbers.reduce((sum, value) => sum + value, 0) / numbers.length;
 }
 
 function esc(value) {

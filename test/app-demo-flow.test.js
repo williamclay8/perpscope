@@ -29,8 +29,8 @@ test("loads Try CLI demo through the same import state path", async () => {
   assert.equal(requestedUrl, DEMO_CLI_PATH);
   assert.equal(nextState.selectedMarketId, "sol-perp");
   assert.equal(nextState.importStatus.label, "demo cli loaded");
-  assert.equal(nextState.importStatus.detail, "examples/percolator-cli.bundle.json: 1 market import, 7 commands");
-  assert.equal(nextState.snapshot.source.commandSet.length, 7);
+  assert.equal(nextState.importStatus.detail, "examples/percolator-cli.bundle.json: 1 market import, 8 commands");
+  assert.equal(nextState.snapshot.source.commandSet.length, 8);
 });
 
 test("surfaces Try CLI demo fetch failures", async () => {

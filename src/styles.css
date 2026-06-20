@@ -152,6 +152,9 @@ button {
 .panel-head strong,
 .spine-step strong,
 .impact-row strong,
+.receipt-tile strong,
+.receipt-step-head span,
+.receipt-bar strong,
 .mini-ledger strong {
   font-variant-numeric: tabular-nums;
 }
@@ -415,6 +418,7 @@ h1 {
 .spine-panel,
 .account-panel,
 .execution-panel,
+.receipt-panel,
 .flags-panel,
 .adapter-panel {
   padding: 18px;
@@ -596,6 +600,220 @@ h1 {
 }
 
 .impact-row b.danger {
+  background: var(--red);
+}
+
+.receipt-panel {
+  grid-column: span 3;
+}
+
+.receipt-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.receipt-tile {
+  display: grid;
+  gap: 6px;
+  min-height: 58px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: var(--shadow-border);
+}
+
+.receipt-tile.good {
+  background: var(--mint-soft);
+}
+
+.receipt-tile.warning {
+  background: var(--amber-soft);
+}
+
+.receipt-tile.danger {
+  background: var(--red-soft);
+}
+
+.receipt-tile span,
+.receipt-step-head i,
+.receipt-chips span,
+.receipt-bar span,
+.receipt-bar strong {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.receipt-tile strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: clamp(13px, 1.05vw, 17px);
+  line-height: 1.08;
+}
+
+.receipt-pulse {
+  height: 58px;
+  margin-bottom: 14px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: var(--shadow-border);
+}
+
+.receipt-pulse svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.receipt-pulse line {
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-dasharray: 4 6;
+  stroke-width: 1.5;
+}
+
+.receipt-pulse polyline {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.receipt-pulse.good polyline {
+  stroke: var(--mint);
+}
+
+.receipt-pulse.danger polyline {
+  stroke: var(--red);
+}
+
+.receipt-timeline {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.receipt-step {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: var(--shadow-border);
+}
+
+.receipt-step.good {
+  background:
+    linear-gradient(135deg, rgba(67, 229, 155, 0.1), transparent 54%),
+    rgba(255, 255, 255, 0.04);
+}
+
+.receipt-step.warning {
+  background:
+    linear-gradient(135deg, rgba(242, 183, 91, 0.11), transparent 54%),
+    rgba(255, 255, 255, 0.04);
+}
+
+.receipt-step.danger {
+  background:
+    linear-gradient(135deg, rgba(255, 104, 99, 0.11), transparent 54%),
+    rgba(255, 255, 255, 0.04);
+}
+
+.receipt-step-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.receipt-step-head span {
+  display: grid;
+  width: 34px;
+  height: 30px;
+  place-items: center;
+  border-radius: 7px;
+  background: rgba(115, 216, 255, 0.1);
+  color: var(--cyan);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.receipt-step-head strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.receipt-step-head i {
+  display: grid;
+  min-width: 42px;
+  min-height: 30px;
+  place-items: center;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.055);
+  font-style: normal;
+  font-weight: 800;
+}
+
+.receipt-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.receipt-chips span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  max-width: 100%;
+  padding: 0 8px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: var(--shadow-border);
+}
+
+.receipt-bars {
+  display: grid;
+  gap: 8px;
+}
+
+.receipt-bar {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 68px;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+}
+
+.receipt-bar i {
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.receipt-bar b {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.receipt-bar b.good {
+  background: var(--mint);
+}
+
+.receipt-bar b.warning {
+  background: var(--amber);
+}
+
+.receipt-bar b.danger {
   background: var(--red);
 }
 
@@ -841,6 +1059,14 @@ code {
   .cockpit-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .receipt-panel {
+    grid-column: span 2;
+  }
+
+  .receipt-timeline {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px) {
@@ -905,6 +1131,7 @@ code {
   }
 
   .hero-panel,
+  .receipt-panel,
   .adapter-panel {
     grid-column: span 1;
   }
@@ -921,6 +1148,8 @@ code {
 
   .runway-metrics,
   .account-strip,
+  .receipt-summary,
+  .receipt-timeline,
   .adapter-flow,
   .import-dock,
   .import-actions {
@@ -938,6 +1167,10 @@ code {
 
   .impact-row {
     grid-template-columns: 44px minmax(0, 1fr) 40px;
+  }
+
+  .receipt-bar {
+    grid-template-columns: 44px minmax(0, 1fr) 62px;
   }
 }
 

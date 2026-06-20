@@ -10,6 +10,8 @@ It is built around a simple idea: traders should understand market health, liqui
 
 ![PerpScope CLI adapter demo](docs/screenshots/perpscope-adapter.png)
 
+![PerpScope receipt timeline](docs/screenshots/perpscope-receipts.png)
+
 ![PerpScope mobile cockpit](docs/screenshots/perpscope-mobile.png)
 
 ## Why This Exists
@@ -40,6 +42,7 @@ Open the cockpit and use `Try CLI` for the bundled Percolator command demo. You 
 
 ```text
 examples/decoded-slab.snapshot.json
+examples/execution-receipts.stdout.json
 examples/percolator-cli.bundle.json
 examples/percolator-list-markets.stdout.json
 examples/read-only-rpc.fetch.json
@@ -81,6 +84,7 @@ It also accepts Percolator CLI command bundles and captured stdout shaped as:
     { command: "slab:params", output },
     { command: "slab:engine", output },
     { command: "best-price", output },
+    { command: "execution:receipts", output },
     { command: "slab:account", output },
     { command: "slab:accounts", output },
     { command: "slab:bitmap", output }
@@ -88,7 +92,7 @@ It also accepts Percolator CLI command bundles and captured stdout shaped as:
 }
 ```
 
-Captured `stdout`, `stdoutText`, `output`, `data`, and `result` fields are parsed through the same read-only path. Raw protocol integer fields such as `capital`, `pnl`, `positionBasisQ`, `vault`, or unscaled `price` are not displayed as USD unless the input uses explicit USD fields like `collateralUsd`, `unrealizedPnlUsd`, `vaultUsd`, `priceUsd`, or includes price decimals.
+Captured `stdout`, `stdoutText`, `output`, `data`, and `result` fields are parsed through the same read-only path. Receipt arrays can be imported as `receipts`, `executionReceipts`, `receiptTimeline`, or an `execution:receipts` command output. Raw protocol integer fields such as `capital`, `pnl`, `positionBasisQ`, `vault`, or unscaled `price` are not displayed as USD unless the input uses explicit USD fields like `collateralUsd`, `unrealizedPnlUsd`, `vaultUsd`, `priceUsd`, or includes price decimals.
 
 ## Schemas
 
@@ -115,7 +119,7 @@ const market = snapshot.markets[0];
 const stress = simulatePriceShock(market, -5);
 ```
 
-Use the normalized DTO to render your own terminal modules without coupling the terminal UI to raw Percolator CLI output. Today the adapter understands PerpScope snapshots plus captured stdout and read-only bundles from `list-markets`, `slab:get`, `slab:params`, `slab:engine`, `best-price`, `slab:account`, `slab:accounts`, and `slab:bitmap`.
+Use the normalized DTO to render your own terminal modules without coupling the terminal UI to raw Percolator CLI output. Today the adapter understands PerpScope snapshots plus captured stdout and read-only bundles from `list-markets`, `slab:get`, `slab:params`, `slab:engine`, `best-price`, `execution:receipts`, `slab:account`, `slab:accounts`, and `slab:bitmap`.
 
 ## Read-Only RPC Fetcher
 
@@ -150,13 +154,14 @@ The normalized market DTO includes:
 - `price`, `crank`, `funding`, `marketStructure`, and `solvency`
 - `account` liquidation distance, margin buffer, equity, PnL, and funding PnL
 - `execution` spread, impact, markout, latency, and fill-quality score
+- `execution.receipts` with spread, impact, 1m/5m markout, route latency, priority fee, source timestamp, and source label
 - `flags` for stale oracle, crank lag, thin insurance, stress caps, and liquidation tightness
 
 ## Product Surface
 
 - `src/lib/percolator-adapter.js` normalizes Percolator-like slab, oracle, crank, funding, insurance, account, and execution data into terminal-ready DTOs.
 - `src/lib/read-only-rpc-fetcher.js` validates read-only RPC slab fixtures and injected account fetches.
-- `src/fixtures/percolator-market.js` contains sample decoded market/account state.
+- `src/fixtures/percolator-market.js` contains sample decoded market/account state plus execution receipt history.
 - `src/app.js` renders the read-only cockpit.
 - `schemas/` contains the public input contracts.
 - `test/percolator-adapter.test.js` covers adapter safety and risk math.
@@ -189,7 +194,6 @@ Current public site: [williamclay8.github.io/perpscope](https://williamclay8.git
 
 ## Roadmap
 
-- Execution-quality receipt timeline.
 - Funding/skew history with source-aware candles.
 - Live RPC adapter examples for selected Percolator deployments.
 - Builder package split for `@perpscope/percolator`.

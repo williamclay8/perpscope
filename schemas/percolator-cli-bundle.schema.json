@@ -18,7 +18,8 @@
         "slab:account",
         "slab:accounts",
         "slab:bitmap",
-        "best-price"
+        "best-price",
+        "execution:receipts"
       ]
     },
     "output": {},

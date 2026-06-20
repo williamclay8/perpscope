@@ -36,7 +36,28 @@
           "oracle": { "type": "object" },
           "engine": { "type": "object" },
           "account": { "type": "object" },
-          "execution": { "type": "object" }
+          "execution": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "receipts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "properties": {
+                    "sourceTimestamp": { "type": "string" },
+                    "spreadBps": { "type": "number" },
+                    "impactBps": { "type": "number" },
+                    "markout1mBps": { "type": "number" },
+                    "markout5mBps": { "type": "number" },
+                    "routeLatencyMs": { "type": "number" },
+                    "priorityFeeMicrolamports": { "type": "number" }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }

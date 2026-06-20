@@ -139,6 +139,8 @@ function coerceCliMarket(scope, currentSlot) {
   const oracle = objectOf(scope, ["oracle", "price", "prices", "oraclePrice"], {});
   const book = objectOf(scope, ["bestPrice", "best-price", "best_price", "book", "orderbook", "quote"], {});
   const execution = objectOf(scope, ["execution", "executionQuality"], {});
+  const receiptRows = receiptListOf(scope, execution);
+  const firstReceipt = firstItem(receiptRows);
   const account = {
     ...firstItem(accountRows),
     ...firstItem(valueOf(scope, ["account", "position", "traderAccount"]))
@@ -153,6 +155,7 @@ function coerceCliMarket(scope, currentSlot) {
   const markPrice = firstNumber(
     priceNumberOf(oracle, ["markPrice", "mark", "priceUsd", "oraclePriceUsd"], ["price", "oraclePrice"]),
     priceNumberOf(book, ["markPrice", "mark", "midPrice", "mid", "priceUsd"], ["price"]),
+    priceNumberOf(firstReceipt, ["markPriceUsd", "markPrice", "mark"], ["markPrice"]),
     priceNumberOf(engine, ["lastOraclePriceUsd", "resolvedPriceUsd"], ["lastOraclePrice", "resolvedPrice"]),
     priceNumberOf(marketInfo, ["markPrice", "priceUsd"], ["price"])
   );
@@ -164,14 +167,18 @@ function coerceCliMarket(scope, currentSlot) {
   const bestBid = firstNumber(
     priceNumberOf(book, ["bestBid", "bid", "best_bid"], []),
     priceNumberOf(execution, ["bestBid"], []),
+    priceNumberOf(firstReceipt, ["bestBid", "bid", "best_bid"], []),
     priceNumberOf(bestSell, ["priceUsd"], ["price"])
   );
   const bestAsk = firstNumber(
     priceNumberOf(book, ["bestAsk", "ask", "best_ask"], []),
     priceNumberOf(execution, ["bestAsk"], []),
+    priceNumberOf(firstReceipt, ["bestAsk", "ask", "best_ask"], []),
     priceNumberOf(bestBuy, ["priceUsd"], ["price"])
   );
   const spreadFallback = markPrice ? markPrice * 0.0008 : 0;
+  const normalizedBestBid = bestBid || Math.max(markPrice - spreadFallback, 0);
+  const normalizedBestAsk = bestAsk || markPrice + spreadFallback;
   const positionSize = numberOf(account, ["positionSize", "basePosition", "positionSizeBase", "size", "position"], 0);
   const side = stringOf(account, ["side"], positionSize < 0 ? "short" : positionSize > 0 ? "long" : "flat");
   const positionNotionalUsd = firstNumber(
@@ -298,15 +305,44 @@ function coerceCliMarket(scope, currentSlot) {
       pnlPath: arrayOf(account, ["pnlPath", "pnlHistory"], [unrealizedPnlUsd])
     },
     execution: {
-      bestBid: bestBid || Math.max(markPrice - spreadFallback, 0),
-      bestAsk: bestAsk || markPrice + spreadFallback,
-      impact10kBps: firstNumber(maybeNumberOf(execution, ["impact10kBps", "impact_10k_bps"]), maybeNumberOf(book, ["effectiveSpreadBps"])),
-      impact50kBps: numberOf(execution, ["impact50kBps", "impact_50k_bps"], 0),
-      markout1mBps: numberOf(execution, ["markout1mBps", "markout_1m_bps"], 0),
-      markout5mBps: numberOf(execution, ["markout5mBps", "markout_5m_bps"], 0),
-      fillQualityScore: numberOf(execution, ["fillQualityScore", "fill_quality_score"], 72),
-      routeLatencyMs: numberOf(execution, ["routeLatencyMs", "latencyMs"], 0),
-      priorityFeeMicrolamports: numberOf(execution, ["priorityFeeMicrolamports", "priorityFee"], 0)
+      bestBid: normalizedBestBid,
+      bestAsk: normalizedBestAsk,
+      impact10kBps: firstNumber(
+        maybeNumberOf(execution, ["impact10kBps", "impact_10k_bps"]),
+        maybeNumberOf(firstReceipt, ["impactBps", "priceImpactBps", "impact_bps"]),
+        maybeNumberOf(book, ["effectiveSpreadBps"])
+      ),
+      impact50kBps: firstNumber(
+        maybeNumberOf(execution, ["impact50kBps", "impact_50k_bps"]),
+        maybeNumberOf(firstReceipt, ["impact50kBps", "impact_50k_bps"])
+      ),
+      markout1mBps: firstNumber(
+        maybeNumberOf(execution, ["markout1mBps", "markout_1m_bps"]),
+        maybeNumberOf(firstReceipt, ["markout1mBps", "markout_1m_bps", "markout60sBps"])
+      ),
+      markout5mBps: firstNumber(
+        maybeNumberOf(execution, ["markout5mBps", "markout_5m_bps"]),
+        maybeNumberOf(firstReceipt, ["markout5mBps", "markout_5m_bps", "markout300sBps"])
+      ),
+      fillQualityScore: firstNumber(
+        maybeNumberOf(execution, ["fillQualityScore", "fill_quality_score"]),
+        maybeNumberOf(firstReceipt, ["fillQualityScore", "qualityScore"]),
+        72
+      ),
+      routeLatencyMs: firstNumber(
+        maybeNumberOf(execution, ["routeLatencyMs", "latencyMs"]),
+        maybeNumberOf(firstReceipt, ["routeLatencyMs", "latencyMs", "durationMs"])
+      ),
+      priorityFeeMicrolamports: firstNumber(
+        maybeNumberOf(execution, ["priorityFeeMicrolamports", "priorityFee"]),
+        maybeNumberOf(firstReceipt, ["priorityFeeMicrolamports", "priorityFee", "priorityFeeMicroLamports"])
+      ),
+      receipts: normalizeExecutionReceipts(receiptRows, {
+        ...execution,
+        bestBid: normalizedBestBid,
+        bestAsk: normalizedBestAsk,
+        spreadBps: bps(normalizedBestAsk - normalizedBestBid, midpoint(normalizedBestAsk, normalizedBestBid))
+      })
     }
   };
 }
@@ -319,6 +355,7 @@ export function toTerminalMarketDto(market, currentSlot = 0) {
   const engine = market.engine || {};
   const config = market.config || {};
   const execution = market.execution || {};
+  const executionReceipts = normalizeExecutionReceipts(execution.receipts || execution.receiptTimeline || [], execution);
 
   const spreadBps = bps(execution.bestAsk - execution.bestBid, midpoint(execution.bestAsk, execution.bestBid));
   const markDriftBps = bps(price - indexPrice, indexPrice);
@@ -440,7 +477,8 @@ export function toTerminalMarketDto(market, currentSlot = 0) {
       markout5mBps: number(execution.markout5mBps),
       fillQualityScore: executionScore,
       routeLatencyMs: number(execution.routeLatencyMs),
-      priorityFeeMicrolamports: number(execution.priorityFeeMicrolamports)
+      priorityFeeMicrolamports: number(execution.priorityFeeMicrolamports),
+      receipts: executionReceipts
     },
     flags,
     healthScore
@@ -546,7 +584,8 @@ function collectCliSections(input) {
     engine: input?.engine,
     account: input?.account,
     accounts: input?.accounts,
-    bitmap: input?.bitmap
+    bitmap: input?.bitmap,
+    receipts: input?.receipts || input?.executionReceipts || input?.receiptTimeline
   };
   if (!input || typeof input !== "object") return sections;
 
@@ -583,7 +622,20 @@ function collectCliSections(input) {
 
 function mergeCompositeCliOutput(sections, output) {
   if (!output || typeof output !== "object" || Array.isArray(output)) return;
-  for (const key of ["market", "header", "config", "params", "engine", "oracle", "accounts", "bitmap", "execution"]) {
+  for (const key of [
+    "market",
+    "header",
+    "config",
+    "params",
+    "engine",
+    "oracle",
+    "accounts",
+    "bitmap",
+    "execution",
+    "receipts",
+    "executionReceipts",
+    "receiptTimeline"
+  ]) {
     if (output[key] && sections[key] === undefined) sections[key] = output[key];
   }
   if (output.slab && sections.market === undefined) sections.market = output;
@@ -616,11 +668,27 @@ function mergeNamedCliOutput(sections, name, output) {
   if (key === "slabbitmap") sections.bitmap = output;
   if (key === "bestprice") sections.bestPrice = output;
   if (key === "listmarkets") sections.markets = output;
+  if (["executionreceipts", "executionreceipt", "receipts", "receiptlog", "fillreceipts", "fills"].includes(key)) {
+    sections.receipts = output;
+  }
 }
 
 function hasCliSections(input) {
   return Object.keys(input || {}).some((key) =>
-    ["slabHeader", "slabConfig", "slabEngine", "slabBitmap", "bestPrice", "best-price", "marketInfo"].some(
+    [
+      "slabHeader",
+      "slabConfig",
+      "slabEngine",
+      "slabBitmap",
+      "bestPrice",
+      "best-price",
+      "marketInfo",
+      "receipts",
+      "executionReceipts",
+      "receiptTimeline",
+      "fillReceipts",
+      "fills"
+    ].some(
       (alias) => normalizeKey(alias) === normalizeKey(key)
     )
   );
@@ -634,6 +702,98 @@ function marketListOf(scope) {
   if (Array.isArray(value?.rows)) return value.rows;
   if (Array.isArray(value?.accounts)) return value.accounts;
   return [];
+}
+
+function receiptListOf(...sources) {
+  for (const source of sources) {
+    if (!source) continue;
+    const directRows = rowsOf(source);
+    if (directRows.length && Array.isArray(source)) return directRows;
+    const value = valueOf(source, ["receipts", "executionReceipts", "receiptTimeline", "fillReceipts", "fills"]);
+    const rows = rowsOf(value);
+    if (rows.length) return rows;
+    const nested = valueOf(value, ["receipts", "executionReceipts", "receiptTimeline", "fillReceipts", "fills"]);
+    const nestedRows = rowsOf(nested);
+    if (nestedRows.length) return nestedRows;
+  }
+  return [];
+}
+
+function normalizeExecutionReceipts(rows, fallback = {}) {
+  return rowsOf(rows).slice(0, 24).map((receipt, index) => {
+    const bestBid = firstNumber(
+      priceNumberOf(receipt, ["bestBid", "bid", "best_bid"], []),
+      priceNumberOf(fallback, ["bestBid"], [])
+    );
+    const bestAsk = firstNumber(
+      priceNumberOf(receipt, ["bestAsk", "ask", "best_ask"], []),
+      priceNumberOf(fallback, ["bestAsk"], [])
+    );
+    const quotePrice = firstNumber(
+      priceNumberOf(receipt, ["quotePriceUsd", "quotePrice", "quotedPriceUsd", "quotedPrice"], ["quotePrice"]),
+      priceNumberOf(receipt, ["priceUsd"], ["price"])
+    );
+    const fillPrice = firstNumber(
+      priceNumberOf(receipt, ["fillPriceUsd", "fillPrice", "executionPriceUsd", "executionPrice"], ["fillPrice"]),
+      quotePrice
+    );
+    const markPrice = firstNumber(
+      priceNumberOf(receipt, ["markPriceUsd", "markPrice", "mark"], ["markPrice"]),
+      priceNumberOf(fallback, ["markPrice"], [])
+    );
+    const spreadBps = firstNumber(
+      maybeNumberOf(receipt, ["spreadBps", "spread_bps", "effectiveSpreadBps"]),
+      maybeNumberOf(fallback, ["spreadBps"]),
+      bps(bestAsk - bestBid, midpoint(bestAsk, bestBid))
+    );
+    const impactBps = firstNumber(
+      maybeNumberOf(receipt, ["impactBps", "priceImpactBps", "impact_bps"]),
+      maybeNumberOf(fallback, ["impact10kBps", "impact_10k_bps"])
+    );
+    const markout1mBps = firstNumber(
+      maybeNumberOf(receipt, ["markout1mBps", "markout_1m_bps", "markout60sBps"]),
+      maybeNumberOf(fallback, ["markout1mBps", "markout_1m_bps"])
+    );
+    const markout5mBps = firstNumber(
+      maybeNumberOf(receipt, ["markout5mBps", "markout_5m_bps", "markout300sBps"]),
+      maybeNumberOf(fallback, ["markout5mBps", "markout_5m_bps"])
+    );
+
+    return {
+      id: stringOf(receipt, ["id", "receiptId", "signature", "txid"], `receipt-${index + 1}`),
+      label: stringOf(receipt, ["label", "kind", "venue", "route"], `fill ${index + 1}`),
+      source: stringOf(receipt, ["source", "origin", "adapter"], "adapter"),
+      sourceTimestamp: stringOf(receipt, ["sourceTimestamp", "timestamp", "observedAt", "filledAt", "ts"], ""),
+      slot: numberOf(receipt, ["slot", "sourceSlot", "marketSlot"], 0),
+      side: stringOf(receipt, ["side", "direction"], "fill"),
+      notionalUsd: firstNumber(maybeNumberOf(receipt, ["notionalUsd", "sizeUsd", "quoteNotionalUsd"])),
+      quotePrice,
+      fillPrice,
+      markPrice,
+      bestBid,
+      bestAsk,
+      spreadBps,
+      impactBps,
+      markout1mBps,
+      markout5mBps,
+      routeLatencyMs: firstNumber(
+        maybeNumberOf(receipt, ["routeLatencyMs", "latencyMs", "durationMs"]),
+        maybeNumberOf(fallback, ["routeLatencyMs", "latencyMs"])
+      ),
+      priorityFeeMicrolamports: firstNumber(
+        maybeNumberOf(receipt, ["priorityFeeMicrolamports", "priorityFee", "priorityFeeMicroLamports"]),
+        maybeNumberOf(fallback, ["priorityFeeMicrolamports", "priorityFee"])
+      ),
+      oracleAgeSec: firstNumber(maybeNumberOf(receipt, ["oracleAgeSec", "priceAgeSec", "ageSecs"])),
+      crankAgeSlots: firstNumber(maybeNumberOf(receipt, ["crankAgeSlots", "ageSlots"])),
+      fundingBpsPerHour: firstNumber(maybeNumberOf(receipt, ["fundingBpsPerHour", "fundingRateBpsPerHour"])),
+      fillQualityScore: clamp(
+        firstNumber(maybeNumberOf(receipt, ["fillQualityScore", "qualityScore"]), maybeNumberOf(fallback, ["fillQualityScore"])),
+        0,
+        100
+      )
+    };
+  });
 }
 
 function scopedMarket(scope, market, index) {

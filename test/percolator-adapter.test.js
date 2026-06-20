@@ -22,6 +22,9 @@ const cliBundle = JSON.parse(
 const listMarketsStdout = JSON.parse(
   readFileSync(new URL("../examples/percolator-list-markets.stdout.json", import.meta.url), "utf8")
 );
+const receiptStdout = JSON.parse(
+  readFileSync(new URL("../examples/execution-receipts.stdout.json", import.meta.url), "utf8")
+);
 const rpcFetchFixture = JSON.parse(
   readFileSync(new URL("../examples/read-only-rpc.fetch.json", import.meta.url), "utf8")
 );
@@ -33,6 +36,9 @@ test("normalizes Percolator-like market state into terminal DTOs", () => {
   assert.equal(snapshot.markets[0].name, "SOL-PERP");
   assert.ok(snapshot.markets[0].healthScore > snapshot.markets[2].healthScore);
   assert.equal(snapshot.markets[2].status, "risk");
+  assert.equal(snapshot.markets[0].execution.receipts.length, 3);
+  assert.equal(snapshot.markets[0].execution.receipts[0].spreadBps, 10.5);
+  assert.equal(snapshot.markets[2].execution.receipts[1].routeLatencyMs, 566);
 });
 
 test("rejects secret-bearing wallet fields in read-only snapshots", () => {
@@ -62,6 +68,7 @@ test("detects and normalizes Percolator CLI command bundles", () => {
     "slab:params",
     "slab:engine",
     "best-price",
+    "execution:receipts",
     "slab:account",
     "slab:accounts",
     "slab:bitmap"
@@ -71,6 +78,9 @@ test("detects and normalizes Percolator CLI command bundles", () => {
   assert.equal(market.price.mark, 181.61);
   assert.equal(market.execution.bestBid, 181.52);
   assert.equal(market.execution.bestAsk, 181.71);
+  assert.equal(market.execution.receipts.length, 3);
+  assert.equal(market.execution.receipts[1].markout5mBps, 9.4);
+  assert.equal(market.execution.receipts[2].source, "percolator cli");
   assert.equal(market.account.side, "long");
   assert.equal(market.config.initialMarginBps, 820);
   assert.equal(market.crank.activeAccounts, 72);
@@ -122,7 +132,7 @@ test("extracts JSON payloads from captured CLI stdout", () => {
   const parsed = parsePercolatorJson(capturedStdout);
 
   assert.equal(parsed.label, "Percolator CLI demo");
-  assert.equal(parsed.commands.length, 7);
+  assert.equal(parsed.commands.length, 8);
 });
 
 test("extracts JSON payloads from ANSI and bracket-prefixed CLI stdout", () => {
@@ -141,6 +151,85 @@ test("normalizes captured list-markets stdout before snapshot shapes", () => {
   assert.equal(snapshot.markets.length, 3);
   assert.equal(snapshot.markets[0].name, "SOL-PERP");
   assert.equal(snapshot.markets[1].slab, "PERCOLAT_BTC_Aw71...Tq9");
+});
+
+test("normalizes captured execution receipt stdout", () => {
+  assert.equal(detectPercolatorInputShape(receiptStdout), "percolator-cli-bundle");
+
+  const snapshot = normalizePercolatorSnapshot(receiptStdout);
+  const [market] = snapshot.markets;
+
+  assert.deepEqual(snapshot.source.commandSet, ["execution:receipts"]);
+  assert.equal(market.name, "SOL-PERP");
+  assert.equal(market.price.mark, 181.61);
+  assert.equal(market.execution.bestBid, 181.52);
+  assert.equal(market.execution.receipts.length, 2);
+  assert.equal(market.execution.receipts[0].priorityFeeMicrolamports, 2200);
+  assert.equal(market.execution.receipts[1].markout5mBps, -6.8);
+});
+
+test("normalizes receipt wrapper containers", () => {
+  const receipt = {
+    label: "imported fill",
+    sourceTimestamp: "2026-06-20T13:24:12Z",
+    spreadBps: 11,
+    impactBps: 7,
+    markout1mBps: 3,
+    markout5mBps: -4,
+    routeLatencyMs: 140,
+    priorityFeeMicrolamports: 2400
+  };
+  const variants = [[receipt], { receipts: [receipt] }, { rows: [receipt] }, { items: [receipt] }];
+
+  for (const output of variants) {
+    const snapshot = normalizePercolatorSnapshot({
+      market: { symbol: "SOL-PERP", slab: "PERCOLAT_SOL", program: "Perco1ator" },
+      commands: [
+        { command: "best-price", output: { oracle: { priceUsd: 181.61 } } },
+        { command: "execution:receipts", output }
+      ]
+    });
+
+    assert.equal(snapshot.markets[0].execution.receipts.length, 1);
+    assert.equal(snapshot.markets[0].execution.receipts[0].impactBps, 7);
+  }
+});
+
+test("normalizes documented top-level receipt imports with market metadata", () => {
+  const snapshot = normalizePercolatorSnapshot({
+    market: {
+      symbol: "SOL-PERP",
+      base: "SOL",
+      quote: "USDC",
+      slab: "PERCOLAT_SOL",
+      program: "Perco1ator"
+    },
+    receipts: [
+      {
+        label: "top-level receipt",
+        source: "terminal log",
+        sourceTimestamp: "2026-06-20T13:24:12Z",
+        markPriceUsd: 181.61,
+        bestBid: 181.52,
+        bestAsk: 181.71,
+        spreadBps: 10.5,
+        impactBps: 8.4,
+        markout1mBps: 4.2,
+        markout5mBps: -1.7,
+        routeLatencyMs: 132,
+        priorityFeeMicrolamports: 2200,
+        fillQualityScore: 84
+      }
+    ]
+  });
+  const [market] = snapshot.markets;
+
+  assert.equal(detectPercolatorInputShape({ market: { symbol: "SOL-PERP" }, receipts: [] }), "percolator-cli-bundle");
+  assert.equal(market.name, "SOL-PERP");
+  assert.equal(market.slab, "PERCOLAT_SOL");
+  assert.equal(market.price.mark, 181.61);
+  assert.equal(market.execution.receipts.length, 1);
+  assert.equal(market.execution.receipts[0].source, "terminal log");
 });
 
 test("normalizes list-markets wrapper containers", () => {
