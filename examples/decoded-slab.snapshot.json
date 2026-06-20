@@ -1,0 +1,95 @@
+{
+  "source": {
+    "label": "Example decoded Percolator snapshot",
+    "mode": "read-only",
+    "pinnedCommit": "example",
+    "generatedAt": "2026-06-20T15:20:00.000Z"
+  },
+  "cluster": "example import",
+  "currentSlot": 346892420,
+  "markets": [
+    {
+      "id": "eth-perp-import",
+      "name": "ETH-PERP",
+      "base": "ETH",
+      "quote": "USDC",
+      "status": "watch",
+      "slab": "PERCOLAT_ETH_import",
+      "program": "Perco1ator111111111111111111111111111111111",
+      "header": {
+        "version": 16,
+        "flags": ["oracle_initialized"],
+        "nonce": "1181090",
+        "admin": "A3Mu2nQd...MrCK"
+      },
+      "config": {
+        "maxLeverage": 18,
+        "initialMarginBps": 900,
+        "maintenanceMarginBps": 550,
+        "liquidationFeeBps": 40,
+        "fundingMaxPremiumBps": 480,
+        "maxStalenessSecs": 8,
+        "confFilterBps": 42,
+        "permissionlessResolveStaleSlots": 432000,
+        "forceCloseDelaySlots": 432000
+      },
+      "oracle": {
+        "indexPrice": 3520.4,
+        "markPrice": 3512.8,
+        "effectivePrice": 3515.2,
+        "confidenceBps": 27,
+        "publishAgeSec": 3.4,
+        "targetAgeSec": 2.9,
+        "legs": [
+          { "name": "Pyth ETH/USD", "weight": 0.7, "ageSec": 3.1, "confidenceBps": 27 },
+          { "name": "Switchboard backup", "weight": 0.3, "ageSec": 4.8, "confidenceBps": 35 }
+        ],
+        "pricePath": [3498.1, 3504.3, 3501.8, 3510.2, 3516.7, 3514.6, 3512.8]
+      },
+      "engine": {
+        "lastCrankSlot": 346892390,
+        "crankAgeSlots": 30,
+        "catchupRequired": false,
+        "staleAccounts": 2,
+        "fundingRateBpsPerHour": -0.44,
+        "fundingIndex": "301992",
+        "openInterestUsd": 1760000,
+        "longOpenInterestUsd": 840000,
+        "shortOpenInterestUsd": 920000,
+        "stressConsumedBps": 166,
+        "stressLimitBps": 500,
+        "insuranceUsd": 84000,
+        "vaultUsd": 620000,
+        "claimUsd": 588000,
+        "socialLossUsd": 0,
+        "sideMode": "balanced"
+      },
+      "account": {
+        "label": "Imported account",
+        "side": "short",
+        "positionSize": -11.5,
+        "entryPrice": 3620,
+        "collateralUsd": 7200,
+        "positionNotionalUsd": 40397.2,
+        "unrealizedPnlUsd": 1232.8,
+        "realizedPnlUsd": 0,
+        "fundingPnlUsd": 14.1,
+        "maintenanceMarginUsd": 2221.85,
+        "initialMarginUsd": 3635.75,
+        "liquidationPrice": 4070.2,
+        "pnlPath": [90, 180, 120, 460, 780, 1110, 1232.8]
+      },
+      "execution": {
+        "bestBid": 3511.9,
+        "bestAsk": 3514.6,
+        "impact10kBps": 9.1,
+        "impact50kBps": 34.5,
+        "markout1mBps": -0.6,
+        "markout5mBps": 2.1,
+        "fillQualityScore": 78,
+        "routeLatencyMs": 154,
+        "priorityFeeMicrolamports": 2400
+      }
+    }
+  ]
+}
