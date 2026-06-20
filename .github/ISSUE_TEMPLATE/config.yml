@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: PerpScope live cockpit
+    url: https://williamclay8.github.io/perpscope/
+    about: Try the read-only capture intake before submitting a decoded shape.
+  - name: Field compatibility map
+    url: https://github.com/williamclay8/perpscope/blob/main/docs/field-compatibility-map.md
+    about: Check accepted aliases, required fields, Watchtower dependencies, and rejected payloads.

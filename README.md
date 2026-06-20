@@ -113,6 +113,8 @@ The public helper is `buildPercolatorCompatibilityReport(input, snapshot?)`, exp
 
 Terminal builders can use the field-level contract in `docs/field-compatibility-map.md` and the machine-readable `examples/field-compatibility-map.json` to see accepted aliases, required fields, Watchtower dependencies, carry-history inputs, ignored fields, and rejected wallet/signer/transaction/order payloads.
 
+Real decoded shapes can be submitted through `docs/feedback-loop.md` or the GitHub issue form at `.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml`.
+
 ## Live Read-Only Deployment Examples
 
 PerpScope v0.2 adds deployment-style read fixtures that mirror how a terminal can validate a selected Percolator slab through an injected RPC client:
@@ -330,6 +332,7 @@ The normalized market DTO includes:
 - `examples/adapter-consumer/` shows the package from an outside-terminal point of view.
 - `docs/field-compatibility-map.md` documents accepted aliases, required fields, Watchtower dependencies, and read-only rejection rules.
 - `docs/feedback-loop.md` is the public intake loop for decoded Percolator shapes and missing terminal fields.
+- `.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml` is the structured intake form for sanitized builder samples.
 - `src/fixtures/percolator-market.js` contains sample decoded market/account state plus execution receipt history.
 - `src/app.js` renders the read-only cockpit.
 - `schemas/` contains the public input contracts.

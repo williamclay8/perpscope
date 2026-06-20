@@ -1,0 +1,119 @@
+name: Decoded Percolator shape
+description: Share one sanitized, read-only decoded Percolator output shape for adapter compatibility.
+title: "[intake] "
+labels:
+  - compatibility
+  - terminal-adapter
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve PerpScope's Percolator adapter.
+
+        Send one read-only decoded shape plus the trader-facing question it should answer. Compare your payload with `docs/field-compatibility-map.md` before posting if you can.
+
+        Do not include wallet paths, private keys, mnemonics, seeds, signers, signatures, transactions, instructions, order payloads, API keys, or user-identifying account data.
+  - type: dropdown
+    id: source-kind
+    attributes:
+      label: Source kind
+      description: Pick the closest source for this decoded output.
+      options:
+        - slab:get
+        - slab:params
+        - slab:engine
+        - best-price
+        - execution:receipts
+        - funding-history
+        - list-markets
+        - read-only RPC decoded account
+        - PerpScope snapshot
+        - Other read-only decoded output
+    validations:
+      required: true
+  - type: input
+    id: command-source
+    attributes:
+      label: Command or source
+      description: Name the command, terminal adapter, RPC read, or fixture source.
+      placeholder: "slab:get, best-price, read-only RPC decoded account, terminal export"
+    validations:
+      required: true
+  - type: input
+    id: cluster
+    attributes:
+      label: Cluster
+      placeholder: "mainnet-beta, devnet, local fixture"
+    validations:
+      required: true
+  - type: input
+    id: market
+    attributes:
+      label: Market, slab, and program
+      description: Use public market identifiers only. Redact user/account identity.
+      placeholder: "SOL-PERP, slab PERCOLAT_..., program Perco1ator..."
+    validations:
+      required: true
+  - type: textarea
+    id: trader-question
+    attributes:
+      label: Trader-facing question
+      description: What should a trader understand from this output?
+      placeholder: "Example: Is the oracle stale enough that I should distrust displayed runway?"
+    validations:
+      required: true
+  - type: textarea
+    id: expected-fields
+    attributes:
+      label: Expected fields or missing rows
+      description: Include PerpScope missing/ignored rows, fields you expected to see, or a compatibility report summary.
+      placeholder: |
+        Missing:
+        - history.fundingSkew
+        Ignored:
+        - commands.foo: command is preserved as provenance but not mapped
+    validations:
+      required: false
+  - type: textarea
+    id: sanitized-payload
+    attributes:
+      label: Sanitized read-only payload
+      description: Paste JSON or captured stdout. Keep it public-safe and read-only.
+      render: json
+      placeholder: |
+        {
+          "command": "best-price",
+          "market": { "symbol": "SOL-PERP", "slab": "PERCOLAT_...", "program": "Perco1ator..." },
+          "output": { "oracle": { "priceUsd": 181.61, "ageSecs": 2 } }
+        }
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety checklist
+      options:
+        - label: This payload has no wallet paths, private keys, mnemonics, seeds, wallet adapters, or API keys.
+          required: true
+        - label: This payload has no signers, signatures, transactions, instructions, order payloads, send payloads, or signing requests.
+          required: true
+        - label: This payload has no user-identifying account data.
+          required: true
+  - type: dropdown
+    id: public-fixture
+    attributes:
+      label: Can this become a public fixture?
+      description: Public fixtures may be added under `examples/` after review and sanitization.
+      options:
+        - "yes"
+        - "no"
+        - "yes, after additional redaction"
+    validations:
+      required: true
+  - type: checkboxes
+    id: compatibility-map
+    attributes:
+      label: Compatibility map
+      options:
+        - label: I compared this with `docs/field-compatibility-map.md` or `examples/field-compatibility-map.json`.
+          required: false

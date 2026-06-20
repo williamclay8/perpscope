@@ -11,8 +11,10 @@ const css = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const js = readFileSync(new URL("../src/app.js", import.meta.url), "utf8");
 const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+const feedbackLoopDoc = readFileSync(new URL("../docs/feedback-loop.md", import.meta.url), "utf8");
 const fieldMapDoc = readFileSync(new URL("../docs/field-compatibility-map.md", import.meta.url), "utf8");
 const fieldMapJson = JSON.parse(readFileSync(new URL("../examples/field-compatibility-map.json", import.meta.url), "utf8"));
+const decodedShapeIssueTemplate = readFileSync(new URL("../.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml", import.meta.url), "utf8");
 const schemaDir = new URL("../schemas/", import.meta.url);
 const exampleDir = new URL("../examples/", import.meta.url);
 const packageEntry = readFileSync(new URL("../packages/percolator-adapter/index.js", import.meta.url), "utf8");
@@ -113,6 +115,32 @@ if (!readme.includes("examples/adapter-consumer/") || !readme.includes("docs/fee
 
 if (!readme.includes("docs/field-compatibility-map.md") || !readme.includes("examples/field-compatibility-map.json")) {
   failures.push("README should link the field compatibility map and JSON manifest.");
+}
+
+if (!readme.includes(".github/ISSUE_TEMPLATE/decoded-percolator-shape.yml")) {
+  failures.push("README should link the decoded shape issue template.");
+}
+
+if (!feedbackLoopDoc.includes("issues/new?template=decoded-percolator-shape.yml")) {
+  failures.push("Feedback loop should link the decoded shape issue form.");
+}
+
+for (const label of ["compatibility", "fixture", "risk-signal", "terminal-adapter", "docs"]) {
+  if (!feedbackLoopDoc.includes(`\`${label}\``)) {
+    failures.push(`Feedback loop should document ${label} triage label.`);
+  }
+}
+
+for (const unsafe of ["wallet paths", "private keys", "mnemonics", "signatures", "transactions", "instructions", "order payloads", "API keys"]) {
+  if (!feedbackLoopDoc.includes(unsafe) || !decodedShapeIssueTemplate.includes(unsafe)) {
+    failures.push(`Feedback loop and issue template should reject ${unsafe}.`);
+  }
+}
+
+for (const required of ["Source kind", "Trader-facing question", "Sanitized read-only payload", "Safety checklist", "Can this become a public fixture?"]) {
+  if (!decodedShapeIssueTemplate.includes(required)) {
+    failures.push(`Decoded shape issue template should include ${required}.`);
+  }
 }
 
 for (const required of [
