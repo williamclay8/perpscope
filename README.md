@@ -6,6 +6,8 @@ It is built around a simple idea: traders should understand market health, liqui
 
 ![PerpScope desktop cockpit](docs/screenshots/perpscope-desktop.png)
 
+![PerpScope healthy-to-risk demo](docs/screenshots/perpscope-demo.gif)
+
 ![PerpScope mobile cockpit](docs/screenshots/perpscope-mobile.png)
 
 ## Why This Exists
@@ -36,9 +38,10 @@ Open the cockpit and use `Import JSON`, or drag this example into the adapter do
 
 ```text
 examples/decoded-slab.snapshot.json
+examples/percolator-cli.bundle.json
 ```
 
-The import path accepts decoded Percolator-like snapshots shaped as:
+The import path accepts full PerpScope snapshots shaped as:
 
 ```js
 {
@@ -61,14 +64,50 @@ The import path accepts decoded Percolator-like snapshots shaped as:
 
 Snapshots containing wallet, keypair, seed, mnemonic, private, or secret-looking fields are rejected before rendering.
 
-## Adapter API
+It also accepts Percolator CLI command bundles shaped as:
+
+```js
+{
+  label: "Percolator CLI command bundle",
+  cluster: "mainnet-beta",
+  market: { symbol, base, quote, slab, program },
+  commands: [
+    { command: "slab:get", output },
+    { command: "slab:params", output },
+    { command: "slab:engine", output },
+    { command: "best-price", output },
+    { command: "slab:account", output }
+  ]
+}
+```
+
+## Terminal Builder Quickstart
 
 ```js
 import {
+  detectPercolatorInputShape,
   normalizePercolatorSnapshot,
   simulatePriceShock
 } from "./src/lib/percolator-adapter.js";
 
+const inputShape = detectPercolatorInputShape(decodedJson);
+const snapshot = normalizePercolatorSnapshot(decodedJson);
+const market = snapshot.markets[0];
+const stress = simulatePriceShock(market, -5);
+```
+
+Use the normalized DTO to render your own terminal modules without coupling the terminal UI to raw Percolator CLI output. Today the adapter understands PerpScope snapshots plus read-only bundles from `slab:get`, `slab:params`, `slab:engine`, `best-price`, and `slab:account`.
+
+## Adapter API
+
+```js
+import {
+  detectPercolatorInputShape,
+  normalizePercolatorSnapshot,
+  simulatePriceShock
+} from "./src/lib/percolator-adapter.js";
+
+const shape = detectPercolatorInputShape(decodedPercolatorState);
 const snapshot = normalizePercolatorSnapshot(decodedPercolatorState);
 const market = snapshot.markets[0];
 const stress = simulatePriceShock(market, -5);
@@ -113,11 +152,10 @@ npm run check
 npm start
 ```
 
-Current status: local preview only until a remote repo and deployment target are configured.
+Current public site: [williamclay8.github.io/perpscope](https://williamclay8.github.io/perpscope/).
 
 ## Roadmap
 
-- Real decoded-slab import adapters from Percolator CLI output.
 - Read-only RPC fetcher with owner/data-length/magic validation.
 - Execution-quality receipt timeline.
 - Funding/skew history with source-aware candles.

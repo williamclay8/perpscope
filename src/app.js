@@ -1,5 +1,10 @@
 import { percolatorFixture } from "./fixtures/percolator-market.js";
-import { normalizePercolatorSnapshot, simulatePriceShock } from "./lib/percolator-adapter.js";
+import {
+  detectPercolatorInputShape,
+  normalizePercolatorSnapshot,
+  parsePercolatorJson,
+  simulatePriceShock
+} from "./lib/percolator-adapter.js";
 
 const state = {
   snapshot: normalizePercolatorSnapshot(percolatorFixture),
@@ -7,7 +12,8 @@ const state = {
   shockPct: -3,
   importStatus: {
     tone: "neutral",
-    label: "fixture loaded"
+    label: "fixture loaded",
+    detail: "PerpScope fixture loaded"
   }
 };
 
@@ -148,7 +154,7 @@ function render() {
               <strong>${state.snapshot.markets.length} markets</strong>
             </div>
             <div class="import-dock" id="import-dock">
-              <div>
+              <div role="status" aria-live="polite" title="${esc(state.importStatus.detail || state.importStatus.label)}">
                 <span class="status-dot ${state.importStatus.tone}"></span>
                 <strong>${esc(state.importStatus.label)}</strong>
               </div>
@@ -158,6 +164,7 @@ function render() {
                 <input id="json-file" type="file" accept="application/json,.json" hidden />
               </div>
             </div>
+            ${sourceStrip(state.snapshot)}
             <div class="adapter-flow" aria-label="Adapter flow">
               <span>slab</span>
               <span>normalize</span>
@@ -199,7 +206,11 @@ function render() {
     state.snapshot = normalizePercolatorSnapshot(percolatorFixture);
     state.selectedMarketId = "sol-perp";
     state.shockPct = -3;
-    state.importStatus = { tone: "neutral", label: "fixture loaded" };
+    state.importStatus = {
+      tone: "neutral",
+      label: "fixture loaded",
+      detail: "PerpScope fixture loaded"
+    };
     render();
   });
 
@@ -224,7 +235,7 @@ function selectedMarket() {
 function marketButton(market) {
   const active = market.id === state.selectedMarketId ? "active" : "";
   return `
-    <button class="market-button ${active}" data-market-id="${esc(market.id)}" type="button">
+    <button class="market-button ${active}" data-market-id="${esc(market.id)}" type="button" aria-pressed="${market.id === state.selectedMarketId}">
       <span>
         <strong>${esc(market.name)}</strong>
         <small>${money(market.price.mark, market.base === "WIF" ? 3 : 2)}</small>
@@ -236,7 +247,8 @@ function marketButton(market) {
 
 async function importJsonFile(file) {
   try {
-    const imported = JSON.parse(await file.text());
+    const imported = parsePercolatorJson(await file.text());
+    const shape = detectPercolatorInputShape(imported);
     const snapshot = normalizePercolatorSnapshot(imported);
     if (!snapshot.markets.length) {
       throw new Error("No markets found.");
@@ -244,9 +256,17 @@ async function importJsonFile(file) {
     state.snapshot = snapshot;
     state.selectedMarketId = snapshot.markets[0].id;
     state.shockPct = -3;
-    state.importStatus = { tone: "good", label: `${snapshot.markets.length} market import` };
+    state.importStatus = {
+      tone: "good",
+      label: `${snapshot.markets.length} ${shapeLabel(shape)}`,
+      detail: `${file.name}: ${snapshot.markets.length} market import`
+    };
   } catch (error) {
-    state.importStatus = { tone: "danger", label: error.message.slice(0, 44) };
+    state.importStatus = {
+      tone: "danger",
+      label: error.message.slice(0, 44),
+      detail: error.message
+    };
   }
   render();
 }
@@ -272,7 +292,7 @@ function liquidationBand(market, stress) {
   const liqLeft = clamp(((liq - min) / (max - min)) * 100, 3, 97);
   const stressLeft = clamp(((stress.nextPrice - min) / (max - min)) * 100, 3, 97);
   return `
-    <div class="liq-band" aria-label="Liquidation band">
+    <div class="liq-band" aria-label="Liquidation band: mark ${money(current, market.base === "WIF" ? 3 : 2)}, liquidation ${money(liq, market.base === "WIF" ? 3 : 2)}, stress ${money(stress.nextPrice, market.base === "WIF" ? 3 : 2)}">
       <span class="danger-zone" style="left:${Math.min(currentLeft, liqLeft)}%; width:${Math.abs(currentLeft - liqLeft)}%"></span>
       <i class="marker current" style="left:${currentLeft}%"><b>mark</b></i>
       <i class="marker liquidation" style="left:${liqLeft}%"><b>liq</b></i>
@@ -300,7 +320,7 @@ function impactBar(label, value, max) {
   const width = clamp((value / max) * 100, 4, 100);
   const tone = value > max * 0.65 ? "danger" : value > max * 0.35 ? "warning" : "good";
   return `
-    <div class="impact-row">
+    <div class="impact-row" aria-label="${esc(label)} impact ${value.toFixed(1)} basis points">
       <span>${esc(label)}</span>
       <i><b class="${tone}" style="width:${width}%"></b></i>
       <strong>${value.toFixed(1)}</strong>
@@ -321,10 +341,31 @@ function sparkline(points, tone) {
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(" ");
   return `
-    <svg class="spark ${tone}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${tone} sparkline">
+    <svg class="spark ${tone}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${tone} sparkline from ${money(min, 2)} to ${money(max, 2)}">
       <polyline points="${path}" />
     </svg>
   `;
+}
+
+function sourceStrip(snapshot) {
+  const source = snapshot.source || {};
+  const commands = Array.isArray(source.commandSet) ? source.commandSet.length : 0;
+  const chips = [
+    source.label || "decoded snapshot",
+    source.mode || "read-only",
+    commands ? `${commands} cli commands` : `${snapshot.markets.length} markets`
+  ];
+  return `
+    <div class="source-strip" aria-label="Snapshot provenance">
+      ${chips.map((chip) => `<span>${esc(chip)}</span>`).join("")}
+    </div>
+  `;
+}
+
+function shapeLabel(shape) {
+  if (shape === "percolator-cli-bundle") return "cli bundle";
+  if (shape === "perpscope-snapshot") return "snapshot";
+  return "market import";
 }
 
 function toneClass(status) {

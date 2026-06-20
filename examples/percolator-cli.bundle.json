@@ -1,0 +1,138 @@
+{
+  "label": "Percolator CLI command bundle",
+  "cluster": "local fixture",
+  "market": {
+    "symbol": "SOL-PERP",
+    "base": "SOL",
+    "quote": "USDC",
+    "slab": "PERCOLAT_SOL_8k4q...Qp2",
+    "program": "Perco1ator111111111111111111111111111111111"
+  },
+  "engine": {
+    "openInterestUsd": 2430000,
+    "longOpenInterestUsd": 1320000,
+    "shortOpenInterestUsd": 1110000,
+    "insuranceUsd": 148000,
+    "vaultUsd": 910000,
+    "claimUsd": 821000
+  },
+  "account": {
+    "label": "Demo trader",
+    "side": "long",
+    "positionSize": 420,
+    "positionNotionalUsd": 76276.2,
+    "collateralUsd": 8400,
+    "unrealizedPnlUsd": 3067.2,
+    "realizedPnlUsd": 540.8,
+    "fundingPnlUsd": -32.4,
+    "liquidationPrice": 162.94,
+    "pnlPath": [620, 880, 540, 1320, 1940, 2430, 2260, 2870, 3067]
+  },
+  "commands": [
+    {
+      "command": "slab:get",
+      "output": {
+        "slab": "PERCOLAT_SOL_8k4q...Qp2",
+        "dataLen": 524800,
+        "header": {
+          "magic": "50455243",
+          "version": 16,
+          "bump": 254,
+          "admin": "A3Mu2nQd...MrCK",
+          "nonce": "1181049",
+          "matCounter": "238",
+          "insuranceAuthority": "InsAuth111...7cV",
+          "insuranceOperator": "InsOper111...5Yq"
+        },
+        "config": {
+          "collateralMint": "USDC111111111111111111111111111111111111",
+          "vault": "Vault1111111111111111111111111111111111",
+          "indexFeedId": "PythSOL11111111111111111111111111111111",
+          "maxStalenessSecs": "8",
+          "confFilterBps": 45,
+          "vaultAuthorityBump": 252,
+          "invert": 0,
+          "unitScale": 6
+        }
+      }
+    },
+    {
+      "command": "slab:params",
+      "output": {
+        "maintenanceMarginBps": "500",
+        "initialMarginBps": "820",
+        "tradingFeeBps": "5",
+        "maxAccounts": "4096",
+        "liquidationFeeBps": "35",
+        "maxAbsFundingE9PerSlot": "2400",
+        "maxPriceMoveBpsPerSlot": "80"
+      }
+    },
+    {
+      "command": "slab:engine",
+      "output": {
+        "vault": "910000",
+        "insuranceFund": {
+          "balance": "148000"
+        },
+        "currentSlot": "346892110",
+        "marketMode": 0,
+        "cTot": "910000",
+        "pnlPosTot": "3067",
+        "pnlMaturedPosTot": "540",
+        "stressConsumedBpsE9SinceEnvelope": "118000000000",
+        "oiEffLongQ": "1320000",
+        "oiEffShortQ": "1110000",
+        "sideModeLong": 0,
+        "sideModeShort": 0,
+        "materializedAccountCount": "71",
+        "negPnlAccountCount": "9",
+        "lastOraclePrice": "181610000",
+        "lastMarketSlot": "346892086",
+        "fLongNum": "18420312",
+        "fShortNum": "18419803",
+        "numUsedAccounts": 72
+      }
+    },
+    {
+      "command": "best-price",
+      "output": {
+        "oracle": {
+          "price": "181610000",
+          "priceUsd": 181.61,
+          "decimals": 6,
+          "timestamp": 1781986800,
+          "ageSecs": 2,
+          "stale": false
+        },
+        "bestBuy": {
+          "lpIndex": 12,
+          "matcherKind": "vAMM",
+          "price": "181710000",
+          "priceUsd": 181.71
+        },
+        "bestSell": {
+          "lpIndex": 4,
+          "matcherKind": "passive",
+          "price": "181520000",
+          "priceUsd": 181.52
+        },
+        "effectiveSpreadBps": 10
+      }
+    },
+    {
+      "command": "slab:account",
+      "output": {
+        "idx": 7,
+        "kind": "User",
+        "owner": "Demo11111111111111111111111111111111111",
+        "capital": "8400",
+        "pnl": "3067",
+        "reservedPnl": "541",
+        "positionBasisQ": "420",
+        "fSnap": "18420010",
+        "lastFeeSlot": "346891920"
+      }
+    }
+  ]
+}
