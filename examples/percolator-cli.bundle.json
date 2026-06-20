@@ -1,5 +1,5 @@
 {
-  "label": "Percolator CLI command bundle",
+  "label": "Percolator CLI demo",
   "cluster": "local fixture",
   "market": {
     "symbol": "SOL-PERP",
@@ -132,6 +132,37 @@
         "positionBasisQ": "420",
         "fSnap": "18420010",
         "lastFeeSlot": "346891920"
+      }
+    },
+    {
+      "command": "slab:accounts",
+      "output": [
+        {
+          "idx": 7,
+          "kind": "User",
+          "owner": "Demo11111111111111111111111111111111111",
+          "capital": "8400",
+          "pnl": "3067",
+          "positionBasisQ": "420",
+          "stale": false
+        },
+        {
+          "idx": 39,
+          "kind": "User",
+          "owner": "Catchup11111111111111111111111111111111",
+          "capital": "1250",
+          "pnl": "-94",
+          "positionBasisQ": "-18",
+          "stale": true
+        }
+      ]
+    },
+    {
+      "command": "slab:bitmap",
+      "output": {
+        "numUsed": 72,
+        "maxAccounts": 4096,
+        "usedIndices": [1, 4, 7, 12, 18]
       }
     }
   ]

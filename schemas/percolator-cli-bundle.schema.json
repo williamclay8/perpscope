@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://williamclay8.github.io/perpscope/schemas/percolator-cli-bundle.schema.json",
+  "title": "Percolator CLI Bundle",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "label": { "type": "string" },
+    "cluster": { "type": "string" },
+    "market": { "type": "object" },
+    "command": {
+      "type": "string",
+      "enum": [
+        "list-markets",
+        "slab:get",
+        "slab:params",
+        "slab:engine",
+        "slab:account",
+        "slab:accounts",
+        "slab:bitmap",
+        "best-price"
+      ]
+    },
+    "output": {},
+    "stdout": { "type": "string" },
+    "stdoutText": { "type": "string" },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["command"],
+        "additionalProperties": true,
+        "properties": {
+          "command": { "$ref": "#/properties/command" },
+          "output": {},
+          "data": {},
+          "result": {},
+          "stdout": { "type": "string" },
+          "stdoutText": { "type": "string" }
+        }
+      }
+    }
+  },
+  "anyOf": [
+    { "required": ["commands"] },
+    { "required": ["command"] },
+    { "required": ["market"] }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "label": "Captured list-markets stdout",
+  "cluster": "local fixture",
+  "command": "list-markets",
+  "stdoutText": "\u001b[36m[INFO]\u001b[0m loading Percolator markets\n[{\"symbol\":\"SOL-PERP\",\"base\":\"SOL\",\"quote\":\"USDC\",\"slab\":\"PERCOLAT_SOL_8k4q...Qp2\",\"program\":\"Perco1ator111111111111111111111111111111111\",\"priceUsd\":181.61,\"openInterestUsd\":2430000},{\"symbol\":\"BTC-PERP\",\"base\":\"BTC\",\"quote\":\"USDC\",\"slab\":\"PERCOLAT_BTC_Aw71...Tq9\",\"program\":\"Perco1ator111111111111111111111111111111111\",\"priceUsd\":64240.8,\"openInterestUsd\":4180000},{\"symbol\":\"WIF-PERP\",\"base\":\"WIF\",\"quote\":\"USDC\",\"slab\":\"PERCOLAT_WIF_Ce22...Lp8\",\"program\":\"Perco1ator111111111111111111111111111111111\",\"priceUsd\":2.084,\"openInterestUsd\":620000}]\n[INFO] done"
+}

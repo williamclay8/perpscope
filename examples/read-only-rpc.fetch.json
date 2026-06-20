@@ -1,0 +1,85 @@
+{
+  "label": "Read-only RPC slab fixture",
+  "cluster": "local fixture",
+  "slab": "PERCOLAT_SOL_8k4q...Qp2",
+  "programId": "Perco1ator111111111111111111111111111111111",
+  "currentSlot": 346892118,
+  "market": {
+    "symbol": "SOL-PERP",
+    "base": "SOL",
+    "quote": "USDC"
+  },
+  "account": {
+    "owner": "Perco1ator111111111111111111111111111111111",
+    "dataLength": 524800,
+    "magic": "50455243",
+    "decoded": {
+      "header": {
+        "magic": "50455243",
+        "version": 16,
+        "nonce": "1181049"
+      },
+      "config": {
+        "maxStalenessSecs": 8,
+        "confFilterBps": 45,
+        "unitScale": 6
+      },
+      "params": {
+        "maintenanceMarginBps": 500,
+        "initialMarginBps": 820,
+        "maxAccounts": 4096,
+        "liquidationFeeBps": 35
+      },
+      "engine": {
+        "currentSlot": 346892118,
+        "lastMarketSlot": 346892090,
+        "openInterestUsd": 2430000,
+        "longOpenInterestUsd": 1320000,
+        "shortOpenInterestUsd": 1110000,
+        "insuranceUsd": 148000,
+        "vaultUsd": 910000,
+        "claimUsd": 821000,
+        "stressConsumedBps": 118,
+        "stressLimitBps": 500
+      },
+      "bestPrice": {
+        "oracle": {
+          "price": "181610000",
+          "decimals": 6,
+          "ageSecs": 2
+        },
+        "bestBuy": {
+          "price": "181710000",
+          "decimals": 6
+        },
+        "bestSell": {
+          "price": "181520000",
+          "decimals": 6
+        },
+        "effectiveSpreadBps": 10
+      },
+      "accountUsd": {
+        "label": "RPC observer",
+        "side": "long",
+        "positionSize": 420,
+        "positionNotionalUsd": 76276.2,
+        "collateralUsd": 8400,
+        "unrealizedPnlUsd": 3067.2,
+        "realizedPnlUsd": 540.8,
+        "fundingPnlUsd": -32.4,
+        "liquidationPrice": 162.94
+      },
+      "accounts": {
+        "rows": [
+          { "idx": 7, "kind": "User", "stale": false },
+          { "idx": 39, "kind": "User", "stale": true }
+        ]
+      },
+      "bitmap": {
+        "numUsed": 72,
+        "maxAccounts": 4096,
+        "usedIndices": [1, 4, 7, 12, 18]
+      }
+    }
+  }
+}

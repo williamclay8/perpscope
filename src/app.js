@@ -6,6 +6,8 @@ import {
   simulatePriceShock
 } from "./lib/percolator-adapter.js";
 
+export const DEMO_CLI_PATH = "./examples/percolator-cli.bundle.json";
+
 const state = {
   snapshot: normalizePercolatorSnapshot(percolatorFixture),
   selectedMarketId: "sol-perp",
@@ -17,9 +19,9 @@ const state = {
   }
 };
 
-const app = document.querySelector("#app");
+const app = typeof document === "undefined" ? null : document.querySelector("#app");
 
-render();
+if (app) render();
 
 function render() {
   const market = selectedMarket();
@@ -159,9 +161,10 @@ function render() {
                 <strong>${esc(state.importStatus.label)}</strong>
               </div>
               <div class="import-actions">
-                <button class="utility-button" id="import-json" type="button">Import JSON</button>
+                <button class="utility-button" id="try-cli" type="button">Try CLI</button>
+                <button class="utility-button ghost" id="import-json" type="button">Import</button>
                 <button class="utility-button ghost" id="reset-fixture" type="button">Reset</button>
-                <input id="json-file" type="file" accept="application/json,.json" hidden />
+                <input id="json-file" type="file" accept="application/json,text/plain,.json,.txt,.log" hidden />
               </div>
             </div>
             ${sourceStrip(state.snapshot)}
@@ -197,6 +200,7 @@ function render() {
 
   const fileInput = app.querySelector("#json-file");
   app.querySelector("#import-json").addEventListener("click", () => fileInput.click());
+  app.querySelector("#try-cli").addEventListener("click", loadCliDemo);
   fileInput.addEventListener("change", async (event) => {
     const [file] = event.target.files || [];
     if (file) await importJsonFile(file);
@@ -248,19 +252,9 @@ function marketButton(market) {
 async function importJsonFile(file) {
   try {
     const imported = parsePercolatorJson(await file.text());
-    const shape = detectPercolatorInputShape(imported);
-    const snapshot = normalizePercolatorSnapshot(imported);
-    if (!snapshot.markets.length) {
-      throw new Error("No markets found.");
-    }
-    state.snapshot = snapshot;
-    state.selectedMarketId = snapshot.markets[0].id;
-    state.shockPct = -3;
-    state.importStatus = {
-      tone: "good",
-      label: `${snapshot.markets.length} ${shapeLabel(shape)}`,
-      detail: `${file.name}: ${snapshot.markets.length} market import`
-    };
+    loadImportedSnapshot(imported, {
+      detailPrefix: file.name
+    });
   } catch (error) {
     state.importStatus = {
       tone: "danger",
@@ -269,6 +263,52 @@ async function importJsonFile(file) {
     };
   }
   render();
+}
+
+async function loadCliDemo() {
+  try {
+    const imported = await fetchCliDemoSnapshot(fetch);
+    loadImportedSnapshot(imported, {
+      label: "demo cli loaded",
+      detailPrefix: DEMO_CLI_PATH.replace(/^\.\//, "")
+    });
+  } catch (error) {
+    state.importStatus = {
+      tone: "danger",
+      label: error.message.slice(0, 44),
+      detail: error.message
+    };
+  }
+  render();
+}
+
+export async function fetchCliDemoSnapshot(fetcher) {
+  const response = await fetcher(DEMO_CLI_PATH);
+  if (!response.ok) throw new Error("CLI demo fixture unavailable.");
+  return parsePercolatorJson(await response.text());
+}
+
+export function createImportedSnapshotState(imported, options = {}) {
+  const shape = detectPercolatorInputShape(imported);
+  const snapshot = normalizePercolatorSnapshot(imported);
+  if (!snapshot.markets.length) {
+    throw new Error("No markets found.");
+  }
+  const commandCount = Array.isArray(snapshot.source?.commandSet) ? snapshot.source.commandSet.length : 0;
+  return {
+    snapshot,
+    selectedMarketId: snapshot.markets[0].id,
+    shockPct: -3,
+    importStatus: {
+      tone: "good",
+      label: options.label || `${snapshot.markets.length} ${shapeLabel(shape)}`,
+      detail: `${options.detailPrefix || "import"}: ${snapshot.markets.length} market import${commandCount ? `, ${commandCount} commands` : ""}`
+    }
+  };
+}
+
+function loadImportedSnapshot(imported, options = {}) {
+  Object.assign(state, createImportedSnapshotState(imported, options));
 }
 
 function gauge(score, status) {

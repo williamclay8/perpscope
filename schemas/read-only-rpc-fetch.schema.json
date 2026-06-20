@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://williamclay8.github.io/perpscope/schemas/read-only-rpc-fetch.schema.json",
+  "title": "PerpScope Read-Only RPC Fetch Fixture",
+  "type": "object",
+  "required": ["slab", "programId", "account"],
+  "additionalProperties": true,
+  "properties": {
+    "label": { "type": "string" },
+    "cluster": { "type": "string" },
+    "slab": { "type": "string" },
+    "programId": { "type": "string" },
+    "currentSlot": { "type": "number" },
+    "market": { "type": "object" },
+    "account": {
+      "type": "object",
+      "required": ["owner", "dataLength", "magic", "decoded"],
+      "additionalProperties": true,
+      "properties": {
+        "owner": { "type": "string" },
+        "dataLength": { "type": "number", "minimum": 128 },
+        "magic": { "type": "string", "pattern": "^(0x)?50455243$" },
+        "decoded": {
+          "type": "object",
+          "required": ["header", "config"],
+          "additionalProperties": true,
+          "properties": {
+            "header": { "type": "object" },
+            "config": { "type": "object" },
+            "params": { "type": "object" },
+            "engine": { "type": "object" },
+            "bestPrice": { "type": "object" },
+            "accountUsd": { "type": "object" },
+            "accounts": {},
+            "bitmap": { "type": "object" }
+          }
+        }
+      }
+    }
+  },
+  "not": {
+    "anyOf": [
+      { "required": ["wallet"] },
+      { "required": ["signer"] },
+      { "required": ["transaction"] },
+      { "required": ["instruction"] },
+      { "required": ["order"] }
+    ]
+  }
+}

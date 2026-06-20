@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { normalizePercolatorSnapshot } from "../src/lib/percolator-adapter.js";
 import { percolatorFixture } from "../src/fixtures/percolator-market.js";
 
@@ -6,6 +6,8 @@ const css = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const js = readFileSync(new URL("../src/app.js", import.meta.url), "utf8");
 const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+const schemaDir = new URL("../schemas/", import.meta.url);
+const exampleDir = new URL("../examples/", import.meta.url);
 
 const failures = [];
 
@@ -41,6 +43,10 @@ if (!/aria-pressed=/.test(js)) {
   failures.push("Market selector should expose selected state to assistive tech.");
 }
 
+if (!/id="try-cli"/.test(js)) {
+  failures.push("Cockpit should expose the low-friction CLI demo loader.");
+}
+
 const dto = normalizePercolatorSnapshot(percolatorFixture);
 if (dto.markets.length < 3) {
   failures.push("Fixture should expose at least three markets for the cockpit.");
@@ -56,6 +62,32 @@ for (const match of readme.matchAll(/!\[([^\]]*)\]\(([^)]+)\)/g)) {
   }
   if (!existsSync(new URL(`../${match[2]}`, import.meta.url))) {
     failures.push(`README image is missing: ${match[2]}`);
+  }
+}
+
+for (const filename of readdirSync(schemaDir).filter((name) => name.endsWith(".json"))) {
+  try {
+    JSON.parse(readFileSync(new URL(filename, schemaDir), "utf8"));
+  } catch (error) {
+    failures.push(`Schema JSON should parse: ${filename} (${error.message})`);
+  }
+}
+
+for (const filename of readdirSync(exampleDir).filter((name) => name.endsWith(".json"))) {
+  try {
+    JSON.parse(readFileSync(new URL(filename, exampleDir), "utf8"));
+  } catch (error) {
+    failures.push(`Example JSON should parse: ${filename} (${error.message})`);
+  }
+}
+
+for (const schema of [
+  "schemas/perpscope-snapshot.schema.json",
+  "schemas/percolator-cli-bundle.schema.json",
+  "schemas/read-only-rpc-fetch.schema.json"
+]) {
+  if (!readme.includes(schema)) {
+    failures.push(`README should link ${schema}.`);
   }
 }
 

@@ -8,6 +8,8 @@ It is built around a simple idea: traders should understand market health, liqui
 
 ![PerpScope healthy-to-risk demo](docs/screenshots/perpscope-demo.gif)
 
+![PerpScope CLI adapter demo](docs/screenshots/perpscope-adapter.png)
+
 ![PerpScope mobile cockpit](docs/screenshots/perpscope-mobile.png)
 
 ## Why This Exists
@@ -32,13 +34,15 @@ Then open the printed local URL.
 npm run check
 ```
 
-## Try JSON Import
+## Try Imports
 
-Open the cockpit and use `Import JSON`, or drag this example into the adapter dock:
+Open the cockpit and use `Try CLI` for the bundled Percolator command demo. You can also use `Import`, or drag JSON/captured stdout into the adapter dock:
 
 ```text
 examples/decoded-slab.snapshot.json
 examples/percolator-cli.bundle.json
+examples/percolator-list-markets.stdout.json
+examples/read-only-rpc.fetch.json
 ```
 
 The import path accepts full PerpScope snapshots shaped as:
@@ -64,21 +68,36 @@ The import path accepts full PerpScope snapshots shaped as:
 
 Snapshots containing wallet, keypair, seed, mnemonic, private, or secret-looking fields are rejected before rendering.
 
-It also accepts Percolator CLI command bundles shaped as:
+It also accepts Percolator CLI command bundles and captured stdout shaped as:
 
 ```js
 {
-  label: "Percolator CLI command bundle",
+  label: "Percolator CLI demo",
   cluster: "mainnet-beta",
   market: { symbol, base, quote, slab, program },
   commands: [
+    { command: "list-markets", output },
     { command: "slab:get", output },
     { command: "slab:params", output },
     { command: "slab:engine", output },
     { command: "best-price", output },
-    { command: "slab:account", output }
+    { command: "slab:account", output },
+    { command: "slab:accounts", output },
+    { command: "slab:bitmap", output }
   ]
 }
+```
+
+Captured `stdout`, `stdoutText`, `output`, `data`, and `result` fields are parsed through the same read-only path. Raw protocol integer fields such as `capital`, `pnl`, `positionBasisQ`, `vault`, or unscaled `price` are not displayed as USD unless the input uses explicit USD fields like `collateralUsd`, `unrealizedPnlUsd`, `vaultUsd`, `priceUsd`, or includes price decimals.
+
+## Schemas
+
+Published JSON schema contracts live in:
+
+```text
+schemas/perpscope-snapshot.schema.json
+schemas/percolator-cli-bundle.schema.json
+schemas/read-only-rpc-fetch.schema.json
 ```
 
 ## Terminal Builder Quickstart
@@ -96,7 +115,19 @@ const market = snapshot.markets[0];
 const stress = simulatePriceShock(market, -5);
 ```
 
-Use the normalized DTO to render your own terminal modules without coupling the terminal UI to raw Percolator CLI output. Today the adapter understands PerpScope snapshots plus read-only bundles from `slab:get`, `slab:params`, `slab:engine`, `best-price`, and `slab:account`.
+Use the normalized DTO to render your own terminal modules without coupling the terminal UI to raw Percolator CLI output. Today the adapter understands PerpScope snapshots plus captured stdout and read-only bundles from `list-markets`, `slab:get`, `slab:params`, `slab:engine`, `best-price`, `slab:account`, `slab:accounts`, and `slab:bitmap`.
+
+## Read-Only RPC Fetcher
+
+The RPC helper is intentionally injectable and read-only. It validates owner, data length, magic bytes, and mutating field names, then converts decoded account data through the same adapter:
+
+```js
+import { buildReadOnlyRpcSnapshot } from "./src/lib/read-only-rpc-fetcher.js";
+
+const snapshot = buildReadOnlyRpcSnapshot(decodedFixture);
+```
+
+`fetchReadOnlyRpcSnapshot(request, client)` accepts a client with `getAccountInfo()`. It does not create wallets, sign, send, route, or place orders.
 
 ## Adapter API
 
@@ -124,8 +155,10 @@ The normalized market DTO includes:
 ## Product Surface
 
 - `src/lib/percolator-adapter.js` normalizes Percolator-like slab, oracle, crank, funding, insurance, account, and execution data into terminal-ready DTOs.
+- `src/lib/read-only-rpc-fetcher.js` validates read-only RPC slab fixtures and injected account fetches.
 - `src/fixtures/percolator-market.js` contains sample decoded market/account state.
 - `src/app.js` renders the read-only cockpit.
+- `schemas/` contains the public input contracts.
 - `test/percolator-adapter.test.js` covers adapter safety and risk math.
 
 ## Design Principles
@@ -156,7 +189,7 @@ Current public site: [williamclay8.github.io/perpscope](https://williamclay8.git
 
 ## Roadmap
 
-- Read-only RPC fetcher with owner/data-length/magic validation.
 - Execution-quality receipt timeline.
 - Funding/skew history with source-aware candles.
+- Live RPC adapter examples for selected Percolator deployments.
 - Builder package split for `@perpscope/percolator`.

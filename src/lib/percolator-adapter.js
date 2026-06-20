@@ -4,7 +4,7 @@ export function assertReadOnlySnapshot(value, path = "snapshot") {
   if (!value || typeof value !== "object") return;
   for (const [key, child] of Object.entries(value)) {
     const nextPath = `${path}.${key}`;
-    if (KEYPAIR_FIELD_PATTERN.test(key)) {
+    if (KEYPAIR_FIELD_PATTERN.test(key) || /secret|private|keypair|mnemonic|seed|walletpath|wallet/.test(normalizeKey(key))) {
       throw new Error(`Refusing secret-bearing field in read-only snapshot: ${nextPath}`);
     }
     if (child && typeof child === "object") {
@@ -15,8 +15,9 @@ export function assertReadOnlySnapshot(value, path = "snapshot") {
 
 export function detectPercolatorInputShape(input) {
   if (!input || typeof input !== "object") return "unknown";
-  if (Array.isArray(input.markets)) return "perpscope-snapshot";
+  if (Array.isArray(input)) return "percolator-market-array";
   if (Array.isArray(input.commands) || input.command || hasCliSections(input)) return "percolator-cli-bundle";
+  if (Array.isArray(input.markets)) return "perpscope-snapshot";
   return "unknown";
 }
 
@@ -58,13 +59,6 @@ function coercePercolatorSnapshot(input) {
     return { source: { label: "empty input", mode: "read-only" }, markets: [] };
   }
 
-  if (Array.isArray(input.markets)) {
-    return {
-      ...input,
-      markets: input.markets.map((market) => coercePercolatorMarket(market, input.currentSlot))
-    };
-  }
-
   if (Array.isArray(input)) {
     return {
       source: { label: "market array", mode: "read-only" },
@@ -76,6 +70,13 @@ function coercePercolatorSnapshot(input) {
 
   if (detectPercolatorInputShape(input) === "percolator-cli-bundle") {
     return coercePercolatorCliBundle(input);
+  }
+
+  if (Array.isArray(input.markets)) {
+    return {
+      ...input,
+      markets: input.markets.map((market) => coercePercolatorMarket(market, input.currentSlot))
+    };
   }
 
   return {
@@ -107,7 +108,7 @@ function coercePercolatorCliBundle(bundle) {
     maybeNumberOf(scope, ["currentSlot", "slot", "current_slot"]),
     maybeNumberOf(engineScope, ["currentSlot", "current_slot"])
   );
-  const market = coerceCliMarket(scope, currentSlot);
+  const markets = marketListOf(scope);
   return {
     source: {
       label: stringOf(scope, ["label", "sourceLabel"], "Percolator CLI bundle"),
@@ -116,7 +117,9 @@ function coercePercolatorCliBundle(bundle) {
     },
     cluster: stringOf(scope, ["cluster", "network"], "unknown"),
     currentSlot,
-    markets: [market]
+    markets: markets.length
+      ? markets.map((market, index) => coerceCliMarket(scopedMarket(scope, market, index), currentSlot))
+      : [coerceCliMarket(scope, currentSlot)]
   };
 }
 
@@ -124,16 +127,21 @@ function coerceCliMarket(scope, currentSlot) {
   const marketInfo = objectOf(scope, ["market", "marketInfo", "metadata", "instrument"], scope);
   const header = objectOf(scope, ["slabHeader", "slab:header", "header"], {});
   const config = objectOf(scope, ["slabConfig", "slab:config", "config", "marketConfig"], {});
+  const accountRows = valueOf(scope, ["accounts", "positions"]);
+  const accountStats = summarizeAccounts(accountRows);
+  const bitmapStats = summarizeBitmap(objectOf(scope, ["bitmap", "slabBitmap", "slab:bitmap"], {}));
   const engine = {
     ...objectOf(scope, ["engine", "state", "riskState"], {}),
-    ...objectOf(scope, ["slabEngine", "slab:engine"], {})
+    ...objectOf(scope, ["slabEngine", "slab:engine"], {}),
+    ...accountStats,
+    ...bitmapStats
   };
   const oracle = objectOf(scope, ["oracle", "price", "prices", "oraclePrice"], {});
   const book = objectOf(scope, ["bestPrice", "best-price", "best_price", "book", "orderbook", "quote"], {});
   const execution = objectOf(scope, ["execution", "executionQuality"], {});
   const account = {
-    ...firstItem(valueOf(scope, ["account", "position", "traderAccount"])),
-    ...firstItem(valueOf(scope, ["accounts", "positions"]))
+    ...firstItem(accountRows),
+    ...firstItem(valueOf(scope, ["account", "position", "traderAccount"]))
   };
   const bestBuy = objectOf(book, ["bestBuy", "best_buy"], objectOf(scope, ["bestBuy", "best_buy"], {}));
   const bestSell = objectOf(book, ["bestSell", "best_sell"], objectOf(scope, ["bestSell", "best_sell"], {}));
@@ -143,28 +151,28 @@ function coerceCliMarket(scope, currentSlot) {
   const base = stringOf(marketInfo, ["base", "baseSymbol", "baseAsset"], parsed.base);
   const quote = stringOf(marketInfo, ["quote", "quoteSymbol", "quoteAsset"], parsed.quote);
   const markPrice = firstNumber(
-    maybeNumberOf(oracle, ["markPrice", "mark", "priceUsd", "oraclePriceUsd", "price"]),
-    maybeNumberOf(book, ["markPrice", "mark", "midPrice", "mid", "priceUsd"]),
-    maybeNumberOf(engine, ["lastOraclePriceUsd", "resolvedPriceUsd"]),
-    maybeNumberOf(marketInfo, ["markPrice", "priceUsd", "price"])
+    priceNumberOf(oracle, ["markPrice", "mark", "priceUsd", "oraclePriceUsd"], ["price", "oraclePrice"]),
+    priceNumberOf(book, ["markPrice", "mark", "midPrice", "mid", "priceUsd"], ["price"]),
+    priceNumberOf(engine, ["lastOraclePriceUsd", "resolvedPriceUsd"], ["lastOraclePrice", "resolvedPrice"]),
+    priceNumberOf(marketInfo, ["markPrice", "priceUsd"], ["price"])
   );
   const indexPrice = firstNumber(
-    maybeNumberOf(oracle, ["indexPrice", "index", "oraclePriceUsd", "priceUsd", "oraclePrice"]),
-    maybeNumberOf(book, ["indexPrice", "oraclePriceUsd", "oraclePrice"]),
+    priceNumberOf(oracle, ["indexPrice", "index", "oraclePriceUsd", "priceUsd"], ["oraclePrice", "price"]),
+    priceNumberOf(book, ["indexPrice", "oraclePriceUsd"], ["oraclePrice", "price"]),
     markPrice
   );
   const bestBid = firstNumber(
-    maybeNumberOf(book, ["bestBid", "bid", "best_bid"]),
-    maybeNumberOf(execution, ["bestBid"]),
-    maybeNumberOf(bestSell, ["priceUsd", "price"])
+    priceNumberOf(book, ["bestBid", "bid", "best_bid"], []),
+    priceNumberOf(execution, ["bestBid"], []),
+    priceNumberOf(bestSell, ["priceUsd"], ["price"])
   );
   const bestAsk = firstNumber(
-    maybeNumberOf(book, ["bestAsk", "ask", "best_ask"]),
-    maybeNumberOf(execution, ["bestAsk"]),
-    maybeNumberOf(bestBuy, ["priceUsd", "price"])
+    priceNumberOf(book, ["bestAsk", "ask", "best_ask"], []),
+    priceNumberOf(execution, ["bestAsk"], []),
+    priceNumberOf(bestBuy, ["priceUsd"], ["price"])
   );
   const spreadFallback = markPrice ? markPrice * 0.0008 : 0;
-  const positionSize = numberOf(account, ["positionSize", "basePosition", "positionBasisQ", "size", "position"], 0);
+  const positionSize = numberOf(account, ["positionSize", "basePosition", "positionSizeBase", "size", "position"], 0);
   const side = stringOf(account, ["side"], positionSize < 0 ? "short" : positionSize > 0 ? "long" : "flat");
   const positionNotionalUsd = firstNumber(
     maybeNumberOf(account, ["positionNotionalUsd", "notionalUsd", "notional"]),
@@ -235,7 +243,7 @@ function coerceCliMarket(scope, currentSlot) {
     oracle: {
       indexPrice,
       markPrice,
-      effectivePrice: firstNumber(maybeNumberOf(oracle, ["effectivePrice", "effectivePriceUsd"]), markPrice),
+      effectivePrice: firstNumber(priceNumberOf(oracle, ["effectivePrice", "effectivePriceUsd"], []), markPrice),
       confidenceBps: numberOf(oracle, ["confidenceBps", "confidence_bps", "confBps"], 0),
       publishAgeSec: numberOf(oracle, ["publishAgeSec", "ageSecs", "ageSec", "age"], 0),
       pricePath: arrayOf(oracle, ["pricePath", "path", "history"], [indexPrice, markPrice]),
@@ -245,7 +253,16 @@ function coerceCliMarket(scope, currentSlot) {
       lastCrankSlot,
       crankAgeSlots,
       catchupRequired: Boolean(valueOf(engine, ["catchupRequired", "catchup_required"])),
-      staleAccounts: numberOf(engine, ["staleAccounts", "stale_accounts"], 0),
+      staleAccounts: numberOf(engine, ["staleAccounts", "stale_accounts", "staleAccountCount"], 0),
+      activeAccounts: firstNumber(
+        maybeNumberOf(engine, ["activeAccounts", "active_accounts", "materializedAccountCount"]),
+        maybeNumberOf(engine, ["numUsedAccounts", "numUsed", "usedAccounts"])
+      ),
+      maxAccounts: firstNumber(
+        maybeNumberOf(engine, ["maxAccounts", "max_accounts"]),
+        maybeNumberOf(params, ["maxAccounts", "max_accounts"]),
+        maybeNumberOf(config, ["maxAccounts", "max_accounts"])
+      ),
       fundingRateBpsPerHour: numberOf(engine, ["fundingRateBpsPerHour", "funding_bps_per_hour", "fundingRate"], 0),
       fundingIndex: valueOf(engine, ["fundingIndex", "funding_index"]) || "0",
       openInterestUsd,
@@ -254,7 +271,7 @@ function coerceCliMarket(scope, currentSlot) {
       stressConsumedBps,
       stressLimitBps: numberOf(engine, ["stressLimitBps", "stress_limit_bps"], 500),
       insuranceUsd,
-      vaultUsd: numberOf(engine, ["vaultUsd", "vault_usd", "vault"], 0),
+      vaultUsd: numberOf(engine, ["vaultUsd", "vault_usd"], 0),
       claimUsd: numberOf(engine, ["claimUsd", "claim_usd"], 0),
       socialLossUsd: numberOf(engine, ["socialLossUsd", "social_loss_usd"], 0),
       sideMode: stringOf(engine, ["sideMode", "side_mode"], "unknown")
@@ -371,7 +388,9 @@ export function toTerminalMarketDto(market, currentSlot = 0) {
       ageSlots: number(engine.crankAgeSlots),
       freshnessScore: crankFreshness,
       catchupRequired: Boolean(engine.catchupRequired),
-      staleAccounts: number(engine.staleAccounts)
+      staleAccounts: number(engine.staleAccounts),
+      activeAccounts: number(engine.activeAccounts),
+      maxAccounts: number(engine.maxAccounts)
     },
     funding: {
       bpsPerHour: number(engine.fundingRateBpsPerHour),
@@ -525,19 +544,32 @@ function collectCliSections(input) {
   const sections = {
     market: input?.market,
     engine: input?.engine,
-    account: input?.account
+    account: input?.account,
+    accounts: input?.accounts,
+    bitmap: input?.bitmap
   };
   if (!input || typeof input !== "object") return sections;
 
-  if (input.command && input.output) {
-    sections[input.command] = input.output;
-    mergeCompositeCliOutput(sections, input.output);
+  if (
+    input.command &&
+    (
+      input.output !== undefined ||
+      input.data !== undefined ||
+      input.result !== undefined ||
+      input.stdout !== undefined ||
+      input.stdoutText !== undefined
+    )
+  ) {
+    const output = cliOutputOf(input);
+    sections[input.command] = output;
+    mergeNamedCliOutput(sections, input.command, output);
+    mergeCompositeCliOutput(sections, output);
   }
 
   for (const entry of input.commands || input.outputs || []) {
     if (!entry || typeof entry !== "object") continue;
     const name = entry.command || entry.name || entry.label || entry.kind;
-    const output = entry.output || entry.data || entry.result || entry;
+    const output = cliOutputOf(entry);
     if (name) sections[name] = output;
     mergeNamedCliOutput(sections, name, output);
     mergeCompositeCliOutput(sections, output);
@@ -551,7 +583,7 @@ function collectCliSections(input) {
 
 function mergeCompositeCliOutput(sections, output) {
   if (!output || typeof output !== "object" || Array.isArray(output)) return;
-  for (const key of ["market", "header", "config", "params", "engine", "oracle", "accounts", "execution"]) {
+  for (const key of ["market", "header", "config", "params", "engine", "oracle", "accounts", "bitmap", "execution"]) {
     if (output[key] && sections[key] === undefined) sections[key] = output[key];
   }
   if (output.slab && sections.market === undefined) sections.market = output;
@@ -573,20 +605,87 @@ function commandNames(input) {
 function mergeNamedCliOutput(sections, name, output) {
   const key = normalizeKey(name || "");
   if (!key || !output || typeof output !== "object") return;
+  if (key === "slabget") {
+    mergeCompositeCliOutput(sections, output);
+    if (!sections.market && !Array.isArray(output)) sections.market = output.market || output;
+  }
   if (key === "slabparams") sections.params = output;
   if (key === "slabengine") sections.engine = { ...(sections.engine || {}), ...output };
   if (key === "slabaccount") sections.account = { ...(sections.account || {}), ...output };
   if (key === "slabaccounts") sections.accounts = output;
+  if (key === "slabbitmap") sections.bitmap = output;
   if (key === "bestprice") sections.bestPrice = output;
   if (key === "listmarkets") sections.markets = output;
 }
 
 function hasCliSections(input) {
   return Object.keys(input || {}).some((key) =>
-    ["slabHeader", "slabConfig", "slabEngine", "bestPrice", "best-price", "marketInfo"].some(
+    ["slabHeader", "slabConfig", "slabEngine", "slabBitmap", "bestPrice", "best-price", "marketInfo"].some(
       (alias) => normalizeKey(alias) === normalizeKey(key)
     )
   );
+}
+
+function marketListOf(scope) {
+  const value = valueOf(scope, ["markets", "listMarkets", "list-markets"]);
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.markets)) return value.markets;
+  if (Array.isArray(value?.items)) return value.items;
+  if (Array.isArray(value?.rows)) return value.rows;
+  if (Array.isArray(value?.accounts)) return value.accounts;
+  return [];
+}
+
+function scopedMarket(scope, market, index) {
+  const inheritedMarket = objectOf(scope, ["market", "marketInfo", "metadata", "instrument"], {});
+  const perMarket = market && typeof market === "object" ? market : { symbol: String(market || `PERP-${index + 1}`) };
+  return {
+    ...scope,
+    ...perMarket,
+    market: {
+      ...inheritedMarket,
+      ...perMarket
+    }
+  };
+}
+
+function summarizeAccounts(value) {
+  const rows = rowsOf(value);
+  const output = {};
+  if (rows.length) output.activeAccounts = rows.length;
+  const staleCount = rows.filter((row) => Boolean(valueOf(row, ["stale", "isStale", "catchupRequired"]))).length;
+  if (staleCount) output.staleAccounts = staleCount;
+  return output;
+}
+
+function summarizeBitmap(bitmap) {
+  if (!bitmap || typeof bitmap !== "object") return {};
+  const output = {};
+  const used = firstDefinedNumber(
+    maybeNumberOf(bitmap, ["numUsed", "numUsedAccounts", "usedAccounts"]),
+    Array.isArray(bitmap.usedIndices) ? bitmap.usedIndices.length : undefined,
+    Array.isArray(bitmap.indices) ? bitmap.indices.length : undefined
+  );
+  const max = firstDefinedNumber(maybeNumberOf(bitmap, ["maxAccounts", "max_accounts", "capacity"]));
+  if (used !== undefined) output.activeAccounts = used;
+  if (max !== undefined) output.maxAccounts = max;
+  return output;
+}
+
+function cliOutputOf(entry) {
+  const value = entry.output ?? entry.data ?? entry.result ?? entry.stdout ?? entry.stdoutText ?? entry.json ?? entry;
+  if (typeof value !== "string") {
+    assertReadOnlySnapshot(value, "cli.output");
+    return value;
+  }
+  let parsed;
+  try {
+    parsed = parsePercolatorJson(value);
+  } catch {
+    return value;
+  }
+  assertReadOnlySnapshot(parsed, "cli.stdout");
+  return parsed;
 }
 
 function objectOf(source, aliases, fallback) {
@@ -618,6 +717,27 @@ function maybeNumberOf(source, aliases) {
   return number(value);
 }
 
+function priceNumberOf(source, usdAliases, rawAliases = []) {
+  for (const alias of usdAliases) {
+    const value = maybeNumberOf(source, [alias]);
+    if (value === undefined) continue;
+    if (normalizeKey(alias).includes("usd")) return value;
+    const decimals = firstDefinedNumber(maybeNumberOf(source, ["decimals", "priceDecimals", "price_decimals"]));
+    if (decimals !== undefined && Math.abs(value) >= 10 ** Math.min(decimals, 4)) {
+      return value / 10 ** decimals;
+    }
+    if (decimals === undefined && Math.abs(value) > 1000000) continue;
+    return value;
+  }
+
+  const raw = firstDefinedNumber(maybeNumberOf(source, rawAliases));
+  if (raw === undefined) return undefined;
+
+  const decimals = firstDefinedNumber(maybeNumberOf(source, ["decimals", "priceDecimals", "price_decimals"]));
+  if (decimals === undefined || decimals < 0 || decimals > 18) return undefined;
+  return raw / 10 ** decimals;
+}
+
 function valueOf(source, aliases, fallback) {
   if (!source || typeof source !== "object") return fallback;
   const entries = Object.entries(source);
@@ -633,8 +753,17 @@ function firstItem(value) {
   if (Array.isArray(value)) return value[0] || {};
   if (value?.items && Array.isArray(value.items)) return value.items[0] || {};
   if (value?.rows && Array.isArray(value.rows)) return value.rows[0] || {};
+  if (value?.accounts && Array.isArray(value.accounts)) return value.accounts[0] || {};
   if (value && typeof value === "object") return value;
   return {};
+}
+
+function rowsOf(value) {
+  if (Array.isArray(value)) return value.filter((item) => item && typeof item === "object");
+  if (Array.isArray(value?.items)) return rowsOf(value.items);
+  if (Array.isArray(value?.rows)) return rowsOf(value.rows);
+  if (Array.isArray(value?.accounts)) return rowsOf(value.accounts);
+  return [];
 }
 
 function firstNumber(...values) {
@@ -646,6 +775,15 @@ function firstNumber(...values) {
   return 0;
 }
 
+function firstDefinedNumber(...values) {
+  for (const value of values) {
+    if (value === undefined || value === null || value === "") continue;
+    const next = number(value);
+    if (Number.isFinite(next)) return next;
+  }
+  return undefined;
+}
+
 function parseSymbol(symbol) {
   const [base = "PERP", quote = "USDC"] = String(symbol)
     .replace(/-?PERP$/i, "")
@@ -655,9 +793,24 @@ function parseSymbol(symbol) {
 }
 
 function extractJsonPayload(source) {
-  const starts = [source.indexOf("{"), source.indexOf("[")].filter((index) => index >= 0);
-  if (!starts.length) return "";
-  const start = Math.min(...starts);
+  const starts = [];
+  for (let index = 0; index < source.length; index += 1) {
+    if (source[index] === "{" || source[index] === "[") starts.push(index);
+  }
+  for (const start of starts) {
+    const payload = balancedJsonPayload(source, start);
+    if (!payload) continue;
+    try {
+      JSON.parse(payload);
+      return payload;
+    } catch {
+      // Keep scanning; captured logs can contain bracketed prefixes before JSON.
+    }
+  }
+  return "";
+}
+
+function balancedJsonPayload(source, start) {
   const opener = source[start];
   const closer = opener === "{" ? "}" : "]";
   let depth = 0;
