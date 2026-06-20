@@ -1,6 +1,6 @@
 {
   "label": "PerpScope terminal adapter recipes",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "recipes": [
     {
       "id": "file-import",
@@ -78,6 +78,16 @@
       "entry": "normalize",
       "export": "PerpScopeTerminalExportV1",
       "provenance": ["source.label", "source.mode", "source.commandSet", "cluster", "currentSlot"]
+    },
+    {
+      "id": "capture-intake",
+      "label": "Capture intake",
+      "fixture": "examples/percolator-cli.bundle.json",
+      "inputShape": "percolator-cli-bundle",
+      "entry": "paste-or-drop",
+      "commands": ["field-map"],
+      "export": "PerpScopeCompatibilityReportV1",
+      "provenance": ["shape", "status", "score", "source.commandSet", "missingFields", "ignoredFields"]
     }
   ],
   "dtoExport": {

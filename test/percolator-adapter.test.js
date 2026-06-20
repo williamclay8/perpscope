@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   assertReadOnlySnapshot,
+  buildPercolatorCompatibilityReport,
   detectPercolatorInputShape,
   normalizePercolatorCliBundle,
   normalizePercolatorSnapshot,
@@ -114,6 +115,91 @@ test("normalizes a CLI bundle directly before terminal DTO conversion", () => {
   assert.equal(snapshot.markets[0].header.version, 16);
   assert.equal(snapshot.markets[0].config.maintenanceMarginBps, 500);
   assert.equal(snapshot.markets[0].oracle.publishAgeSec, 2);
+});
+
+test("builds a compatibility report for Percolator CLI captures", () => {
+  const snapshot = normalizePercolatorSnapshot(cliBundle);
+  const report = buildPercolatorCompatibilityReport(cliBundle, snapshot);
+
+  assert.equal(report.shape, "percolator-cli-bundle");
+  assert.equal(report.status, "partial");
+  assert.equal(report.compatible, false);
+  assert.equal(report.source.commandSet.length, 8);
+  assert.equal(report.summary.marketCount, 1);
+  assert.ok(report.score > 50);
+  assert.ok(report.recognizedSections.some((section) => section.id === "price"));
+  assert.ok(report.recognizedSections.some((section) => section.id === "receipts"));
+  assert.ok(report.missingFields.some((field) => field.field === "history.fundingSkew"));
+  assert.doesNotMatch(JSON.stringify(report), /connect wallet|sign transaction|send transaction|place order|submit trade|trade now/i);
+});
+
+test("reports unknown captures as not compatible instead of successful market imports", () => {
+  const report = buildPercolatorCompatibilityReport({ foo: "bar" });
+
+  assert.equal(report.shape, "unknown");
+  assert.equal(report.status, "unknown");
+  assert.equal(report.compatible, false);
+  assert.equal(report.tone, "danger");
+  assert.ok(report.missingFields.some((field) => field.field === "market.slab"));
+  assert.ok(report.missingFields.some((field) => field.field === "price.mark"));
+  assert.deepEqual(report.ignoredFields.map((field) => field.path), ["foo"]);
+});
+
+test("reports partial decoded captures without treating ignored fields as mapped", () => {
+  const report = buildPercolatorCompatibilityReport({
+    label: "partial capture",
+    cluster: "devnet",
+    market: { symbol: "SOL-PERP", slab: "PERCOLAT_SOL", program: "Perco1ator" },
+    oracle: { priceUsd: 181.61, ageSecs: 2 },
+    unexpectedEnvelope: { value: 1 }
+  });
+
+  assert.equal(report.shape, "unknown");
+  assert.equal(report.status, "partial");
+  assert.equal(report.compatible, false);
+  assert.equal(report.source.slab, "PERCOLAT_SOL");
+  assert.ok(report.recognizedSections.some((section) => section.id === "market"));
+  assert.ok(report.recognizedSections.some((section) => section.id === "price"));
+  assert.ok(report.ignoredFields.some((field) => field.path === "unexpectedEnvelope"));
+});
+
+test("classifies raw funding row arrays as carry history, not market arrays", () => {
+  const rows = [{ fundingBpsPerHour: 1.2, oiSkewPct: 9, sourceTimestamp: "2026-06-20T00:00:00Z" }];
+  const report = buildPercolatorCompatibilityReport(rows);
+
+  assert.equal(detectPercolatorInputShape(rows), "funding-skew-history");
+  assert.equal(report.shape, "funding-skew-history");
+  assert.ok(report.recognizedSections.some((section) => section.id === "history"));
+});
+
+test("reports read-only RPC fixtures against decoded account sections", () => {
+  const snapshot = buildReadOnlyRpcSnapshot(mainnetSolDeployment);
+  const report = buildPercolatorCompatibilityReport(mainnetSolDeployment, snapshot);
+
+  assert.equal(report.shape, "read-only-rpc-fetch");
+  assert.equal(report.source.slab, mainnetSolDeployment.slab);
+  assert.equal(report.source.program, mainnetSolDeployment.programId);
+  assert.ok(report.recognizedSections.some((section) => section.id === "price"));
+  assert.ok(report.recognizedSections.some((section) => section.id === "engine"));
+});
+
+test("rejects mutating fields while building compatibility reports", () => {
+  assert.throws(
+    () => buildPercolatorCompatibilityReport({ market: { privateKey: "secret" } }),
+    /Refusing secret-bearing field/
+  );
+  assert.throws(
+    () => buildPercolatorCompatibilityReport({ market: { signer: "nope" } }),
+    /Refusing mutating field/
+  );
+  assert.throws(
+    () =>
+      buildPercolatorCompatibilityReport({
+        command: "slab:get",
+        stdoutText: JSON.stringify({ market: { transaction: "nope" } })
+      }),
+    /Refusing mutating field/
+  );
 });
 
 test("uses nested slab:get market metadata from command-only bundles", () => {
@@ -504,7 +590,7 @@ test("rejects deployment fixtures with stale oracle expectations", () => {
 test("documents terminal import and export recipes with live fixtures", () => {
   assert.deepEqual(
     terminalRecipes.recipes.map((recipe) => recipe.id),
-    ["file-import", "drag-drop-stdout", "command-bundle", "list-markets", "read-only-rpc", "carry-history", "dto-export"]
+    ["file-import", "drag-drop-stdout", "command-bundle", "list-markets", "read-only-rpc", "carry-history", "dto-export", "capture-intake"]
   );
 
   for (const recipe of terminalRecipes.recipes) {

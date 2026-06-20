@@ -1,10 +1,12 @@
 import { percolatorFixture } from "./fixtures/percolator-market.js";
 import {
+  buildPercolatorCompatibilityReport,
   detectPercolatorInputShape,
   normalizePercolatorSnapshot,
   parsePercolatorJson,
   simulatePriceShock
 } from "./lib/percolator-adapter.js";
+import { buildReadOnlyRpcSnapshot } from "./lib/read-only-rpc-fetcher.js";
 import {
   normalizeFundingSkewHistory,
   summarizeFundingSkewHistory
@@ -96,13 +98,25 @@ export const TERMINAL_RECIPES = [
     entry: "normalize",
     output: "builder JSON",
     commands: "provenance"
+  },
+  {
+    id: "capture-intake",
+    label: "capture intake",
+    fixture: "decoded stdout / JSON",
+    entry: "Paste",
+    output: "compat report",
+    commands: "field map"
   }
 ];
 
+const fixtureSnapshot = normalizePercolatorSnapshot(percolatorFixture);
+
 const state = {
-  snapshot: normalizePercolatorSnapshot(percolatorFixture),
+  snapshot: fixtureSnapshot,
   selectedMarketId: "sol-perp",
   shockPct: -3,
+  compatibilityReport: buildPercolatorCompatibilityReport(percolatorFixture, fixtureSnapshot),
+  captureOpen: false,
   importStatus: {
     tone: "neutral",
     label: "fixture loaded",
@@ -189,6 +203,8 @@ function render() {
 
           ${watchtowerPanel(market, stress)}
 
+          ${compatibilityPanel(state.compatibilityReport)}
+
           ${fundingHistoryPanel(market)}
 
           <article class="spine-panel panel stagger-item">
@@ -259,6 +275,7 @@ function render() {
               </div>
               <div class="import-actions">
                 <button class="utility-button" id="try-cli" type="button">Try CLI</button>
+                <button class="utility-button ghost" data-capture-open type="button">Paste</button>
                 <button class="utility-button ghost" id="import-json" type="button">Import</button>
                 <button class="utility-button ghost" id="reset-fixture" type="button">Reset</button>
                 <input id="json-file" type="file" accept="application/json,text/plain,.json,.txt,.log" hidden />
@@ -273,6 +290,7 @@ function render() {
             </div>
             <div class="method-list">
               <code>normalizePercolatorSnapshot()</code>
+              <code>buildPercolatorCompatibilityReport()</code>
               <code>toTerminalMarketDto()</code>
               <code>simulatePriceShock()</code>
             </div>
@@ -301,16 +319,34 @@ function render() {
 
   const fileInput = app.querySelector("#json-file");
   app.querySelector("#import-json").addEventListener("click", () => fileInput.click());
+  app.querySelector("#capture-import-json")?.addEventListener("click", () => fileInput.click());
   app.querySelector("#try-cli").addEventListener("click", loadCliDemo);
+  app.querySelectorAll("[data-capture-open]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.captureOpen = true;
+      render();
+      app.querySelector("#capture-text")?.focus();
+    });
+  });
+  app.querySelector("#close-capture")?.addEventListener("click", () => {
+    state.captureOpen = false;
+    render();
+  });
+  app.querySelector("#analyze-capture")?.addEventListener("click", () => {
+    analyzePastedCapture(app.querySelector("#capture-text")?.value || "");
+  });
   fileInput.addEventListener("change", async (event) => {
     const [file] = event.target.files || [];
     if (file) await importJsonFile(file);
   });
 
   app.querySelector("#reset-fixture").addEventListener("click", () => {
-    state.snapshot = normalizePercolatorSnapshot(percolatorFixture);
+    const snapshot = normalizePercolatorSnapshot(percolatorFixture);
+    state.snapshot = snapshot;
     state.selectedMarketId = "sol-perp";
     state.shockPct = -3;
+    state.compatibilityReport = buildPercolatorCompatibilityReport(percolatorFixture, snapshot);
+    state.captureOpen = false;
     state.importStatus = {
       tone: "neutral",
       label: "fixture loaded",
@@ -320,17 +356,8 @@ function render() {
   });
 
   const importDock = app.querySelector("#import-dock");
-  importDock.addEventListener("dragover", (event) => {
-    event.preventDefault();
-    importDock.classList.add("dragging");
-  });
-  importDock.addEventListener("dragleave", () => importDock.classList.remove("dragging"));
-  importDock.addEventListener("drop", async (event) => {
-    event.preventDefault();
-    importDock.classList.remove("dragging");
-    const [file] = event.dataTransfer.files || [];
-    if (file) await importJsonFile(file);
-  });
+  bindDropZone(importDock);
+  bindDropZone(app.querySelector("#capture-dropzone"));
 }
 
 function selectedMarket() {
@@ -350,6 +377,102 @@ function marketButton(market) {
   `;
 }
 
+function compatibilityPanel(report) {
+  const sections = report.recognizedSections.slice(0, 8);
+  const missing = report.missingFields.slice(0, 6);
+  const ignored = report.ignoredFields.slice(0, 4);
+  return `
+    <article class="capture-panel panel stagger-item ${report.tone}" id="capture-panel">
+      <div class="panel-head">
+        <span class="panel-label">capture intake</span>
+        <strong class="compat-status ${report.tone}">${esc(report.status)}</strong>
+      </div>
+      <div class="capture-hero">
+        <section class="compat-score-card ${report.tone}" aria-label="Compatibility score ${report.score}">
+          <strong>${report.score}</strong>
+          <span>compat</span>
+        </section>
+        <section class="capture-dropzone" id="capture-dropzone" tabindex="0" aria-label="Drop decoded JSON or captured stdout">
+          <div>
+            <span class="status-dot ${report.tone}"></span>
+            <strong>${esc(shapeLabel(report.shape))}</strong>
+            <small>${esc(report.source.label || "decoded capture")}</small>
+          </div>
+          <div class="import-actions">
+            <button class="utility-button" data-capture-open type="button">Paste</button>
+            <button class="utility-button ghost" id="capture-import-json" type="button">Import</button>
+          </div>
+        </section>
+      </div>
+      <div class="compat-tiles" aria-label="Compatibility summary">
+        ${compatTile("shape", shapeLabel(report.shape), report.tone)}
+        ${compatTile("mapped", String(report.summary.recognizedCount), report.summary.recognizedCount >= 6 ? "good" : "warning")}
+        ${compatTile("missing", String(report.summary.missingCount), report.summary.missingCount ? "warning" : "good")}
+        ${compatTile("ignored", String(report.summary.ignoredCount), report.summary.ignoredCount ? "warning" : "good")}
+      </div>
+      <div class="compat-source-strip">
+        ${[
+          report.source.cluster,
+          report.source.currentSlot ? `slot ${fmtInt(report.source.currentSlot)}` : "",
+          report.source.commandSet?.length ? `${report.source.commandSet.length} commands` : "",
+          report.source.slab ? shortAddress(report.source.slab) : "",
+          report.source.program ? shortAddress(report.source.program) : ""
+        ].filter(Boolean).map((chip) => `<span>${esc(chip)}</span>`).join("")}
+      </div>
+      <div class="compat-map" aria-label="Mapped compatibility sections">
+        ${sections.map(compatSection).join("")}
+      </div>
+      ${missing.length ? `
+        <div class="compat-gap-list" aria-label="Missing useful fields">
+          ${missing.map(compatGap).join("")}
+        </div>
+      ` : ""}
+      ${ignored.length ? `
+        <div class="compat-ignored" aria-label="Ignored fields">
+          ${ignored.map((item) => `<span>${esc(item.label)}</span>`).join("")}
+        </div>
+      ` : ""}
+      ${state.captureOpen ? captureEditor() : ""}
+    </article>
+  `;
+}
+
+function compatTile(label, value, tone = "neutral") {
+  return `<section class="compat-tile ${tone}"><span>${esc(label)}</span><strong>${esc(value)}</strong></section>`;
+}
+
+function compatSection(section) {
+  return `
+    <section class="compat-section ${section.tone}">
+      <span></span>
+      <strong>${esc(section.label)}</strong>
+      <small>${esc(section.detail)}</small>
+    </section>
+  `;
+}
+
+function compatGap(field) {
+  return `
+    <section class="compat-gap ${field.severity}">
+      <span>${esc(field.label)}</span>
+      <strong>${esc(field.field)}</strong>
+      <small>${esc(field.detail)}</small>
+    </section>
+  `;
+}
+
+function captureEditor() {
+  return `
+    <div class="capture-editor">
+      <textarea id="capture-text" spellcheck="false" placeholder="Paste decoded JSON or captured stdout"></textarea>
+      <div class="capture-editor-actions">
+        <button class="utility-button" id="analyze-capture" type="button">Analyze</button>
+        <button class="utility-button ghost" id="close-capture" type="button">Close</button>
+      </div>
+    </div>
+  `;
+}
+
 async function importJsonFile(file) {
   try {
     const imported = parsePercolatorJson(await file.text());
@@ -357,6 +480,27 @@ async function importJsonFile(file) {
       detailPrefix: file.name
     });
   } catch (error) {
+    state.compatibilityReport = rejectedCompatibilityReport(error);
+    state.importStatus = {
+      tone: "danger",
+      label: error.message.slice(0, 44),
+      detail: error.message
+    };
+  }
+  render();
+}
+
+function analyzePastedCapture(text) {
+  try {
+    if (!String(text).trim()) throw new Error("Paste decoded JSON or captured stdout first.");
+    const imported = parsePercolatorJson(text);
+    loadImportedSnapshot(imported, {
+      label: "capture analyzed",
+      detailPrefix: "pasted capture"
+    });
+    state.captureOpen = false;
+  } catch (error) {
+    state.compatibilityReport = rejectedCompatibilityReport(error);
     state.importStatus = {
       tone: "danger",
       label: error.message.slice(0, 44),
@@ -374,6 +518,7 @@ async function loadCliDemo() {
       detailPrefix: DEMO_CLI_PATH.replace(/^\.\//, "")
     });
   } catch (error) {
+    state.compatibilityReport = rejectedCompatibilityReport(error);
     state.importStatus = {
       tone: "danger",
       label: error.message.slice(0, 44),
@@ -391,25 +536,94 @@ export async function fetchCliDemoSnapshot(fetcher) {
 
 export function createImportedSnapshotState(imported, options = {}) {
   const shape = detectPercolatorInputShape(imported);
-  const snapshot = normalizePercolatorSnapshot(imported);
+  const snapshot = shape === "read-only-rpc-fetch"
+    ? buildReadOnlyRpcSnapshot(imported)
+    : normalizePercolatorSnapshot(imported);
+  const compatibilityReport = buildPercolatorCompatibilityReport(imported, snapshot);
   if (!snapshot.markets.length) {
     throw new Error("No markets found.");
   }
+  if (compatibilityReport.status === "unknown") {
+    const error = new Error("Capture has no recognized Percolator sections.");
+    error.compatibilityReport = compatibilityReport;
+    throw error;
+  }
   const commandCount = Array.isArray(snapshot.source?.commandSet) ? snapshot.source.commandSet.length : 0;
+  const tone = compatibilityReport.tone === "danger" ? "warning" : compatibilityReport.tone;
   return {
     snapshot,
     selectedMarketId: snapshot.markets[0].id,
     shockPct: -3,
+    compatibilityReport,
+    captureOpen: false,
     importStatus: {
-      tone: "good",
+      tone,
       label: options.label || `${snapshot.markets.length} ${shapeLabel(shape)}`,
-      detail: `${options.detailPrefix || "import"}: ${snapshot.markets.length} market import${commandCount ? `, ${commandCount} commands` : ""}`
+      detail: `${options.detailPrefix || "import"}: ${snapshot.markets.length} market import${commandCount ? `, ${commandCount} commands` : ""}${compatibilityReport.summary.missingCount ? `, ${compatibilityReport.summary.missingCount} missing fields` : ""}`
     }
   };
 }
 
 function loadImportedSnapshot(imported, options = {}) {
-  Object.assign(state, createImportedSnapshotState(imported, options));
+  try {
+    Object.assign(state, createImportedSnapshotState(imported, options));
+  } catch (error) {
+    if (error.compatibilityReport) state.compatibilityReport = error.compatibilityReport;
+    throw error;
+  }
+}
+
+function rejectedCompatibilityReport(error) {
+  const message = error?.message || "Capture rejected.";
+  return {
+    shape: "rejected",
+    status: "rejected",
+    compatible: false,
+    tone: "danger",
+    score: 0,
+    recognizedSections: [
+      {
+        id: "safety",
+        label: "read-only safety",
+        tone: "danger",
+        detail: "capture rejected"
+      }
+    ],
+    missingFields: [],
+    ignoredFields: [],
+    source: {
+      label: message.slice(0, 80),
+      mode: "read-only",
+      commandSet: [],
+      cluster: state.snapshot?.cluster || "unknown",
+      currentSlot: state.snapshot?.currentSlot || 0,
+      marketCount: state.snapshot?.markets?.length || 0,
+      slab: "",
+      program: ""
+    },
+    summary: {
+      recognizedCount: 1,
+      missingCount: 0,
+      ignoredCount: 0,
+      marketCount: state.snapshot?.markets?.length || 0,
+      commandCount: 0
+    }
+  };
+}
+
+function bindDropZone(element) {
+  if (!element) return;
+  element.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    element.classList.add("dragging");
+  });
+  element.addEventListener("dragleave", () => element.classList.remove("dragging"));
+  element.addEventListener("drop", async (event) => {
+    event.preventDefault();
+    element.classList.remove("dragging");
+    const [file] = event.dataTransfer.files || [];
+    if (file) await importJsonFile(file);
+  });
 }
 
 function gauge(score, status) {
@@ -860,6 +1074,11 @@ function recipeCard(recipe) {
 function shapeLabel(shape) {
   if (shape === "percolator-cli-bundle") return "cli bundle";
   if (shape === "perpscope-snapshot") return "snapshot";
+  if (shape === "read-only-rpc-fetch") return "rpc read";
+  if (shape === "funding-skew-history") return "carry history";
+  if (shape === "percolator-market-array") return "market array";
+  if (shape === "unknown") return "unknown";
+  if (shape === "rejected") return "rejected";
   return "market import";
 }
 

@@ -6,6 +6,8 @@ PerpScope needs real decoded Percolator shapes from terminal builders.
 
 Send one read-only decoded output shape and what you expected a trader to understand from it.
 
+PerpScope v0.4 also shows a capture-intake compatibility report. If the cockpit marks a field as missing or ignored, include that row in your note.
+
 Useful inputs:
 
 - `slab:get`
@@ -37,6 +39,7 @@ Market:
 Expected trader question:
 Fields present:
 Fields missing:
+PerpScope missing/ignored rows:
 Can this be added as a public fixture? yes/no
 ```
 

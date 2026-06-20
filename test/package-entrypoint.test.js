@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
+  buildPercolatorCompatibilityReport,
   buildReadOnlyRpcSnapshot,
   buildWatchtowerSignals,
   detectPercolatorInputShape,
@@ -34,9 +35,12 @@ test("adapter package exposes read-only terminal DTO helpers", () => {
   const stress = simulatePriceShock(sol, -3);
   const signals = buildWatchtowerSignals(sol, stress);
   const history = normalizeFundingSkewHistory(sol.history.fundingSkew, sol);
+  const report = buildPercolatorCompatibilityReport(percolatorFixture, snapshot);
 
   assert.equal(detectPercolatorInputShape(percolatorFixture), "perpscope-snapshot");
   assert.equal(snapshot.markets.length, 3);
+  assert.equal(report.compatible, true);
+  assert.equal(report.status, "compatible");
   assert.equal(signals.find((signal) => signal.id === "carry").tone, "good");
   assert.equal(history.length, 6);
   assert.equal(history.at(-1).fundingBpsPerHour, 0.82);
@@ -76,10 +80,13 @@ test("adapter package can be packed and imported outside the monorepo", async ()
     const packed = await import(pathToFileURL(join(tempDir, "package", "index.js")).href);
     const snapshot = packed.normalizePercolatorSnapshot(percolatorFixture);
     const history = packed.normalizeFundingSkewHistory(historyStdout);
+    const report = packed.buildPercolatorCompatibilityReport(percolatorFixture, snapshot);
 
     assert.equal(snapshot.markets.length, 3);
     assert.equal(history.at(-1).oiSkewPct.toFixed(1), "8.6");
     assert.equal(typeof packed.buildWatchtowerSignals, "function");
+    assert.equal(typeof packed.buildPercolatorCompatibilityReport, "function");
+    assert.equal(report.status, "compatible");
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
   }
@@ -101,6 +108,8 @@ test("adapter consumer example imports the package by name", async () => {
 
     assert.equal(summary.inputShape, "percolator-cli-bundle");
     assert.equal(summary.market, "SOL-PERP");
+    assert.equal(summary.compatibility.status, "partial");
+    assert.ok(summary.compatibility.missing.includes("history.fundingSkew"));
     assert.equal(summary.watchtower.length, 6);
     assert.equal(summary.carryLatest.fundingBpsPerHour, 0.82);
     assert.doesNotMatch(JSON.stringify(summary), /connect wallet|sign transaction|send transaction|place order|submit trade|trade now/i);

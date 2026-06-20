@@ -43,8 +43,13 @@ test("loads Try CLI demo through the same import state path", async () => {
   assert.equal(requestedUrl, DEMO_CLI_PATH);
   assert.equal(nextState.selectedMarketId, "sol-perp");
   assert.equal(nextState.importStatus.label, "demo cli loaded");
-  assert.equal(nextState.importStatus.detail, "examples/percolator-cli.bundle.json: 1 market import, 8 commands");
+  assert.equal(nextState.importStatus.tone, "warning");
+  assert.equal(nextState.importStatus.detail, "examples/percolator-cli.bundle.json: 1 market import, 8 commands, 2 missing fields");
   assert.equal(nextState.snapshot.source.commandSet.length, 8);
+  assert.equal(nextState.compatibilityReport.shape, "percolator-cli-bundle");
+  assert.equal(nextState.compatibilityReport.status, "partial");
+  assert.ok(nextState.compatibilityReport.recognizedSections.some((section) => section.id === "receipts"));
+  assert.ok(nextState.compatibilityReport.missingFields.some((field) => field.field === "history.fundingSkew"));
 });
 
 test("surfaces Try CLI demo fetch failures", async () => {
@@ -116,12 +121,31 @@ test("builds deployment and recipe summaries for the cockpit", () => {
     "list-markets",
     "read-only-rpc",
     "carry-history",
-    "dto-export"
+    "dto-export",
+    "capture-intake"
   ]);
   assert.equal(recipes[0].step, "01");
-  assert.equal(recipes.at(-1).step, "07");
+  assert.equal(recipes.at(-1).step, "08");
   assert.doesNotMatch(JSON.stringify({ deployments, recipes }), /connect wallet|sign transaction|send transaction|place order|submit trade|trade now/i);
   assert.equal(TERMINAL_RECIPES.find((recipe) => recipe.id === "read-only-rpc").commands, "getAccountInfo");
+});
+
+test("flags unknown imported captures without a good import status", () => {
+  assert.throws(
+    () => createImportedSnapshotState({ foo: "bar" }),
+    /no recognized Percolator sections/
+  );
+
+  const nextState = createImportedSnapshotState({
+    label: "partial capture",
+    market: { symbol: "SOL-PERP", slab: "PERCOLAT_SOL", program: "Perco1ator" },
+    oracle: { priceUsd: 181.61, ageSecs: 2 }
+  });
+
+  assert.equal(nextState.importStatus.tone, "warning");
+  assert.equal(nextState.snapshot.markets[0].name, "SOL-PERP");
+  assert.equal(nextState.compatibilityReport.status, "partial");
+  assert.ok(nextState.compatibilityReport.summary.missingCount > 0);
 });
 
 test("builds funding and skew history summaries for the cockpit", () => {

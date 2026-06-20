@@ -1,5 +1,8 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { normalizePercolatorSnapshot } from "../src/lib/percolator-adapter.js";
+import {
+  buildPercolatorCompatibilityReport,
+  normalizePercolatorSnapshot
+} from "../src/lib/percolator-adapter.js";
 import { normalizeFundingSkewHistory } from "../src/lib/funding-history.js";
 import { summarizeReadOnlyRpcDeployment } from "../src/lib/read-only-rpc-fetcher.js";
 import { percolatorFixture } from "../src/fixtures/percolator-market.js";
@@ -68,6 +71,10 @@ if (!/recipe-panel/.test(js) || !/TERMINAL_RECIPES/.test(js)) {
   failures.push("Cockpit should expose terminal import/export recipes.");
 }
 
+if (!/capture-panel/.test(js) || !/buildPercolatorCompatibilityReport/.test(js)) {
+  failures.push("Cockpit should expose the capture intake compatibility report.");
+}
+
 const dto = normalizePercolatorSnapshot(percolatorFixture);
 if (dto.markets.length < 3) {
   failures.push("Fixture should expose at least three markets for the cockpit.");
@@ -81,8 +88,13 @@ if (!dto.markets.every((market) => market.history?.fundingSkew?.length >= 1)) {
   failures.push("Fixture markets should expose funding/skew history rows.");
 }
 
-if (!/normalizePercolatorSnapshot/.test(packageEntry) || !/buildWatchtowerSignals/.test(packageEntry) || !/normalizeFundingSkewHistory/.test(packageEntry)) {
-  failures.push("Adapter package should expose snapshot, Watchtower, and funding history helpers.");
+const compatibilityReport = buildPercolatorCompatibilityReport(percolatorFixture, dto);
+if (compatibilityReport.status !== "compatible") {
+  failures.push("Fixture compatibility report should be compatible.");
+}
+
+if (!/normalizePercolatorSnapshot/.test(packageEntry) || !/buildWatchtowerSignals/.test(packageEntry) || !/normalizeFundingSkewHistory/.test(packageEntry) || !/buildPercolatorCompatibilityReport/.test(packageEntry)) {
+  failures.push("Adapter package should expose snapshot, compatibility, Watchtower, and funding history helpers.");
 }
 
 if (!/"@perpscope\/percolator-adapter": "file:\.\.\/\.\.\/packages\/percolator-adapter"/.test(consumerPackage)) {
@@ -136,7 +148,7 @@ for (const filename of [
 try {
   const recipeManifest = JSON.parse(readFileSync(new URL("terminal-recipes.json", exampleDir), "utf8"));
   const recipeIds = new Set((recipeManifest.recipes || []).map((recipe) => recipe.id));
-  for (const expected of ["file-import", "drag-drop-stdout", "command-bundle", "list-markets", "read-only-rpc", "carry-history", "dto-export"]) {
+  for (const expected of ["file-import", "drag-drop-stdout", "command-bundle", "list-markets", "read-only-rpc", "carry-history", "dto-export", "capture-intake"]) {
     if (!recipeIds.has(expected)) failures.push(`Terminal recipes should include ${expected}.`);
   }
   for (const recipe of recipeManifest.recipes || []) {

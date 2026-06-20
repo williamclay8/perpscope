@@ -2,7 +2,7 @@
 
 This is the smallest outside-terminal shape for using `@perpscope/percolator-adapter`.
 
-It imports the package by name, loads a captured Percolator command bundle, and returns the fields a frontend trading terminal would usually want first: market status, health score, Watchtower signals, carry history, and source provenance.
+It imports the package by name, loads a captured Percolator command bundle, and returns the fields a frontend trading terminal would usually want first: compatibility status, market status, health score, Watchtower signals, carry history, and source provenance.
 
 ```bash
 cd examples/adapter-consumer
@@ -19,7 +19,7 @@ The dependency points at the local package while developing this repo:
 When the package is published, replace that with a version range:
 
 ```json
-"@perpscope/percolator-adapter": "^0.3.0"
+"@perpscope/percolator-adapter": "^0.4.0"
 ```
 
 The example stays read-only. It does not connect wallets, sign, send, route, place orders, or submit transactions.

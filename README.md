@@ -16,6 +16,7 @@ For terminal builders, it provides a read-only adapter package that turns Percol
 
 ```js
 import {
+  buildPercolatorCompatibilityReport,
   buildWatchtowerSignals,
   normalizeFundingSkewHistory,
   normalizePercolatorSnapshot,
@@ -26,6 +27,7 @@ const snapshot = normalizePercolatorSnapshot(decodedPercolatorOutput);
 const market = snapshot.markets[0];
 const stress = simulatePriceShock(market, -5);
 
+const compatibility = buildPercolatorCompatibilityReport(decodedPercolatorOutput, snapshot);
 const signals = buildWatchtowerSignals(market, stress);
 const carryHistory = normalizeFundingSkewHistory(market.history.fundingSkew, market);
 ```
@@ -55,6 +57,7 @@ Solana perps terminals are getting better, but terminal teams still have to deco
 Star PerpScope if you are building a Solana perps terminal, risk dashboard, or agent-readable trading workflow and want:
 
 - a clean DTO for decoded Percolator-like market, account, execution, and receipt data
+- a compatibility report for pasted or dropped decoded captures before your terminal adapter is complete
 - import fixtures for CLI logs, captured stdout, read-only RPC fixtures, carry history, and terminal adapter demos
 - a visual reference for presenting risk without turning the screen into protocol JSON
 - a read-only safety boundary you can copy into your own frontend
@@ -97,6 +100,17 @@ The cockpit includes a compact funding/skew history panel for:
 
 The same parser accepts fixture arrays and captured terminal logs like `examples/funding-skew-history.stdout.json`.
 
+## Capture Intake
+
+PerpScope v0.4 adds a read-only capture intake panel and adapter helper for messy decoded protocol output. Paste, drop, or import JSON/stdout and PerpScope will:
+
+- normalize the sections it understands
+- score terminal compatibility
+- show mapped sections, missing fields, ignored fields, source commands, slab, and program provenance
+- reject secret-bearing or mutating fields before rendering
+
+The public helper is `buildPercolatorCompatibilityReport(input, snapshot?)`, exported from `@perpscope/percolator-adapter`.
+
 ## Live Read-Only Deployment Examples
 
 PerpScope v0.2 adds deployment-style read fixtures that mirror how a terminal can validate a selected Percolator slab through an injected RPC client:
@@ -124,7 +138,7 @@ npm run check
 
 ## Try Imports
 
-Open the cockpit and use `Try CLI` for the bundled Percolator command demo. You can also use `Import`, or drag JSON/captured stdout into the adapter dock:
+Open the cockpit and use `Try CLI` for the bundled Percolator command demo. You can also use `Paste`, `Import`, or drag JSON/captured stdout into the capture intake:
 
 ```text
 examples/decoded-slab.snapshot.json
@@ -203,6 +217,7 @@ The adapter boundary lives in `packages/percolator-adapter` and re-exports the p
 
 ```js
 import {
+  buildPercolatorCompatibilityReport,
   buildWatchtowerSignals,
   normalizeFundingSkewHistory,
   normalizePercolatorSnapshot,
@@ -212,6 +227,7 @@ import {
 const snapshot = normalizePercolatorSnapshot(decodedJson);
 const market = snapshot.markets[0];
 const stress = simulatePriceShock(market, -5);
+const compatibility = buildPercolatorCompatibilityReport(decodedJson, snapshot);
 const watchtower = buildWatchtowerSignals(market, stress);
 const carryHistory = normalizeFundingSkewHistory(market.history.fundingSkew, market);
 ```
@@ -222,6 +238,7 @@ The package is intentionally side-effect free. It does not create wallets, sign,
 
 ```js
 import {
+  buildPercolatorCompatibilityReport,
   detectPercolatorInputShape,
   normalizeFundingSkewHistory,
   normalizePercolatorSnapshot,
@@ -232,6 +249,7 @@ const inputShape = detectPercolatorInputShape(decodedJson);
 const snapshot = normalizePercolatorSnapshot(decodedJson);
 const market = snapshot.markets[0];
 const stress = simulatePriceShock(market, -5);
+const compatibility = buildPercolatorCompatibilityReport(decodedJson, snapshot);
 const carryHistory = normalizeFundingSkewHistory(market.history.fundingSkew, market);
 ```
 
@@ -239,7 +257,7 @@ Use the normalized DTO to render your own terminal modules without coupling the 
 
 ## Terminal Import/Export Recipes
 
-`examples/terminal-recipes.json` documents seven paths:
+`examples/terminal-recipes.json` documents eight paths:
 
 - file import from `examples/decoded-slab.snapshot.json`
 - drag/drop captured stdout from `examples/execution-receipts.stdout.json`
@@ -249,6 +267,7 @@ Use the normalized DTO to render your own terminal modules without coupling the 
 - carry-history stdout from `examples/funding-skew-history.stdout.json`
 - external package consumer from `examples/adapter-consumer/`
 - DTO export using `examples/terminal-dto-export.json`
+- capture intake compatibility report from pasted or dropped decoded JSON/stdout
 
 The export shape keeps source provenance with `source.label`, `source.mode`, `source.commandSet`, `cluster`, `currentSlot`, `market.slab`, and `market.program` so a terminal can show where the risk state came from.
 
@@ -272,6 +291,7 @@ const summary = summarizeReadOnlyRpcDeployment(decodedFixture);
 
 ```js
 import {
+  buildPercolatorCompatibilityReport,
   detectPercolatorInputShape,
   normalizePercolatorSnapshot,
   simulatePriceShock
@@ -279,6 +299,7 @@ import {
 
 const shape = detectPercolatorInputShape(decodedPercolatorState);
 const snapshot = normalizePercolatorSnapshot(decodedPercolatorState);
+const compatibility = buildPercolatorCompatibilityReport(decodedPercolatorState, snapshot);
 const market = snapshot.markets[0];
 const stress = simulatePriceShock(market, -5);
 ```
@@ -290,6 +311,7 @@ The normalized market DTO includes:
 - `account` liquidation distance, margin buffer, equity, PnL, and funding PnL
 - `execution` spread, impact, markout, latency, and fill-quality score
 - `execution.receipts` with spread, impact, 1m/5m markout, route latency, priority fee, source timestamp, and source label
+- `buildPercolatorCompatibilityReport()` with `status`, `score`, `recognizedSections`, `missingFields`, and `ignoredFields`
 - `Watchtower` signals for runway, freshness, execution, impact curve, carry, and solvency
 - `history.fundingSkew` rows for funding, OI skew, stress usage, oracle age, source timestamp, and slot
 - `flags` for stale oracle, crank lag, thin insurance, stress caps, and liquidation tightness
@@ -297,6 +319,7 @@ The normalized market DTO includes:
 ## Product Surface
 
 - `src/lib/percolator-adapter.js` normalizes Percolator-like slab, oracle, crank, funding, insurance, account, and execution data into terminal-ready DTOs.
+- `buildPercolatorCompatibilityReport()` maps partial decoded captures into visible terminal-readiness warnings.
 - `src/lib/read-only-rpc-fetcher.js` validates read-only RPC slab fixtures and injected account fetches.
 - `src/lib/watchtower-signals.js` and `src/lib/funding-history.js` power the embeddable package and cockpit panels.
 - `packages/percolator-adapter/` is the package boundary for terminal builders.
@@ -335,7 +358,7 @@ Current public site: [williamclay8.github.io/perpscope](https://williamclay8.git
 
 ## Roadmap
 
-- v0.4 real Percolator capture intake: paste/drop unknown decoded outputs, normalize what is known, and show compatibility warnings for missing fields.
+- v0.4 shipped: capture intake for pasted/dropped decoded outputs, compatibility scoring, missing-field warnings, and ignored-field mapping.
 - More deployment fixtures as Percolator terminal teams share read-only shapes.
 - Field-level compatibility notes for terminal import/export adapters.
 - npm publication for `@perpscope/percolator-adapter` once package ownership/auth is confirmed.

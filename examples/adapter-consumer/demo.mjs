@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import {
+  buildPercolatorCompatibilityReport,
   buildWatchtowerSignals,
   detectPercolatorInputShape,
   normalizeFundingSkewHistory,
@@ -19,6 +20,7 @@ export function buildTerminalSummary(input = loadFixture(), historyInput = loadF
   const snapshot = normalizePercolatorSnapshot(input);
   const market = snapshot.markets[0];
   const stress = simulatePriceShock(market, -5);
+  const compatibility = buildPercolatorCompatibilityReport(input, snapshot);
   const watchtower = buildWatchtowerSignals(market, stress);
   const carryHistory = normalizeFundingSkewHistory(historyInput, market);
 
@@ -28,6 +30,11 @@ export function buildTerminalSummary(input = loadFixture(), historyInput = loadF
     market: market.name,
     status: market.status,
     healthScore: market.healthScore,
+    compatibility: {
+      status: compatibility.status,
+      score: compatibility.score,
+      missing: compatibility.missingFields.map((field) => field.field)
+    },
     watchtower: watchtower.map((signal) => ({
       id: signal.id,
       value: signal.value,

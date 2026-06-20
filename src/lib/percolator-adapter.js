@@ -24,7 +24,8 @@ export function assertReadOnlySnapshot(value, path = "snapshot") {
 
 export function detectPercolatorInputShape(input) {
   if (!input || typeof input !== "object") return "unknown";
-  if (Array.isArray(input)) return "percolator-market-array";
+  if (Array.isArray(input)) return isFundingHistoryArray(input) ? "funding-skew-history" : "percolator-market-array";
+  if (isReadOnlyRpcInput(input)) return "read-only-rpc-fetch";
   if (isFundingHistoryInput(input)) return "funding-skew-history";
   if (Array.isArray(input.commands) || input.command || hasCliSections(input)) return "percolator-cli-bundle";
   if (Array.isArray(input.markets)) return "perpscope-snapshot";
@@ -64,6 +65,539 @@ export function normalizePercolatorSnapshot(input) {
   };
 }
 
+export function buildPercolatorCompatibilityReport(input, normalizedSnapshot) {
+  assertReadOnlySnapshot(input);
+  assertReadOnlyCompatibilityCapture(input);
+  const shape = detectPercolatorInputShape(input);
+  const scope = compatibilityScope(input);
+  assertReadOnlyCompatibilityCapture(scope, "capture.normalized");
+  const snapshot = normalizedSnapshot || normalizePercolatorSnapshot(input);
+  const context = {
+    input,
+    scope,
+    shape,
+    snapshot,
+    market: compatibilityMarket(firstItem(snapshot.markets), input)
+  };
+  const recognizedSections = COMPATIBILITY_SECTION_SPECS
+    .filter((section) => section.present(context))
+    .map((section) => ({
+      id: section.id,
+      label: section.label,
+      tone: section.tone ? section.tone(context) : "good",
+      detail: section.detail(context)
+    }));
+  const missingFields = COMPATIBILITY_FIELD_SPECS
+    .filter((field) => !field.present(context))
+    .map((field) => ({
+      field: field.field,
+      label: field.label,
+      severity: field.severity,
+      detail: field.detail
+    }));
+  const ignoredFields = ignoredCompatibilityFields(input);
+  const dangerCount = missingFields.filter((field) => field.severity === "danger").length;
+  const warningCount = missingFields.length - dangerCount;
+  const recognizedDataCount = recognizedSections.filter((section) => section.id !== "safety").length;
+  const unknownStatus = shape === "unknown" && recognizedDataCount === 0;
+  const unknownPenalty = unknownStatus ? 22 : shape === "unknown" ? 10 : 0;
+  const score = clamp(100 - dangerCount * 18 - warningCount * 8 - ignoredFields.length * 3 - unknownPenalty, 0, 100);
+  const tone = unknownStatus || dangerCount ? "danger" : warningCount || ignoredFields.length ? "warning" : "good";
+  const status = unknownStatus ? "unknown" : dangerCount || warningCount || ignoredFields.length ? "partial" : "compatible";
+  const compatible = status === "compatible";
+  const source = snapshot.source || {};
+  const commandSet = Array.isArray(source.commandSet) ? source.commandSet : commandNames(input);
+
+  return {
+    shape,
+    status,
+    compatible,
+    tone,
+    score,
+    recognizedSections,
+    missingFields,
+    ignoredFields,
+    source: {
+      label: source.label || stringOf(scope, ["label", "sourceLabel"], "decoded capture"),
+      mode: source.mode || "read-only",
+      commandSet,
+      cluster: snapshot.cluster || "unknown",
+      currentSlot: snapshot.currentSlot || 0,
+      marketCount: snapshot.markets.length,
+      slab: context.market.slab || "",
+      program: context.market.program || ""
+    },
+    summary: {
+      recognizedCount: recognizedSections.length,
+      missingCount: missingFields.length,
+      ignoredCount: ignoredFields.length,
+      marketCount: snapshot.markets.length,
+      commandCount: commandSet.length
+    }
+  };
+}
+
+const COMPATIBILITY_SECTION_SPECS = [
+  {
+    id: "safety",
+    label: "read-only safety",
+    present: () => true,
+    detail: () => "no secret-like fields found"
+  },
+  {
+    id: "market",
+    label: "market identity",
+    present: ({ scope, snapshot }) =>
+      marketListOf(scope).length > 0 ||
+      nonEmptyObject(objectOf(scope, ["market", "marketInfo", "metadata", "instrument"], {})) ||
+      snapshot.markets.some((market) => knownText(market.slab) && !/^unknown/i.test(market.slab)),
+    detail: ({ snapshot }) => `${snapshot.markets.length} market${snapshot.markets.length === 1 ? "" : "s"} mapped`
+  },
+  {
+    id: "price",
+    label: "oracle price",
+    present: hasPriceSignal,
+    detail: ({ market }) => market.price?.mark ? `$${market.price.mark.toFixed(market.base === "WIF" ? 3 : 2)} mark` : "price signal mapped"
+  },
+  {
+    id: "engine",
+    label: "crank engine",
+    present: hasEngineSignal,
+    tone: hasCrankAgeSignal ? () => "good" : () => "warning",
+    detail: ({ market }) => `${Number(market.crank?.ageSlots || 0).toFixed(0)} slot age`
+  },
+  {
+    id: "funding",
+    label: "carry rate",
+    present: hasFundingSignal,
+    detail: ({ market }) => `${Number(market.funding?.bpsPerHour || 0).toFixed(1)} bps/hr`
+  },
+  {
+    id: "structure",
+    label: "market structure",
+    present: hasMarketStructureSignal,
+    detail: ({ market }) => `${Number(market.marketStructure?.oiSkewPct || 0).toFixed(1)}% OI skew`
+  },
+  {
+    id: "account",
+    label: "account runway",
+    present: hasAccountSignal,
+    detail: ({ market }) => `${Number(market.account?.liquidationDistancePct || 0).toFixed(1)}% runway`
+  },
+  {
+    id: "execution",
+    label: "book quality",
+    present: hasExecutionSignal,
+    detail: ({ market }) => `${Number(market.execution?.spreadBps || 0).toFixed(1)} bps spread`
+  },
+  {
+    id: "receipts",
+    label: "fill receipts",
+    present: hasReceiptSignal,
+    detail: ({ scope, market }) => `${receiptCount(scope, market)} receipt${receiptCount(scope, market) === 1 ? "" : "s"}`
+  },
+  {
+    id: "history",
+    label: "carry history",
+    present: hasHistorySignal,
+    detail: ({ scope, market }) => `${historyCount(scope, market)} rows`
+  },
+  {
+    id: "provenance",
+    label: "provenance",
+    present: hasProvenanceSignal,
+    detail: ({ snapshot }) => snapshot.source?.label || snapshot.cluster || "source mapped"
+  }
+];
+
+const COMPATIBILITY_FIELD_SPECS = [
+  {
+    field: "market.slab",
+    label: "slab address",
+    severity: "danger",
+    detail: "Needed to anchor the terminal view to one Percolator market.",
+    present: ({ market }) => knownText(market.slab) && !/^unknown/i.test(market.slab)
+  },
+  {
+    field: "market.program",
+    label: "program id",
+    severity: "danger",
+    detail: "Needed before a live terminal trusts decoded account ownership.",
+    present: ({ market }) => knownText(market.program) && !/^unknown/i.test(market.program)
+  },
+  {
+    field: "price.mark",
+    label: "mark price",
+    severity: "danger",
+    detail: "Needed for runway, impact, and account notional math.",
+    present: hasPriceSignal
+  },
+  {
+    field: "price.publishAgeSec",
+    label: "oracle age",
+    severity: "warning",
+    detail: "Keeps stale price reads visible instead of hidden in raw output.",
+    present: hasOracleAgeSignal
+  },
+  {
+    field: "crank.ageSlots",
+    label: "crank age",
+    severity: "warning",
+    detail: "Shows whether risk and funding state are lagging the latest slot.",
+    present: hasCrankAgeSignal
+  },
+  {
+    field: "funding.bpsPerHour",
+    label: "funding rate",
+    severity: "warning",
+    detail: "Makes carry pressure readable for traders watching positions.",
+    present: hasFundingSignal
+  },
+  {
+    field: "marketStructure.openInterestUsd",
+    label: "open interest",
+    severity: "warning",
+    detail: "Needed for skew and stress pressure cards.",
+    present: hasMarketStructureSignal
+  },
+  {
+    field: "account.positionNotionalUsd",
+    label: "position notional",
+    severity: "warning",
+    detail: "Needed for account-level buffer and liquidation runway.",
+    present: hasPositionNotionalSignal
+  },
+  {
+    field: "execution.bestBid/bestAsk",
+    label: "best bid / ask",
+    severity: "warning",
+    detail: "Needed to separate real spread from adapter fallbacks.",
+    present: hasExecutionSignal
+  },
+  {
+    field: "execution.receipts",
+    label: "fill receipts",
+    severity: "warning",
+    detail: "Adds latency, markout, and priority-fee context.",
+    present: hasReceiptSignal
+  },
+  {
+    field: "history.fundingSkew",
+    label: "funding / skew history",
+    severity: "warning",
+    detail: "Adds trend context beyond a single decoded snapshot.",
+    present: hasHistorySignal
+  }
+];
+
+const COMPATIBILITY_MUTATING_KEYS = new Set([
+  "instruction",
+  "instructions",
+  "order",
+  "orders",
+  "send",
+  "sendtransaction",
+  "sign",
+  "signer",
+  "signtransaction",
+  "transaction",
+  "transactions"
+]);
+
+const COMPATIBILITY_TOP_LEVEL_KEYS = new Set([
+  "account",
+  "accountInfo",
+  "accounts",
+  "bitmap",
+  "cluster",
+  "command",
+  "commands",
+  "config",
+  "currentSlot",
+  "current_slot",
+  "data",
+  "engine",
+  "execution",
+  "executionReceipts",
+  "expectations",
+  "fillReceipts",
+  "fixture",
+  "fixtureKind",
+  "fundingHistory",
+  "fundingSkewHistory",
+  "header",
+  "history",
+  "items",
+  "json",
+  "label",
+  "market",
+  "marketConfig",
+  "marketInfo",
+  "markets",
+  "metadata",
+  "network",
+  "oracle",
+  "output",
+  "outputs",
+  "params",
+  "price",
+  "prices",
+  "program",
+  "programId",
+  "receiptTimeline",
+  "receipts",
+  "result",
+  "rows",
+  "rpcRead",
+  "slab",
+  "slabAddress",
+  "slabBitmap",
+  "slabConfig",
+  "slabEngine",
+  "slabHeader",
+  "slabParams",
+  "source",
+  "sourceLabel",
+  "slot",
+  "stdout",
+  "stdoutText"
+].map(normalizeKey));
+
+const COMPATIBILITY_COMMAND_KEYS = new Set([
+  "bestprice",
+  "executionreceipt",
+  "executionreceipts",
+  "fillreceipts",
+  "fills",
+  "fundinghistory",
+  "fundingrates",
+  "fundingskewhistory",
+  "listmarkets",
+  "marketcarryhistory",
+  "receiptlog",
+  "receipts",
+  "skewhistory",
+  "slabaccount",
+  "slabaccounts",
+  "slabbitmap",
+  "slabengine",
+  "slabget",
+  "slabparams"
+]);
+
+function ignoredCompatibilityFields(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return [];
+  const ignored = [];
+  for (const [key] of Object.entries(input)) {
+    if (!COMPATIBILITY_TOP_LEVEL_KEYS.has(normalizeKey(key))) {
+      ignored.push({
+        path: key,
+        label: key,
+        reason: "top-level field is not part of the adapter map yet"
+      });
+    }
+  }
+  for (const command of commandNames(input)) {
+    if (!COMPATIBILITY_COMMAND_KEYS.has(normalizeKey(command))) {
+      ignored.push({
+        path: `commands.${command}`,
+        label: command,
+        reason: "command is preserved as provenance but not mapped"
+      });
+    }
+  }
+  return ignored.slice(0, 8);
+}
+
+function assertReadOnlyCompatibilityCapture(value, path = "capture") {
+  if (!value || typeof value !== "object") return;
+  for (const [key, child] of Object.entries(value)) {
+    const normalized = normalizeKey(key);
+    if (COMPATIBILITY_MUTATING_KEYS.has(normalized)) {
+      throw new Error(`Refusing mutating field in compatibility capture: ${path}.${key}`);
+    }
+    if (child && typeof child === "object") assertReadOnlyCompatibilityCapture(child, `${path}.${key}`);
+  }
+}
+
+function compatibilityScope(input) {
+  if (!input || typeof input !== "object") return { markets: [] };
+  if (Array.isArray(input)) return { history: isFundingHistoryArray(input) ? input : [], markets: input };
+  const scope = collectCliSections(input);
+  if (!isReadOnlyRpcInput(input)) return scope;
+  const account = objectOf(input, ["account", "accountInfo"], {});
+  const decoded = objectOf(account, ["decoded"], {});
+  const market = {
+    ...objectOf(input, ["market"], {}),
+    slab: stringOf(input, ["slab", "slabAddress", "pubkey"], ""),
+    program: stringOf(input, ["programId", "program", "owner"], "")
+  };
+  return {
+    ...scope,
+    ...decoded,
+    market,
+    account: objectOf(decoded, ["accountUsd", "account", "position"], scope.account || {}),
+    accounts: decoded.accounts || scope.accounts,
+    bestPrice: decoded.bestPrice || scope.bestPrice,
+    bitmap: decoded.bitmap || scope.bitmap,
+    config: decoded.config || scope.config,
+    engine: decoded.engine || scope.engine,
+    header: decoded.header || scope.header,
+    params: decoded.params || scope.params
+  };
+}
+
+function compatibilityMarket(market, input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return market || {};
+  const inputMarket = objectOf(input, ["market", "marketInfo", "metadata", "instrument"], {});
+  return {
+    ...(market || {}),
+    slab: knownText(market?.slab) && !/^unknown/i.test(market.slab)
+      ? market.slab
+      : stringOf(inputMarket, ["slab", "slabAddress", "pubkey"], stringOf(input, ["slab", "slabAddress", "pubkey"], market?.slab || "")),
+    program: knownText(market?.program) && !/^unknown/i.test(market.program)
+      ? market.program
+      : stringOf(inputMarket, ["programId", "program", "owner"], stringOf(input, ["programId", "program", "owner"], market?.program || ""))
+  };
+}
+
+function hasPriceSignal({ scope, market }) {
+  const oracle = objectOf(scope, ["oracle", "price", "prices", "oraclePrice"], {});
+  const book = objectOf(scope, ["bestPrice", "best-price", "best_price", "book", "orderbook", "quote"], {});
+  const firstReceipt = firstItem(receiptListOf(scope));
+  return rawNumberPresent(oracle, ["markPrice", "mark", "priceUsd", "oraclePriceUsd", "price"]) ||
+    rawNumberPresent(book, ["markPrice", "mark", "midPrice", "mid", "priceUsd"]) ||
+    rawNumberPresent(firstReceipt, ["markPriceUsd", "markPrice", "mark"]) ||
+    Number(market.price?.mark) > 0;
+}
+
+function hasOracleAgeSignal({ scope, market }) {
+  const oracle = objectOf(scope, ["oracle", "price", "prices", "oraclePrice"], {});
+  const firstReceipt = firstItem(receiptListOf(scope));
+  const age = Number(market.price?.publishAgeSec);
+  return rawNumberPresent(oracle, ["publishAgeSec", "ageSecs", "ageSec", "age"]) ||
+    rawNumberPresent(firstReceipt, ["oracleAgeSec", "priceAgeSec", "ageSecs"]) ||
+    (Number.isFinite(age) && age > 0);
+}
+
+function hasEngineSignal({ scope, market }) {
+  return nonEmptyObject(objectOf(scope, ["engine", "state", "riskState", "slabEngine", "slab:engine"], {})) ||
+    nonEmptyObject(objectOf(scope, ["bitmap", "slabBitmap", "slab:bitmap"], {})) ||
+    Number(market.crank?.activeAccounts || 0) > 0 ||
+    Number(market.crank?.ageSlots || 0) > 0;
+}
+
+function hasCrankAgeSignal({ scope, market }) {
+  const engine = objectOf(scope, ["engine", "state", "riskState", "slabEngine", "slab:engine"], {});
+  return rawNumberPresent(engine, ["crankAgeSlots", "crank_age_slots", "ageSlots", "lastCrankSlot", "last_crank_slot", "lastMarketSlot", "last_market_slot"]) ||
+    Number(market.crank?.ageSlots) > 0;
+}
+
+function hasFundingSignal({ scope, market }) {
+  const engine = objectOf(scope, ["engine", "state", "riskState", "slabEngine", "slab:engine"], {});
+  const firstHistory = firstItem(historyListOf(scope));
+  const funding = Number(market.funding?.bpsPerHour);
+  return rawNumberPresent(engine, ["fundingRateBpsPerHour", "funding_bps_per_hour", "fundingRate"]) ||
+    rawNumberPresent(firstHistory, ["fundingBpsPerHour", "fundingRateBpsPerHour"]) ||
+    (Number.isFinite(funding) && funding !== 0);
+}
+
+function hasMarketStructureSignal({ scope, market }) {
+  const engine = objectOf(scope, ["engine", "state", "riskState", "slabEngine", "slab:engine"], {});
+  const marketInfo = objectOf(scope, ["market", "marketInfo", "metadata", "instrument"], {});
+  const firstHistory = firstItem(historyListOf(scope));
+  return rawNumberPresent(engine, ["openInterestUsd", "open_interest_usd", "oiUsd", "longOpenInterestUsd", "shortOpenInterestUsd"]) ||
+    rawNumberPresent(marketInfo, ["openInterestUsd"]) ||
+    rawNumberPresent(firstHistory, ["openInterestUsd", "oiUsd", "longOpenInterestUsd", "shortOpenInterestUsd", "oiSkewPct"]) ||
+    Number(market.marketStructure?.openInterestUsd) > 0;
+}
+
+function hasAccountSignal({ scope, market }) {
+  const account = objectOf(scope, ["account", "position", "traderAccount"], {});
+  return nonEmptyObject(account) ||
+    rowsOf(valueOf(scope, ["accounts", "positions"])).length > 0 ||
+    Math.abs(Number(market.account?.positionSize || 0)) > 0 ||
+    Number(market.account?.collateralUsd || 0) > 0;
+}
+
+function hasPositionNotionalSignal({ scope, market }) {
+  const account = objectOf(scope, ["account", "position", "traderAccount"], {});
+  return rawNumberPresent(account, ["positionNotionalUsd", "notionalUsd", "notional"]) ||
+    (
+      rawNumberPresent(account, ["positionSize", "basePosition", "positionSizeBase", "size", "position"]) &&
+      Number(market.price?.mark) > 0
+    ) ||
+    Number(market.account?.positionNotionalUsd) > 0;
+}
+
+function hasExecutionSignal({ scope, market }) {
+  const book = objectOf(scope, ["bestPrice", "best-price", "best_price", "book", "orderbook", "quote"], {});
+  const execution = objectOf(scope, ["execution", "executionQuality"], {});
+  const firstReceipt = firstItem(receiptListOf(scope));
+  const sourceExecution = objectOf(sourceMarketOf(scope), ["execution", "executionQuality"], {});
+  return rawNumberPresent(book, ["bestBid", "bid", "best_bid", "bestAsk", "ask", "best_ask"]) ||
+    rawNumberPresent(execution, ["bestBid", "bestAsk"]) ||
+    rawNumberPresent(sourceExecution, ["bestBid", "bestAsk"]) ||
+    rawNumberPresent(firstReceipt, ["bestBid", "bestAsk", "bid", "ask"]) ||
+    (Number(market.execution?.bestBid) > 0 && Number(market.execution?.bestAsk) > 0 && (receiptCount(scope, market) > 0 || nonEmptyObject(sourceExecution)));
+}
+
+function hasReceiptSignal({ scope, market }) {
+  return receiptCount(scope, market) > 0;
+}
+
+function hasHistorySignal({ scope, market }) {
+  return historyCount(scope, market) > 0;
+}
+
+function receiptCount(scope, market) {
+  const sourceReceipts = objectOf(sourceMarketOf(scope), ["execution", "executionQuality"], {});
+  return Math.max(
+    receiptListOf(scope).length,
+    receiptListOf(sourceReceipts).length,
+    Array.isArray(market.execution?.receipts) ? market.execution.receipts.length : 0
+  );
+}
+
+function historyCount(scope, market) {
+  const sourceHistory = objectOf(sourceMarketOf(scope), ["history"], {});
+  return Math.max(
+    historyListOf(scope).length,
+    historyListOf(sourceHistory).length,
+    Array.isArray(market.history?.fundingSkew) ? market.history.fundingSkew.length : 0
+  );
+}
+
+function sourceMarketOf(scope) {
+  const [market] = marketListOf(scope);
+  if (market && typeof market === "object") return market;
+  return objectOf(scope, ["market", "marketInfo", "metadata", "instrument"], {});
+}
+
+function hasProvenanceSignal({ input, scope, snapshot }) {
+  return Array.isArray(snapshot.source?.commandSet) && snapshot.source.commandSet.length > 0 ||
+    knownText(valueOf(scope, ["label", "sourceLabel"])) ||
+    (knownText(snapshot.cluster) && snapshot.cluster !== "unknown") ||
+    rawNumberPresent(scope, ["currentSlot", "slot", "current_slot"]) ||
+    commandNames(input).length > 0;
+}
+
+function rawNumberPresent(source, aliases) {
+  if (!source || typeof source !== "object") return false;
+  const value = valueOf(source, aliases);
+  if (value === undefined || value === null || value === "") return false;
+  const next = Number(typeof value === "string" ? value.replace(/[$,%_\s,]/g, "") : value);
+  return Number.isFinite(next);
+}
+
+function knownText(value) {
+  return Boolean(value && String(value).trim());
+}
+
+function nonEmptyObject(value) {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length);
+}
+
 function coercePercolatorSnapshot(input) {
   if (!input || typeof input !== "object") {
     return { source: { label: "empty input", mode: "read-only" }, markets: [] };
@@ -101,11 +635,12 @@ function coercePercolatorSnapshot(input) {
 function coercePercolatorMarket(market, currentSlot = 0) {
   if (!market || typeof market !== "object") return {};
   if (market.oracle && market.engine && market.account && market.execution) return market;
+  const marketInfo = objectOf(market, ["market", "marketInfo", "metadata", "instrument"], market);
   return coercePercolatorCliBundle({
     ...market,
     cluster: market.cluster,
     currentSlot,
-    market
+    market: marketInfo
   }).markets[0];
 }
 
@@ -805,6 +1340,37 @@ function isFundingHistoryInput(input) {
   return !Object.keys(input).some((key) =>
     nonHistoryAliases.some((alias) => normalizeKey(alias) === normalizeKey(key))
   );
+}
+
+function isFundingHistoryArray(input) {
+  if (!Array.isArray(input) || !input.length) return false;
+  return input.every(isFundingHistoryRow);
+}
+
+function isFundingHistoryRow(row) {
+  if (!row || typeof row !== "object" || Array.isArray(row)) return false;
+  return [
+    "fundingBpsPerHour",
+    "fundingRateBpsPerHour",
+    "oiSkewPct",
+    "openInterestUsd",
+    "stressUsedPct",
+    "oracleAgeSec",
+    "sourceTimestamp"
+  ].some((alias) => valueOf(row, [alias]) !== undefined);
+}
+
+function isReadOnlyRpcInput(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return false;
+  const account = objectOf(input, ["account", "accountInfo"], {});
+  if (!nonEmptyObject(account)) return false;
+  return knownText(valueOf(input, ["slab", "slabAddress", "pubkey"])) &&
+    knownText(valueOf(input, ["programId", "program"])) &&
+    (
+      knownText(valueOf(account, ["owner", "programId"])) ||
+      valueOf(account, ["decoded"]) !== undefined ||
+      valueOf(account, ["dataLength", "dataLen", "space"]) !== undefined
+    );
 }
 
 function isHistoryCommandName(value) {

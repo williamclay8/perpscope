@@ -1,5 +1,6 @@
 export {
   assertReadOnlySnapshot,
+  buildPercolatorCompatibilityReport,
   detectPercolatorInputShape,
   normalizePercolatorCliBundle,
   normalizePercolatorSnapshot,
