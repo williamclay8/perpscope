@@ -153,6 +153,8 @@ button {
 .spine-step strong,
 .impact-row strong,
 .watch-card b,
+.history-tile strong,
+.history-lane strong,
 .deployment-ledger strong,
 .recipe-card span,
 .receipt-tile strong,
@@ -428,6 +430,7 @@ h1 {
 .account-panel,
 .execution-panel,
 .watchtower-panel,
+.history-panel,
 .deployment-panel,
 .recipe-panel,
 .receipt-panel,
@@ -743,6 +746,120 @@ h1 {
 
 .receipt-panel {
   grid-column: span 3;
+}
+
+.history-panel {
+  grid-column: span 3;
+}
+
+.history-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.history-tile {
+  display: grid;
+  gap: 6px;
+  min-height: 58px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: var(--shadow-border);
+}
+
+.history-tile.good {
+  background: var(--mint-soft);
+}
+
+.history-tile.warning {
+  background: var(--amber-soft);
+}
+
+.history-tile.danger {
+  background: var(--red-soft);
+}
+
+.history-tile span,
+.history-lane span,
+.history-source-strip span {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.history-tile strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: clamp(13px, 1.05vw, 17px);
+  line-height: 1.08;
+}
+
+.history-lanes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.history-lane {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: var(--shadow-border);
+}
+
+.history-lane div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.history-lane strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.history-lane svg {
+  display: block;
+  width: 100%;
+  height: 58px;
+}
+
+.history-lane line {
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-dasharray: 4 6;
+  stroke-width: 1.3;
+}
+
+.history-lane polyline {
+  fill: none;
+  stroke: var(--cyan);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.history-source-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.history-source-strip span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 9px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.045);
+  font-weight: 800;
+  box-shadow: var(--shadow-border);
 }
 
 .receipt-summary {
@@ -1251,7 +1368,7 @@ h1 {
 
 .recipe-flow {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
   gap: 10px;
   margin-bottom: 14px;
 }
@@ -1387,12 +1504,20 @@ code {
     grid-column: span 2;
   }
 
+  .history-panel {
+    grid-column: span 2;
+  }
+
   .deployment-panel,
   .recipe-panel {
     grid-column: span 2;
   }
 
   .watchtower-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .history-lanes {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1472,6 +1597,7 @@ code {
 
   .hero-panel,
   .watchtower-panel,
+  .history-panel,
   .deployment-panel,
   .recipe-panel,
   .receipt-panel,
@@ -1492,6 +1618,8 @@ code {
   .runway-metrics,
   .account-strip,
   .watchtower-grid,
+  .history-summary,
+  .history-lanes,
   .deployment-grid,
   .recipe-flow,
   .dto-strip,

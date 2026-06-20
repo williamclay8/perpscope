@@ -1,0 +1,83 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import {
+  buildReadOnlyRpcSnapshot,
+  buildWatchtowerSignals,
+  detectPercolatorInputShape,
+  normalizeFundingSkewHistory,
+  normalizePercolatorSnapshot,
+  simulatePriceShock,
+  summarizeFundingSkewHistory,
+  validateReadOnlyRpcRequest
+} from "../packages/percolator-adapter/index.js";
+import { percolatorFixture } from "../src/fixtures/percolator-market.js";
+
+const historyStdout = JSON.parse(
+  readFileSync(new URL("../examples/funding-skew-history.stdout.json", import.meta.url), "utf8")
+);
+const rpcFixture = JSON.parse(
+  readFileSync(new URL("../examples/percolator-mainnet-sol.readonly-rpc.json", import.meta.url), "utf8")
+);
+const packageDir = fileURLToPath(new URL("../packages/percolator-adapter/", import.meta.url));
+
+test("adapter package exposes read-only terminal DTO helpers", () => {
+  const snapshot = normalizePercolatorSnapshot(percolatorFixture);
+  const sol = snapshot.markets.find((market) => market.id === "sol-perp");
+  const stress = simulatePriceShock(sol, -3);
+  const signals = buildWatchtowerSignals(sol, stress);
+  const history = normalizeFundingSkewHistory(sol.history.fundingSkew, sol);
+
+  assert.equal(detectPercolatorInputShape(percolatorFixture), "perpscope-snapshot");
+  assert.equal(snapshot.markets.length, 3);
+  assert.equal(signals.find((signal) => signal.id === "carry").tone, "good");
+  assert.equal(history.length, 6);
+  assert.equal(history.at(-1).fundingBpsPerHour, 0.82);
+  assert.doesNotMatch(JSON.stringify({ signals, history }), /connect wallet|sign transaction|send transaction|place order|submit trade|trade now/i);
+});
+
+test("adapter package normalizes captured carry history logs", () => {
+  const history = normalizeFundingSkewHistory(historyStdout);
+  const summary = summarizeFundingSkewHistory(history);
+
+  assert.equal(history.length, 6);
+  assert.equal(history[0].source, "terminal stdout");
+  assert.equal(history.at(-1).oiSkewPct.toFixed(1), "8.6");
+  assert.equal(summary.tone, "good");
+});
+
+test("adapter package exposes read-only RPC helpers", () => {
+  const checked = validateReadOnlyRpcRequest(rpcFixture);
+  const snapshot = buildReadOnlyRpcSnapshot(rpcFixture);
+
+  assert.equal(checked.magic, "50455243");
+  assert.equal(snapshot.markets[0].name, "SOL-PERP");
+});
+
+test("adapter package can be packed and imported outside the monorepo", async () => {
+  const tempDir = mkdtempSync(join(tmpdir(), "perpscope-adapter-pack-"));
+  try {
+    const output = execFileSync("npm", ["pack", "--json", "--pack-destination", tempDir], {
+      cwd: packageDir,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    const [{ filename }] = JSON.parse(output);
+    const tarball = join(tempDir, filename);
+    execFileSync("tar", ["-xzf", tarball, "-C", tempDir], { stdio: "ignore" });
+
+    const packed = await import(pathToFileURL(join(tempDir, "package", "index.js")).href);
+    const snapshot = packed.normalizePercolatorSnapshot(percolatorFixture);
+    const history = packed.normalizeFundingSkewHistory(historyStdout);
+
+    assert.equal(snapshot.markets.length, 3);
+    assert.equal(history.at(-1).oiSkewPct.toFixed(1), "8.6");
+    assert.equal(typeof packed.buildWatchtowerSignals, "function");
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});

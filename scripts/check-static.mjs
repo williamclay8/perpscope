@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { normalizePercolatorSnapshot } from "../src/lib/percolator-adapter.js";
+import { normalizeFundingSkewHistory } from "../src/lib/funding-history.js";
 import { summarizeReadOnlyRpcDeployment } from "../src/lib/read-only-rpc-fetcher.js";
 import { percolatorFixture } from "../src/fixtures/percolator-market.js";
 
@@ -9,6 +10,7 @@ const js = readFileSync(new URL("../src/app.js", import.meta.url), "utf8");
 const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
 const schemaDir = new URL("../schemas/", import.meta.url);
 const exampleDir = new URL("../examples/", import.meta.url);
+const packageEntry = readFileSync(new URL("../packages/percolator-adapter/index.js", import.meta.url), "utf8");
 
 const failures = [];
 
@@ -52,6 +54,10 @@ if (!/watchtower-panel/.test(js) || !/buildWatchtowerSignals/.test(js)) {
   failures.push("Cockpit should expose the Watchtower read-only signal layer.");
 }
 
+if (!/history-panel/.test(js) || !/normalizeFundingSkewHistory/.test(js)) {
+  failures.push("Cockpit should expose the funding/skew history signal layer.");
+}
+
 if (!/deployment-panel/.test(js) || !/READ_ONLY_DEPLOYMENTS/.test(js)) {
   failures.push("Cockpit should expose read-only deployment examples.");
 }
@@ -67,6 +73,14 @@ if (dto.markets.length < 3) {
 
 if (!dto.markets.some((market) => market.status === "risk")) {
   failures.push("Fixture should include a risk state for visual QA.");
+}
+
+if (!dto.markets.every((market) => market.history?.fundingSkew?.length >= 1)) {
+  failures.push("Fixture markets should expose funding/skew history rows.");
+}
+
+if (!/normalizePercolatorSnapshot/.test(packageEntry) || !/buildWatchtowerSignals/.test(packageEntry) || !/normalizeFundingSkewHistory/.test(packageEntry)) {
+  failures.push("Adapter package should expose snapshot, Watchtower, and funding history helpers.");
 }
 
 for (const match of readme.matchAll(/!\[([^\]]*)\]\(([^)]+)\)/g)) {
@@ -108,7 +122,7 @@ for (const filename of [
 try {
   const recipeManifest = JSON.parse(readFileSync(new URL("terminal-recipes.json", exampleDir), "utf8"));
   const recipeIds = new Set((recipeManifest.recipes || []).map((recipe) => recipe.id));
-  for (const expected of ["file-import", "drag-drop-stdout", "command-bundle", "list-markets", "read-only-rpc", "dto-export"]) {
+  for (const expected of ["file-import", "drag-drop-stdout", "command-bundle", "list-markets", "read-only-rpc", "carry-history", "dto-export"]) {
     if (!recipeIds.has(expected)) failures.push(`Terminal recipes should include ${expected}.`);
   }
   for (const recipe of recipeManifest.recipes || []) {
@@ -120,10 +134,18 @@ try {
   failures.push(`Terminal recipe manifest should parse and validate (${error.message})`);
 }
 
+try {
+  const history = normalizeFundingSkewHistory(JSON.parse(readFileSync(new URL("funding-skew-history.stdout.json", exampleDir), "utf8")));
+  if (history.length < 4) failures.push("Funding/skew history example should expose at least four rows.");
+} catch (error) {
+  failures.push(`Funding/skew history example should validate (${error.message})`);
+}
+
 for (const schema of [
   "schemas/perpscope-snapshot.schema.json",
   "schemas/percolator-cli-bundle.schema.json",
-  "schemas/read-only-rpc-fetch.schema.json"
+  "schemas/read-only-rpc-fetch.schema.json",
+  "schemas/funding-skew-history.schema.json"
 ]) {
   if (!readme.includes(schema)) {
     failures.push(`README should link ${schema}.`);

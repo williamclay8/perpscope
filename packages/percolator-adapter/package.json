@@ -1,0 +1,19 @@
+{
+  "name": "@perpscope/percolator-adapter",
+  "version": "0.3.0",
+  "type": "module",
+  "description": "Read-only Percolator adapter helpers for Solana perps terminals.",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "keywords": [
+    "solana",
+    "perps",
+    "percolator",
+    "risk",
+    "terminal-adapter"
+  ],
+  "license": "MIT",
+  "sideEffects": false
+}

@@ -1,6 +1,6 @@
 {
   "label": "PerpScope terminal adapter recipes",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "recipes": [
     {
       "id": "file-import",
@@ -61,6 +61,16 @@
       "provenance": ["source.deployment", "slab", "programId", "account.owner"]
     },
     {
+      "id": "carry-history",
+      "label": "Carry history",
+      "fixture": "examples/funding-skew-history.stdout.json",
+      "inputShape": "funding-skew-history",
+      "entry": "stdout-json",
+      "commands": ["funding-history"],
+      "export": "PerpScopeCarryHistoryV1",
+      "provenance": ["source.commandSet", "market.slab", "market.program", "sourceTimestamp"]
+    },
+    {
       "id": "dto-export",
       "label": "DTO export",
       "fixture": "examples/terminal-dto-export.json",
@@ -87,6 +97,7 @@
           "crank": ["ageSlots", "freshnessScore", "catchupRequired"],
           "account": ["side", "liquidationDistancePct", "marginBufferUsd"],
           "execution": ["spreadBps", "impact10kBps", "impact50kBps", "markout5mBps", "receipts"],
+          "history": ["fundingSkew"],
           "flags": ["label", "tone"]
         }
       ]

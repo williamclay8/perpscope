@@ -15,6 +15,10 @@ import {
   summarizeReadOnlyRpcDeployment,
   validateReadOnlyRpcRequest
 } from "../src/lib/read-only-rpc-fetcher.js";
+import {
+  normalizeFundingSkewHistory,
+  summarizeFundingSkewHistory
+} from "../src/lib/funding-history.js";
 import { percolatorFixture } from "../src/fixtures/percolator-market.js";
 
 const cliBundle = JSON.parse(
@@ -38,6 +42,9 @@ const devnetWifDeployment = JSON.parse(
 const terminalRecipes = JSON.parse(
   readFileSync(new URL("../examples/terminal-recipes.json", import.meta.url), "utf8")
 );
+const historyStdout = JSON.parse(
+  readFileSync(new URL("../examples/funding-skew-history.stdout.json", import.meta.url), "utf8")
+);
 
 test("normalizes Percolator-like market state into terminal DTOs", () => {
   const snapshot = normalizePercolatorSnapshot(percolatorFixture);
@@ -49,6 +56,8 @@ test("normalizes Percolator-like market state into terminal DTOs", () => {
   assert.equal(snapshot.markets[0].execution.receipts.length, 3);
   assert.equal(snapshot.markets[0].execution.receipts[0].spreadBps, 10.5);
   assert.equal(snapshot.markets[2].execution.receipts[1].routeLatencyMs, 566);
+  assert.equal(snapshot.markets[0].history.fundingSkew.length, 6);
+  assert.equal(snapshot.markets[2].history.fundingSkew.at(-1).fundingBpsPerHour, 3.9);
 });
 
 test("rejects secret-bearing wallet fields in read-only snapshots", () => {
@@ -176,6 +185,57 @@ test("normalizes captured execution receipt stdout", () => {
   assert.equal(market.execution.receipts.length, 2);
   assert.equal(market.execution.receipts[0].priorityFeeMicrolamports, 2200);
   assert.equal(market.execution.receipts[1].markout5mBps, -6.8);
+});
+
+test("normalizes captured funding and skew history stdout", () => {
+  assert.equal(detectPercolatorInputShape(historyStdout), "funding-skew-history");
+
+  const snapshot = normalizePercolatorSnapshot(historyStdout);
+  const history = normalizeFundingSkewHistory(historyStdout, snapshot.markets[0]);
+  const summary = summarizeFundingSkewHistory(history);
+
+  assert.equal(snapshot.markets[0].history.fundingSkew.length, 6);
+  assert.equal(history.at(-1).fundingBpsPerHour, 0.82);
+  assert.equal(history.at(-1).oiSkewPct.toFixed(1), "8.6");
+  assert.equal(summary.tone, "good");
+});
+
+test("rejects secret-bearing fields in funding history logs", () => {
+  assert.throws(
+    () => normalizeFundingSkewHistory({ rows: [{ sourceTimestamp: "now", walletPath: "~/.config/solana/id.json" }] }),
+    /Refusing mutating field/
+  );
+  for (const key of ["signer", "transaction", "instruction", "order", "privateKey", "secretKey"]) {
+    assert.throws(
+      () => normalizeFundingSkewHistory({ rows: [{ sourceTimestamp: "now", fundingBpsPerHour: 1, [key]: "nope" }] }),
+      /Refusing mutating field/
+    );
+  }
+  assert.throws(
+    () => normalizeFundingSkewHistory({
+      commands: [
+        {
+          command: "funding-history",
+          stdoutText: "{\"rows\":[{\"fundingBpsPerHour\":1,\"walletPath\":\"~/.config/solana/id.json\"}]}"
+        }
+      ]
+    }),
+    /Refusing mutating field/
+  );
+});
+
+test("keeps the latest funding history rows after chronological normalization", () => {
+  const rows = Array.from({ length: 50 }, (_, index) => ({
+    slot: index + 1,
+    fundingBpsPerHour: index + 1
+  }));
+  const normalized = normalizeFundingSkewHistory({ rows });
+  const summary = summarizeFundingSkewHistory(normalized);
+
+  assert.equal(normalized.length, 48);
+  assert.equal(normalized[0].slot, 3);
+  assert.equal(normalized.at(-1).slot, 50);
+  assert.equal(summary.latest.fundingBpsPerHour, 50);
 });
 
 test("normalizes receipt wrapper containers", () => {
@@ -444,7 +504,7 @@ test("rejects deployment fixtures with stale oracle expectations", () => {
 test("documents terminal import and export recipes with live fixtures", () => {
   assert.deepEqual(
     terminalRecipes.recipes.map((recipe) => recipe.id),
-    ["file-import", "drag-drop-stdout", "command-bundle", "list-markets", "read-only-rpc", "dto-export"]
+    ["file-import", "drag-drop-stdout", "command-bundle", "list-markets", "read-only-rpc", "carry-history", "dto-export"]
   );
 
   for (const recipe of terminalRecipes.recipes) {
@@ -456,6 +516,12 @@ test("documents terminal import and export recipes with live fixtures", () => {
       const summary = summarizeReadOnlyRpcDeployment(fixture);
       assert.equal(summary.method, "getAccountInfo");
       assert.ok(summary.freshness > 0);
+      continue;
+    }
+
+    if (recipe.inputShape === "funding-skew-history") {
+      const history = normalizeFundingSkewHistory(fixture);
+      assert.ok(history.length >= 1);
       continue;
     }
 

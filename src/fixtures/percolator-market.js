@@ -163,6 +163,16 @@ export const percolatorFixture = {
             fillQualityScore: 77
           }
         ]
+      },
+      history: {
+        fundingSkew: [
+          { source: "percolator fixture", sourceTimestamp: "2026-06-20T12:10:00Z", slot: 346888840, fundingBpsPerHour: 0.42, longOpenInterestUsd: 1190000, shortOpenInterestUsd: 1120000, stressConsumedBps: 86, stressLimitBps: 500, oracleAgeSec: 1.8 },
+          { source: "percolator fixture", sourceTimestamp: "2026-06-20T12:32:00Z", slot: 346889510, fundingBpsPerHour: 0.55, longOpenInterestUsd: 1230000, shortOpenInterestUsd: 1130000, stressConsumedBps: 92, stressLimitBps: 500, oracleAgeSec: 2.4 },
+          { source: "percolator fixture", sourceTimestamp: "2026-06-20T12:54:00Z", slot: 346890170, fundingBpsPerHour: 0.74, longOpenInterestUsd: 1260000, shortOpenInterestUsd: 1120000, stressConsumedBps: 104, stressLimitBps: 500, oracleAgeSec: 1.7 },
+          { source: "percolator fixture", sourceTimestamp: "2026-06-20T13:08:00Z", slot: 346890720, fundingBpsPerHour: 0.69, longOpenInterestUsd: 1290000, shortOpenInterestUsd: 1130000, stressConsumedBps: 111, stressLimitBps: 500, oracleAgeSec: 2.0 },
+          { source: "percolator fixture", sourceTimestamp: "2026-06-20T13:21:00Z", slot: 346891520, fundingBpsPerHour: 0.78, longOpenInterestUsd: 1310000, shortOpenInterestUsd: 1115000, stressConsumedBps: 116, stressLimitBps: 500, oracleAgeSec: 1.9 },
+          { source: "percolator fixture", sourceTimestamp: "2026-06-20T13:24:00Z", slot: 346892086, fundingBpsPerHour: 0.82, longOpenInterestUsd: 1320000, shortOpenInterestUsd: 1110000, stressConsumedBps: 118, stressLimitBps: 500, oracleAgeSec: 2.1 }
+        ]
       }
     },
     {
@@ -296,6 +306,16 @@ export const percolatorFixture = {
             fillQualityScore: 68
           }
         ]
+      },
+      history: {
+        fundingSkew: [
+          { source: "percolator fixture", sourceTimestamp: "2026-06-20T12:06:00Z", slot: 346888720, fundingBpsPerHour: -0.62, longOpenInterestUsd: 1960000, shortOpenInterestUsd: 2090000, stressConsumedBps: 188, stressLimitBps: 500, oracleAgeSec: 4.1 },
+          { source: "percolator fixture", sourceTimestamp: "2026-06-20T12:28:00Z", slot: 346889390, fundingBpsPerHour: -0.78, longOpenInterestUsd: 1930000, shortOpenInterestUsd: 2140000, stressConsumedBps: 214, stressLimitBps: 500, oracleAgeSec: 4.8 },
+          { source: "percolator fixture", sourceTimestamp: "2026-06-20T12:50:00Z", slot: 346890050, fundingBpsPerHour: -0.94, longOpenInterestUsd: 1900000, shortOpenInterestUsd: 2200000, stressConsumedBps: 238, stressLimitBps: 500, oracleAgeSec: 5.2 },
+          { source: "percolator fixture", sourceTimestamp: "2026-06-20T13:04:00Z", slot: 346890610, fundingBpsPerHour: -1.08, longOpenInterestUsd: 1880000, shortOpenInterestUsd: 2220000, stressConsumedBps: 252, stressLimitBps: 500, oracleAgeSec: 5.6 },
+          { source: "percolator fixture", sourceTimestamp: "2026-06-20T13:18:00Z", slot: 346891480, fundingBpsPerHour: -1.02, longOpenInterestUsd: 1875000, shortOpenInterestUsd: 2240000, stressConsumedBps: 271, stressLimitBps: 500, oracleAgeSec: 6.1 },
+          { source: "percolator fixture", sourceTimestamp: "2026-06-20T13:23:00Z", slot: 346891992, fundingBpsPerHour: -1.18, longOpenInterestUsd: 1870000, shortOpenInterestUsd: 2250000, stressConsumedBps: 284, stressLimitBps: 500, oracleAgeSec: 5.7 }
+        ]
       }
     },
     {
@@ -428,6 +448,16 @@ export const percolatorFixture = {
             fundingBpsPerHour: 4.4,
             fillQualityScore: 29
           }
+        ]
+      },
+      history: {
+        fundingSkew: [
+          { source: "percolator fixture", sourceTimestamp: "2026-06-20T12:02:00Z", slot: 346888540, fundingBpsPerHour: 1.7, longOpenInterestUsd: 402000, shortOpenInterestUsd: 302000, stressConsumedBps: 244, stressLimitBps: 500, oracleAgeSec: 4.8 },
+          { source: "percolator fixture", sourceTimestamp: "2026-06-20T12:24:00Z", slot: 346889260, fundingBpsPerHour: 2.2, longOpenInterestUsd: 438000, shortOpenInterestUsd: 286000, stressConsumedBps: 286, stressLimitBps: 500, oracleAgeSec: 5.9 },
+          { source: "percolator fixture", sourceTimestamp: "2026-06-20T12:46:00Z", slot: 346889930, fundingBpsPerHour: 2.8, longOpenInterestUsd: 472000, shortOpenInterestUsd: 244000, stressConsumedBps: 328, stressLimitBps: 500, oracleAgeSec: 7.3 },
+          { source: "percolator fixture", sourceTimestamp: "2026-06-20T13:01:00Z", slot: 346890520, fundingBpsPerHour: 3.5, longOpenInterestUsd: 496000, shortOpenInterestUsd: 218000, stressConsumedBps: 364, stressLimitBps: 500, oracleAgeSec: 8.1 },
+          { source: "percolator fixture", sourceTimestamp: "2026-06-20T13:17:00Z", slot: 346891611, fundingBpsPerHour: 4.4, longOpenInterestUsd: 518000, shortOpenInterestUsd: 203000, stressConsumedBps: 397, stressLimitBps: 500, oracleAgeSec: 10.2 },
+          { source: "percolator fixture", sourceTimestamp: "2026-06-20T13:22:00Z", slot: 346891702, fundingBpsPerHour: 3.9, longOpenInterestUsd: 512000, shortOpenInterestUsd: 198000, stressConsumedBps: 382, stressLimitBps: 500, oracleAgeSec: 8.8 }
         ]
       }
     }

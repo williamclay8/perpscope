@@ -4,13 +4,17 @@ import { readFileSync } from "node:fs";
 import {
   buildDeploymentSummaries,
   buildTerminalRecipeSummaries,
-  buildWatchtowerSignals,
   createImportedSnapshotState,
   DEMO_CLI_PATH,
   fetchCliDemoSnapshot,
   READ_ONLY_DEPLOYMENTS,
   TERMINAL_RECIPES
 } from "../src/app.js";
+import { buildWatchtowerSignals } from "../src/lib/watchtower-signals.js";
+import {
+  normalizeFundingSkewHistory,
+  summarizeFundingSkewHistory
+} from "../src/lib/funding-history.js";
 import {
   normalizePercolatorSnapshot,
   simulatePriceShock
@@ -79,6 +83,24 @@ test("Watchtower escalates degraded markets without action controls", () => {
   assert.match(signals.find((signal) => signal.id === "execution").detail, /ms route/);
 });
 
+test("Watchtower does not call missing impact ratios flat when absolute impact is high", () => {
+  const snapshot = normalizePercolatorSnapshot(percolatorFixture);
+  const sol = snapshot.markets.find((market) => market.id === "sol-perp");
+  const signals = buildWatchtowerSignals({
+    ...sol,
+    execution: {
+      ...sol.execution,
+      impact10kBps: 0,
+      impact50kBps: 80
+    }
+  });
+  const impact = signals.find((signal) => signal.id === "impact");
+
+  assert.equal(impact.value, "80.0 bps");
+  assert.equal(impact.tone, "danger");
+  assert.ok(impact.score < 20);
+});
+
 test("builds deployment and recipe summaries for the cockpit", () => {
   const deployments = buildDeploymentSummaries();
   const recipes = buildTerminalRecipeSummaries();
@@ -93,10 +115,23 @@ test("builds deployment and recipe summaries for the cockpit", () => {
     "command-bundle",
     "list-markets",
     "read-only-rpc",
+    "carry-history",
     "dto-export"
   ]);
   assert.equal(recipes[0].step, "01");
-  assert.equal(recipes.at(-1).step, "06");
+  assert.equal(recipes.at(-1).step, "07");
   assert.doesNotMatch(JSON.stringify({ deployments, recipes }), /connect wallet|sign transaction|send transaction|place order|submit trade|trade now/i);
   assert.equal(TERMINAL_RECIPES.find((recipe) => recipe.id === "read-only-rpc").commands, "getAccountInfo");
+});
+
+test("builds funding and skew history summaries for the cockpit", () => {
+  const snapshot = normalizePercolatorSnapshot(percolatorFixture);
+  const wif = snapshot.markets.find((market) => market.id === "wif-perp");
+  const history = normalizeFundingSkewHistory(wif.history.fundingSkew, wif);
+  const summary = summarizeFundingSkewHistory(history);
+
+  assert.equal(history.length, 6);
+  assert.equal(summary.latest.fundingBpsPerHour, 3.9);
+  assert.equal(summary.tone, "danger");
+  assert.ok(summary.stressMaxPct > 75);
 });

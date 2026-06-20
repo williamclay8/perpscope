@@ -48,6 +48,19 @@
           }
         ]
       },
+      "history": {
+        "fundingSkew": [
+          {
+            "source": "terminal stdout",
+            "sourceTimestamp": "2026-06-20T13:24:00Z",
+            "slot": 346892086,
+            "fundingBpsPerHour": 0.82,
+            "oiSkewPct": 8.64,
+            "stressUsedPct": 23.6,
+            "oracleAgeSec": 2.1
+          }
+        ]
+      },
       "flags": [
         { "label": "fresh oracle", "tone": "good" },
         { "label": "crank ok", "tone": "good" }

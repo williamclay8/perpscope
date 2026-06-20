@@ -1,0 +1,17 @@
+{
+  "label": "Captured funding skew history stdout",
+  "cluster": "mainnet-beta",
+  "market": {
+    "symbol": "SOL-PERP",
+    "base": "SOL",
+    "quote": "USDC",
+    "slab": "PERCOLAT_SOL_8k4q...Qp2",
+    "program": "Perco1ator111111111111111111111111111111111"
+  },
+  "commands": [
+    {
+      "command": "funding-history",
+      "stdoutText": "percolator funding-history SOL-PERP --json\n{\"rows\":[{\"source\":\"terminal stdout\",\"sourceTimestamp\":\"2026-06-20T12:10:00Z\",\"slot\":346888840,\"fundingBpsPerHour\":0.42,\"longOpenInterestUsd\":1190000,\"shortOpenInterestUsd\":1120000,\"stressConsumedBps\":86,\"stressLimitBps\":500,\"oracleAgeSec\":1.8},{\"source\":\"terminal stdout\",\"sourceTimestamp\":\"2026-06-20T12:32:00Z\",\"slot\":346889510,\"fundingBpsPerHour\":0.55,\"longOpenInterestUsd\":1230000,\"shortOpenInterestUsd\":1130000,\"stressConsumedBps\":92,\"stressLimitBps\":500,\"oracleAgeSec\":2.4},{\"source\":\"terminal stdout\",\"sourceTimestamp\":\"2026-06-20T12:54:00Z\",\"slot\":346890170,\"fundingBpsPerHour\":0.74,\"longOpenInterestUsd\":1260000,\"shortOpenInterestUsd\":1120000,\"stressConsumedBps\":104,\"stressLimitBps\":500,\"oracleAgeSec\":1.7},{\"source\":\"terminal stdout\",\"sourceTimestamp\":\"2026-06-20T13:08:00Z\",\"slot\":346890720,\"fundingBpsPerHour\":0.69,\"longOpenInterestUsd\":1290000,\"shortOpenInterestUsd\":1130000,\"stressConsumedBps\":111,\"stressLimitBps\":500,\"oracleAgeSec\":2.0},{\"source\":\"terminal stdout\",\"sourceTimestamp\":\"2026-06-20T13:21:00Z\",\"slot\":346891520,\"fundingBpsPerHour\":0.78,\"longOpenInterestUsd\":1310000,\"shortOpenInterestUsd\":1115000,\"stressConsumedBps\":116,\"stressLimitBps\":500,\"oracleAgeSec\":1.9},{\"source\":\"terminal stdout\",\"sourceTimestamp\":\"2026-06-20T13:24:00Z\",\"slot\":346892086,\"fundingBpsPerHour\":0.82,\"longOpenInterestUsd\":1320000,\"shortOpenInterestUsd\":1110000,\"stressConsumedBps\":118,\"stressLimitBps\":500,\"oracleAgeSec\":2.1}]}\n"
+    }
+  ]
+}

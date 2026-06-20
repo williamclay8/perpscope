@@ -1,9 +1,12 @@
 {
   "name": "perpscope",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Read-only Percolator risk cockpit and terminal adapter kit.",
+  "workspaces": [
+    "packages/percolator-adapter"
+  ],
   "scripts": {
     "build": "node scripts/build-static.mjs",
     "start": "node scripts/serve.mjs",

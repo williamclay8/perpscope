@@ -5,6 +5,11 @@ import {
   parsePercolatorJson,
   simulatePriceShock
 } from "./lib/percolator-adapter.js";
+import {
+  normalizeFundingSkewHistory,
+  summarizeFundingSkewHistory
+} from "./lib/funding-history.js";
+import { buildWatchtowerSignals } from "./lib/watchtower-signals.js";
 
 export const DEMO_CLI_PATH = "./examples/percolator-cli.bundle.json";
 export const READ_ONLY_DEPLOYMENTS = [
@@ -75,6 +80,14 @@ export const TERMINAL_RECIPES = [
     entry: "client",
     output: "market dto",
     commands: "getAccountInfo"
+  },
+  {
+    id: "carry-history",
+    label: "carry log",
+    fixture: "funding-skew-history.stdout.json",
+    entry: "stdout",
+    output: "history dto",
+    commands: "funding-history"
   },
   {
     id: "dto-export",
@@ -175,6 +188,8 @@ function render() {
           </article>
 
           ${watchtowerPanel(market, stress)}
+
+          ${fundingHistoryPanel(market)}
 
           <article class="spine-panel panel stagger-item">
             <div class="panel-head">
@@ -454,77 +469,6 @@ function impactBar(label, value, max) {
   `;
 }
 
-export function buildWatchtowerSignals(market, stress) {
-  const receipts = market.execution.receipts || [];
-  const avgMarkout5m = receipts.length ? mean(receipts.map((receipt) => receipt.markout5mBps)) : market.execution.markout5mBps;
-  const avgLatency = receipts.length ? mean(receipts.map((receipt) => receipt.routeLatencyMs)) : market.execution.routeLatencyMs;
-  const avgFee = receipts.length ? mean(receipts.map((receipt) => receipt.priorityFeeMicrolamports)) : market.execution.priorityFeeMicrolamports;
-  const freshnessScore = Math.min(market.price.freshnessScore, market.crank.freshnessScore);
-  const impactRatio = market.execution.impact10kBps > 0
-    ? market.execution.impact50kBps / market.execution.impact10kBps
-    : 0;
-  const carryDaily = Math.abs(market.funding.dailyUsd);
-  const runwayScore = clamp(market.account.liquidationDistancePct * 6, 0, 100);
-  const projectedBuffer = stress?.projectedBufferUsd ?? market.account.marginBufferUsd;
-
-  return [
-    {
-      id: "runway",
-      label: "runway",
-      value: pct(market.account.liquidationDistancePct),
-      detail: `${money(market.account.marginBufferUsd, 0)} buffer`,
-      subvalue: `${money(projectedBuffer, 0)} stress`,
-      score: runwayScore,
-      tone: scoreTone(runwayScore)
-    },
-    {
-      id: "freshness",
-      label: "freshness",
-      value: `${Math.round(freshnessScore)}%`,
-      detail: `${fmtInt(market.crank.ageSlots)} slots`,
-      subvalue: `${market.price.publishAgeSec.toFixed(1)}s oracle`,
-      score: freshnessScore,
-      tone: scoreTone(freshnessScore)
-    },
-    {
-      id: "execution",
-      label: "execution",
-      value: signedBps(avgMarkout5m),
-      detail: `${Math.round(avgLatency)} ms route`,
-      subvalue: feeLabel(avgFee),
-      score: clamp(100 - Math.max(Math.abs(Math.min(avgMarkout5m, 0)) * 1.8, Math.max(avgLatency - 150, 0) / 5), 0, 100),
-      tone: avgMarkout5m >= 0 && avgLatency <= 220 ? "good" : avgMarkout5m < -18 || avgLatency > 420 ? "danger" : "warning"
-    },
-    {
-      id: "impact",
-      label: "impact curve",
-      value: impactRatio ? `${impactRatio.toFixed(1)}x` : "flat",
-      detail: `${market.execution.impact50kBps.toFixed(1)} bps at $50k`,
-      subvalue: `${market.execution.impact10kBps.toFixed(1)} bps at $10k`,
-      score: clamp(100 - impactRatio * 16, 0, 100),
-      tone: impactRatio >= 4.2 ? "danger" : impactRatio >= 2.7 ? "warning" : "good"
-    },
-    {
-      id: "carry",
-      label: "carry",
-      value: `${signedBps(market.funding.bpsPerHour)} / hr`,
-      detail: `${money(carryDaily, 0)} daily`,
-      subvalue: `${signedBps(market.marketStructure.oiSkewPct)} OI skew`,
-      score: clamp(100 - Math.abs(market.funding.bpsPerHour) * 14 - Math.abs(market.marketStructure.oiSkewPct) * 0.55, 0, 100),
-      tone: Math.abs(market.funding.bpsPerHour) >= 3.2 || Math.abs(market.marketStructure.oiSkewPct) >= 48 ? "danger" : Math.abs(market.funding.bpsPerHour) >= 1.4 || Math.abs(market.marketStructure.oiSkewPct) >= 24 ? "warning" : "good"
-    },
-    {
-      id: "solvency",
-      label: "solvency",
-      value: `${Math.round(market.solvency.coveragePct)}%`,
-      detail: `${money(market.solvency.insuranceUsd, 0)} insurance`,
-      subvalue: `${money(market.solvency.socialLossUsd, 0)} social loss`,
-      score: clamp(Math.min(market.solvency.coveragePct, 120) * 0.82, 0, 100),
-      tone: market.solvency.coveragePct < 28 || market.solvency.socialLossUsd > 0 ? "danger" : market.solvency.coveragePct < 55 ? "warning" : "good"
-    }
-  ];
-}
-
 function watchtowerPanel(market, stress) {
   const signals = buildWatchtowerSignals(market, stress);
   const summary = watchtowerSummary(signals);
@@ -564,6 +508,70 @@ function watchtowerSummary(signals) {
   if (dangerCount) return `${dangerCount} hot`;
   if (warningCount) return `${warningCount} watch`;
   return "clear";
+}
+
+function fundingHistoryPanel(market) {
+  const rows = normalizeFundingSkewHistory(market.history?.fundingSkew || [], market);
+  const summary = summarizeFundingSkewHistory(rows, market);
+  const latest = summary.latest;
+  return `
+    <article class="history-panel panel stagger-item">
+      <div class="panel-head">
+        <span class="panel-label">carry history</span>
+        <strong>${esc(summary.tone)}</strong>
+      </div>
+      <div class="history-summary">
+        ${historyTile("funding", `${signedBps(latest.fundingBpsPerHour)} / hr`, fundingTone(latest.fundingBpsPerHour))}
+        ${historyTile("OI skew", signedPct(latest.oiSkewPct), skewTone(latest.oiSkewPct))}
+        ${historyTile("stress", pct(latest.stressUsedPct), latest.stressUsedPct >= 75 ? "danger" : latest.stressUsedPct >= 52 ? "warning" : "good")}
+        ${historyTile("oracle", `${latest.oracleAgeSec.toFixed(1)}s`, latest.oracleAgeSec >= 8 ? "danger" : latest.oracleAgeSec >= 5 ? "warning" : "good")}
+      </div>
+      <div class="history-lanes" aria-label="Funding, skew, stress, and oracle age history">
+        ${historyLine("funding", rows.map((row) => row.fundingBpsPerHour), signedBps)}
+        ${historyLine("OI skew", rows.map((row) => row.oiSkewPct), signedPct)}
+        ${historyLine("stress", rows.map((row) => row.stressUsedPct), pct)}
+        ${historyLine("oracle", rows.map((row) => row.oracleAgeSec), (value) => `${value.toFixed(1)}s`)}
+      </div>
+      <div class="history-source-strip">
+        <span>${esc(latest.source || "adapter")}</span>
+        <span>${esc(timeLabel(latest.sourceTimestamp, latest.slot))}</span>
+        <span>${fmtInt(latest.slot || market.currentSlot)}</span>
+      </div>
+    </article>
+  `;
+}
+
+function historyTile(label, value, tone = "neutral") {
+  return `<div class="history-tile ${tone}"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`;
+}
+
+function historyLine(label, points, formatter) {
+  const cleanPoints = points.map(Number).filter(Number.isFinite);
+  if (!cleanPoints.length) return "";
+  const width = 280;
+  const height = 56;
+  const min = Math.min(...cleanPoints, 0);
+  const max = Math.max(...cleanPoints, 0);
+  const range = max - min || 1;
+  const path = cleanPoints.map((value, index) => {
+    const x = (index / (cleanPoints.length - 1 || 1)) * width;
+    const y = height - ((value - min) / range) * (height - 12) - 6;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  const latest = cleanPoints[cleanPoints.length - 1];
+  const zeroY = height - ((0 - min) / range) * (height - 12) - 6;
+  return `
+    <section class="history-lane" aria-label="${esc(label)} history ${esc(formatter(latest))}">
+      <div>
+        <span>${esc(label)}</span>
+        <strong>${esc(formatter(latest))}</strong>
+      </div>
+      <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(label)} sparkline">
+        <line x1="0" y1="${zeroY.toFixed(1)}" x2="${width}" y2="${zeroY.toFixed(1)}"></line>
+        <polyline points="${path}"></polyline>
+      </svg>
+    </section>
+  `;
 }
 
 function receiptPanel(market) {
@@ -708,6 +716,20 @@ function scoreTone(score) {
   if (score >= 68) return "good";
   if (score >= 42) return "warning";
   return "danger";
+}
+
+function fundingTone(value) {
+  const abs = Math.abs(Number(value));
+  if (abs >= 3.2) return "danger";
+  if (abs >= 1.4) return "warning";
+  return "good";
+}
+
+function skewTone(value) {
+  const abs = Math.abs(Number(value));
+  if (abs >= 48) return "danger";
+  if (abs >= 24) return "warning";
+  return "good";
 }
 
 function sparkline(points, tone) {

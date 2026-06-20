@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://williamclay8.github.io/perpscope/schemas/funding-skew-history.schema.json",
+  "title": "PerpScope Funding and Skew History",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "label": { "type": "string" },
+    "cluster": { "type": "string" },
+    "market": { "type": "object" },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "command": { "type": "string" },
+          "output": {},
+          "stdoutText": { "type": "string" }
+        },
+        "$ref": "#/$defs/readOnlyObject"
+      }
+    },
+    "rows": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/historyRow" }
+    },
+    "fundingSkew": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/historyRow" }
+    },
+    "fundingHistory": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/historyRow" }
+    },
+    "fundingSkewHistory": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/historyRow" }
+    }
+  },
+  "$defs": {
+    "historyRow": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "source": { "type": "string" },
+        "sourceTimestamp": { "type": "string" },
+        "slot": { "type": "number" },
+        "fundingBpsPerHour": { "type": "number" },
+        "longOpenInterestUsd": { "type": "number" },
+        "shortOpenInterestUsd": { "type": "number" },
+        "openInterestUsd": { "type": "number" },
+        "oiSkewPct": { "type": "number" },
+        "stressConsumedBps": { "type": "number" },
+        "stressLimitBps": { "type": "number" },
+        "stressUsedPct": { "type": "number" },
+        "oracleAgeSec": { "type": "number" }
+      },
+      "$ref": "#/$defs/readOnlyObject"
+    },
+    "readOnlyObject": {
+      "not": {
+        "anyOf": [
+          { "required": ["wallet"] },
+          { "required": ["walletPath"] },
+          { "required": ["signer"] },
+          { "required": ["signature"] },
+          { "required": ["transaction"] },
+          { "required": ["instruction"] },
+          { "required": ["order"] },
+          { "required": ["privateKey"] },
+          { "required": ["secretKey"] },
+          { "required": ["keypair"] },
+          { "required": ["mnemonic"] },
+          { "required": ["seed"] }
+        ]
+      }
+    }
+  },
+  "$ref": "#/$defs/readOnlyObject"
+}
