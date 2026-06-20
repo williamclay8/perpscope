@@ -47,6 +47,10 @@ if (!/id="try-cli"/.test(js)) {
   failures.push("Cockpit should expose the low-friction CLI demo loader.");
 }
 
+if (!/watchtower-panel/.test(js) || !/buildWatchtowerSignals/.test(js)) {
+  failures.push("Cockpit should expose the Watchtower read-only signal layer.");
+}
+
 const dto = normalizePercolatorSnapshot(percolatorFixture);
 if (dto.markets.length < 3) {
   failures.push("Fixture should expose at least three markets for the cockpit.");

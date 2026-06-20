@@ -2,10 +2,16 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
+  buildWatchtowerSignals,
   createImportedSnapshotState,
   DEMO_CLI_PATH,
   fetchCliDemoSnapshot
 } from "../src/app.js";
+import {
+  normalizePercolatorSnapshot,
+  simulatePriceShock
+} from "../src/lib/percolator-adapter.js";
+import { percolatorFixture } from "../src/fixtures/percolator-market.js";
 
 const cliBundleText = readFileSync(
   new URL("../examples/percolator-cli.bundle.json", import.meta.url),
@@ -38,4 +44,33 @@ test("surfaces Try CLI demo fetch failures", async () => {
     () => fetchCliDemoSnapshot(async () => ({ ok: false, text: async () => "" })),
     /CLI demo fixture unavailable/
   );
+});
+
+test("builds read-only Watchtower signals from normalized market data", () => {
+  const snapshot = normalizePercolatorSnapshot(percolatorFixture);
+  const sol = snapshot.markets.find((market) => market.id === "sol-perp");
+  const signals = buildWatchtowerSignals(sol, simulatePriceShock(sol, -3));
+
+  assert.deepEqual(signals.map((signal) => signal.id), [
+    "runway",
+    "freshness",
+    "execution",
+    "impact",
+    "carry",
+    "solvency"
+  ]);
+  assert.ok(signals.every((signal) => Number.isFinite(signal.score)));
+  assert.ok(signals.every((signal) => ["good", "warning", "danger"].includes(signal.tone)));
+  assert.equal(signals.find((signal) => signal.id === "execution").value, "+0.3 bps");
+  assert.doesNotMatch(JSON.stringify(signals), /connect|wallet|sign|send|place|order|trade now/i);
+});
+
+test("Watchtower escalates degraded markets without action controls", () => {
+  const snapshot = normalizePercolatorSnapshot(percolatorFixture);
+  const wif = snapshot.markets.find((market) => market.id === "wif-perp");
+  const signals = buildWatchtowerSignals(wif, simulatePriceShock(wif, -5));
+
+  assert.ok(signals.filter((signal) => signal.tone === "danger").length >= 3);
+  assert.equal(signals.find((signal) => signal.id === "solvency").tone, "danger");
+  assert.match(signals.find((signal) => signal.id === "execution").detail, /ms route/);
 });

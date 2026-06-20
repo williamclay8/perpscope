@@ -96,6 +96,8 @@ function render() {
             </label>
           </article>
 
+          ${watchtowerPanel(market, stress)}
+
           <article class="spine-panel panel stagger-item">
             <div class="panel-head">
               <span class="panel-label">protocol spine</span>
@@ -370,6 +372,118 @@ function impactBar(label, value, max) {
   `;
 }
 
+export function buildWatchtowerSignals(market, stress) {
+  const receipts = market.execution.receipts || [];
+  const avgMarkout5m = receipts.length ? mean(receipts.map((receipt) => receipt.markout5mBps)) : market.execution.markout5mBps;
+  const avgLatency = receipts.length ? mean(receipts.map((receipt) => receipt.routeLatencyMs)) : market.execution.routeLatencyMs;
+  const avgFee = receipts.length ? mean(receipts.map((receipt) => receipt.priorityFeeMicrolamports)) : market.execution.priorityFeeMicrolamports;
+  const freshnessScore = Math.min(market.price.freshnessScore, market.crank.freshnessScore);
+  const impactRatio = market.execution.impact10kBps > 0
+    ? market.execution.impact50kBps / market.execution.impact10kBps
+    : 0;
+  const carryDaily = Math.abs(market.funding.dailyUsd);
+  const runwayScore = clamp(market.account.liquidationDistancePct * 6, 0, 100);
+  const projectedBuffer = stress?.projectedBufferUsd ?? market.account.marginBufferUsd;
+
+  return [
+    {
+      id: "runway",
+      label: "runway",
+      value: pct(market.account.liquidationDistancePct),
+      detail: `${money(market.account.marginBufferUsd, 0)} buffer`,
+      subvalue: `${money(projectedBuffer, 0)} stress`,
+      score: runwayScore,
+      tone: scoreTone(runwayScore)
+    },
+    {
+      id: "freshness",
+      label: "freshness",
+      value: `${Math.round(freshnessScore)}%`,
+      detail: `${fmtInt(market.crank.ageSlots)} slots`,
+      subvalue: `${market.price.publishAgeSec.toFixed(1)}s oracle`,
+      score: freshnessScore,
+      tone: scoreTone(freshnessScore)
+    },
+    {
+      id: "execution",
+      label: "execution",
+      value: signedBps(avgMarkout5m),
+      detail: `${Math.round(avgLatency)} ms route`,
+      subvalue: feeLabel(avgFee),
+      score: clamp(100 - Math.max(Math.abs(Math.min(avgMarkout5m, 0)) * 1.8, Math.max(avgLatency - 150, 0) / 5), 0, 100),
+      tone: avgMarkout5m >= 0 && avgLatency <= 220 ? "good" : avgMarkout5m < -18 || avgLatency > 420 ? "danger" : "warning"
+    },
+    {
+      id: "impact",
+      label: "impact curve",
+      value: impactRatio ? `${impactRatio.toFixed(1)}x` : "flat",
+      detail: `${market.execution.impact50kBps.toFixed(1)} bps at $50k`,
+      subvalue: `${market.execution.impact10kBps.toFixed(1)} bps at $10k`,
+      score: clamp(100 - impactRatio * 16, 0, 100),
+      tone: impactRatio >= 4.2 ? "danger" : impactRatio >= 2.7 ? "warning" : "good"
+    },
+    {
+      id: "carry",
+      label: "carry",
+      value: `${signedBps(market.funding.bpsPerHour)} / hr`,
+      detail: `${money(carryDaily, 0)} daily`,
+      subvalue: `${signedBps(market.marketStructure.oiSkewPct)} OI skew`,
+      score: clamp(100 - Math.abs(market.funding.bpsPerHour) * 14 - Math.abs(market.marketStructure.oiSkewPct) * 0.55, 0, 100),
+      tone: Math.abs(market.funding.bpsPerHour) >= 3.2 || Math.abs(market.marketStructure.oiSkewPct) >= 48 ? "danger" : Math.abs(market.funding.bpsPerHour) >= 1.4 || Math.abs(market.marketStructure.oiSkewPct) >= 24 ? "warning" : "good"
+    },
+    {
+      id: "solvency",
+      label: "solvency",
+      value: `${Math.round(market.solvency.coveragePct)}%`,
+      detail: `${money(market.solvency.insuranceUsd, 0)} insurance`,
+      subvalue: `${money(market.solvency.socialLossUsd, 0)} social loss`,
+      score: clamp(Math.min(market.solvency.coveragePct, 120) * 0.82, 0, 100),
+      tone: market.solvency.coveragePct < 28 || market.solvency.socialLossUsd > 0 ? "danger" : market.solvency.coveragePct < 55 ? "warning" : "good"
+    }
+  ];
+}
+
+function watchtowerPanel(market, stress) {
+  const signals = buildWatchtowerSignals(market, stress);
+  const summary = watchtowerSummary(signals);
+  return `
+    <article class="watchtower-panel panel stagger-item">
+      <div class="panel-head">
+        <span class="panel-label">watchtower</span>
+        <strong>${esc(summary)}</strong>
+      </div>
+      <div class="watchtower-grid" aria-label="Read-only perps risk signals">
+        ${signals.map((signal) => watchSignalCard(signal)).join("")}
+      </div>
+    </article>
+  `;
+}
+
+function watchSignalCard(signal) {
+  const width = clamp(signal.score, 4, 100);
+  return `
+    <section class="watch-card ${signal.tone}" aria-label="${esc(signal.label)} ${esc(signal.value)}">
+      <div class="watch-card-head">
+        <span></span>
+        <strong>${esc(signal.label)}</strong>
+        <i>${esc(signal.tone)}</i>
+      </div>
+      <b>${esc(signal.value)}</b>
+      <p>${esc(signal.detail)}</p>
+      <div class="watch-meter" aria-hidden="true"><span style="width:${width}%"></span></div>
+      <small>${esc(signal.subvalue)}</small>
+    </section>
+  `;
+}
+
+function watchtowerSummary(signals) {
+  const dangerCount = signals.filter((signal) => signal.tone === "danger").length;
+  const warningCount = signals.filter((signal) => signal.tone === "warning").length;
+  if (dangerCount) return `${dangerCount} hot`;
+  if (warningCount) return `${warningCount} watch`;
+  return "clear";
+}
+
 function receiptPanel(market) {
   const receipts = market.execution.receipts || [];
   const latest = receipts[0];
@@ -506,6 +620,12 @@ function exposureLabel(side) {
   if (side === "short") return "net -";
   if (side === "long") return "net +";
   return "flat";
+}
+
+function scoreTone(score) {
+  if (score >= 68) return "good";
+  if (score >= 42) return "warning";
+  return "danger";
 }
 
 function sparkline(points, tone) {

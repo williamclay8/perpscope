@@ -12,6 +12,8 @@ Live demo: [williamclay8.github.io/perpscope](https://williamclay8.github.io/per
 
 ![PerpScope CLI adapter demo](docs/screenshots/perpscope-adapter.png)
 
+![PerpScope Watchtower signals](docs/screenshots/perpscope-watchtower.png)
+
 ![PerpScope receipt timeline](docs/screenshots/perpscope-receipts.png)
 
 ![PerpScope mobile cockpit](docs/screenshots/perpscope-mobile.png)
@@ -32,6 +34,19 @@ Star PerpScope if you are building a Solana perps terminal, risk dashboard, or a
 - import fixtures for CLI logs, captured stdout, read-only RPC fixtures, and terminal adapter demos
 - a visual reference for presenting risk without turning the screen into protocol JSON
 - a read-only safety boundary you can copy into your own frontend
+
+## Watchtower
+
+Watchtower is the trader-facing read-only signal layer inside PerpScope. It compresses normalized protocol data into six compact cards:
+
+- runway: liquidation distance, margin buffer, and stress buffer
+- freshness: oracle age and crank lag
+- execution: receipt markout, latency, and priority fee pressure
+- impact curve: $50k impact versus $10k impact
+- carry: funding and OI-skew pressure
+- solvency: insurance coverage and social-loss state
+
+It is deliberately observational. It does not recommend a direction, place an order, connect a wallet, or submit a transaction.
 
 ## Run
 
@@ -166,6 +181,7 @@ The normalized market DTO includes:
 - `account` liquidation distance, margin buffer, equity, PnL, and funding PnL
 - `execution` spread, impact, markout, latency, and fill-quality score
 - `execution.receipts` with spread, impact, 1m/5m markout, route latency, priority fee, source timestamp, and source label
+- `Watchtower` signals for runway, freshness, execution, impact curve, carry, and solvency
 - `flags` for stale oracle, crank lag, thin insurance, stress caps, and liquidation tightness
 
 ## Product Surface
