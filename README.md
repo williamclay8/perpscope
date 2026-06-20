@@ -4,6 +4,8 @@ PerpScope is a read-only Percolator risk cockpit plus a small terminal adapter k
 
 It is built around a simple idea: traders should understand market health, liquidation runway, oracle/crank freshness, funding pressure, and execution quality without reading a wall of raw protocol output.
 
+Live demo: [williamclay8.github.io/perpscope](https://williamclay8.github.io/perpscope/)
+
 ![PerpScope desktop cockpit](docs/screenshots/perpscope-desktop.png)
 
 ![PerpScope healthy-to-risk demo](docs/screenshots/perpscope-demo.gif)
@@ -21,6 +23,15 @@ Solana perps terminals are getting better, but terminal teams still have to deco
 - a cockpit traders can keep open while checking perps risk
 - a fixture-first adapter kit terminal builders can embed or test against
 - a safety boundary that never connects wallets, signs, sends, routes, or recommends trades
+
+## Why Star This
+
+Star PerpScope if you are building a Solana perps terminal, risk dashboard, or agent-readable trading workflow and want:
+
+- a clean DTO for decoded Percolator-like market, account, execution, and receipt data
+- import fixtures for CLI logs, captured stdout, read-only RPC fixtures, and terminal adapter demos
+- a visual reference for presenting risk without turning the screen into protocol JSON
+- a read-only safety boundary you can copy into your own frontend
 
 ## Run
 
