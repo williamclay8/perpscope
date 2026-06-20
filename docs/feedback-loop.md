@@ -8,6 +8,8 @@ Send one read-only decoded output shape and what you expected a trader to unders
 
 PerpScope v0.4 also shows a capture-intake compatibility report. If the cockpit marks a field as missing or ignored, include that row in your note.
 
+Before sending a shape, you can compare it with `docs/field-compatibility-map.md` or `examples/field-compatibility-map.json` to see which aliases already map into the cockpit.
+
 Useful inputs:
 
 - `slab:get`

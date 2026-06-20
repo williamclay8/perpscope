@@ -1,0 +1,750 @@
+{
+  "name": "PerpScope field compatibility map",
+  "version": "0.4.0",
+  "sourceFiles": [
+    "src/lib/percolator-adapter.js",
+    "src/lib/watchtower-signals.js",
+    "src/lib/funding-history.js"
+  ],
+  "statuses": [
+    "compatible",
+    "partial",
+    "unknown",
+    "rejected"
+  ],
+  "inputShapes": {
+    "perpscope-snapshot": {
+      "containers": [
+        "source",
+        "cluster",
+        "currentSlot",
+        "markets"
+      ]
+    },
+    "percolator-cli-bundle": {
+      "containers": [
+        "commands",
+        "command",
+        "slabHeader",
+        "slabConfig",
+        "slabEngine",
+        "slabBitmap",
+        "bestPrice",
+        "marketInfo",
+        "receipts",
+        "executionReceipts",
+        "receiptTimeline",
+        "fillReceipts",
+        "fills"
+      ],
+      "commandNames": [
+        "best-price",
+        "execution:receipt",
+        "execution:receipts",
+        "fill-receipts",
+        "fills",
+        "funding-history",
+        "funding-rates",
+        "funding-skew-history",
+        "list-markets",
+        "market-carry-history",
+        "receipt-log",
+        "receipts",
+        "skew-history",
+        "slab:account",
+        "slab:accounts",
+        "slab:bitmap",
+        "slab:engine",
+        "slab:get",
+        "slab:params"
+      ]
+    },
+    "read-only-rpc-fetch": {
+      "requiredContainers": [
+        "slab",
+        "programId",
+        "account"
+      ],
+      "aliases": {
+        "slab": [
+          "slab",
+          "slabAddress",
+          "pubkey"
+        ],
+        "programId": [
+          "programId",
+          "program"
+        ],
+        "account": [
+          "account",
+          "accountInfo"
+        ]
+      }
+    },
+    "funding-skew-history": {
+      "containers": [
+        "fundingSkew",
+        "fundingHistory",
+        "fundingSkewHistory",
+        "history",
+        "rows",
+        "items"
+      ]
+    },
+    "percolator-market-array": {
+      "containers": [
+        "array of market-like objects"
+      ]
+    },
+    "unknown": {
+      "containers": [
+        "unmapped object"
+      ]
+    }
+  },
+  "requiredFields": [
+    {
+      "field": "market.slab",
+      "severity": "danger",
+      "aliases": [
+        "slab",
+        "slabAddress",
+        "address",
+        "pubkey"
+      ]
+    },
+    {
+      "field": "market.program",
+      "severity": "danger",
+      "aliases": [
+        "program",
+        "programId",
+        "owner"
+      ]
+    },
+    {
+      "field": "price.mark",
+      "severity": "danger",
+      "aliases": [
+        "markPrice",
+        "mark",
+        "priceUsd",
+        "oraclePriceUsd",
+        "price",
+        "oraclePrice",
+        "midPrice",
+        "mid",
+        "markPriceUsd",
+        "lastOraclePriceUsd",
+        "resolvedPriceUsd"
+      ]
+    }
+  ],
+  "optionalFields": [
+    {
+      "field": "price.publishAgeSec",
+      "severity": "warning",
+      "aliases": [
+        "publishAgeSec",
+        "ageSecs",
+        "ageSec",
+        "age"
+      ]
+    },
+    {
+      "field": "crank.ageSlots",
+      "severity": "warning",
+      "aliases": [
+        "crankAgeSlots",
+        "crank_age_slots",
+        "ageSlots"
+      ]
+    },
+    {
+      "field": "funding.bpsPerHour",
+      "severity": "warning",
+      "aliases": [
+        "fundingRateBpsPerHour",
+        "funding_bps_per_hour",
+        "fundingRate"
+      ]
+    },
+    {
+      "field": "marketStructure.openInterestUsd",
+      "severity": "warning",
+      "aliases": [
+        "openInterestUsd",
+        "open_interest_usd",
+        "oiUsd"
+      ]
+    },
+    {
+      "field": "account.positionNotionalUsd",
+      "severity": "warning",
+      "aliases": [
+        "positionNotionalUsd",
+        "notionalUsd",
+        "notional"
+      ]
+    },
+    {
+      "field": "execution.bestBid/bestAsk",
+      "severity": "warning",
+      "aliases": [
+        "bestBid",
+        "bid",
+        "best_bid",
+        "bestAsk",
+        "ask",
+        "best_ask"
+      ]
+    },
+    {
+      "field": "execution.receipts",
+      "severity": "warning",
+      "aliases": [
+        "receipts",
+        "executionReceipts",
+        "receiptTimeline",
+        "fillReceipts",
+        "fills"
+      ]
+    },
+    {
+      "field": "history.fundingSkew",
+      "severity": "warning",
+      "aliases": [
+        "fundingSkew",
+        "fundingHistory",
+        "fundingSkewHistory",
+        "history"
+      ]
+    }
+  ],
+  "fields": {
+    "market": {
+      "objectAliases": [
+        "market",
+        "marketInfo",
+        "metadata",
+        "instrument"
+      ],
+      "id": [
+        "id",
+        "marketId"
+      ],
+      "name": [
+        "symbol",
+        "name",
+        "market",
+        "ticker"
+      ],
+      "base": [
+        "base",
+        "baseSymbol",
+        "baseAsset"
+      ],
+      "quote": [
+        "quote",
+        "quoteSymbol",
+        "quoteAsset"
+      ],
+      "slab": [
+        "slab",
+        "slabAddress",
+        "address",
+        "pubkey"
+      ],
+      "program": [
+        "program",
+        "programId",
+        "owner"
+      ],
+      "status": [
+        "status"
+      ]
+    },
+    "price": {
+      "objectAliases": [
+        "oracle",
+        "price",
+        "prices",
+        "oraclePrice"
+      ],
+      "mark": [
+        "markPrice",
+        "mark",
+        "priceUsd",
+        "oraclePriceUsd",
+        "price with decimals",
+        "oraclePrice with decimals",
+        "midPrice",
+        "mid",
+        "markPriceUsd",
+        "lastOraclePriceUsd",
+        "resolvedPriceUsd"
+      ],
+      "index": [
+        "indexPrice",
+        "index",
+        "oraclePriceUsd",
+        "priceUsd",
+        "oraclePrice with decimals",
+        "price with decimals"
+      ],
+      "effective": [
+        "effectivePrice",
+        "effectivePriceUsd"
+      ],
+      "confidenceBps": [
+        "confidenceBps",
+        "confidence_bps",
+        "confBps"
+      ],
+      "publishAgeSec": [
+        "publishAgeSec",
+        "ageSecs",
+        "ageSec",
+        "age"
+      ],
+      "path": [
+        "pricePath",
+        "path",
+        "history"
+      ],
+      "legs": [
+        "legs",
+        "sources"
+      ],
+      "decimals": [
+        "decimals",
+        "priceDecimals",
+        "price_decimals"
+      ]
+    },
+    "crank": {
+      "engineAliases": [
+        "engine",
+        "state",
+        "riskState",
+        "slabEngine",
+        "slab:engine"
+      ],
+      "lastSlot": [
+        "lastCrankSlot",
+        "last_crank_slot"
+      ],
+      "ageSlots": [
+        "crankAgeSlots",
+        "crank_age_slots",
+        "ageSlots",
+        "currentSlot - lastMarketSlot"
+      ],
+      "catchupRequired": [
+        "catchupRequired",
+        "catchup_required"
+      ],
+      "staleAccounts": [
+        "staleAccounts",
+        "stale_accounts",
+        "staleAccountCount"
+      ],
+      "activeAccounts": [
+        "activeAccounts",
+        "active_accounts",
+        "materializedAccountCount",
+        "numUsedAccounts",
+        "numUsed",
+        "usedAccounts",
+        "usedIndices",
+        "indices",
+        "account rows"
+      ],
+      "maxAccounts": [
+        "maxAccounts",
+        "max_accounts",
+        "capacity"
+      ]
+    },
+    "funding": {
+      "bpsPerHour": [
+        "fundingRateBpsPerHour",
+        "funding_bps_per_hour",
+        "fundingRate"
+      ],
+      "index": [
+        "fundingIndex",
+        "funding_index"
+      ]
+    },
+    "marketStructure": {
+      "openInterestUsd": [
+        "openInterestUsd",
+        "open_interest_usd",
+        "oiUsd"
+      ],
+      "longOpenInterestUsd": [
+        "longOpenInterestUsd",
+        "long_oi_usd"
+      ],
+      "shortOpenInterestUsd": [
+        "shortOpenInterestUsd",
+        "short_oi_usd"
+      ],
+      "stressConsumedBps": [
+        "stressConsumedBps",
+        "stress_consumed_bps",
+        "stressConsumedBpsE9SinceEnvelope"
+      ],
+      "stressLimitBps": [
+        "stressLimitBps",
+        "stress_limit_bps"
+      ],
+      "sideMode": [
+        "sideMode",
+        "side_mode"
+      ]
+    },
+    "solvency": {
+      "insuranceUsd": [
+        "insuranceUsd",
+        "insurance_usd"
+      ],
+      "vaultUsd": [
+        "vaultUsd",
+        "vault_usd"
+      ],
+      "claimUsd": [
+        "claimUsd",
+        "claim_usd"
+      ],
+      "socialLossUsd": [
+        "socialLossUsd",
+        "social_loss_usd"
+      ]
+    },
+    "account": {
+      "objectAliases": [
+        "account",
+        "position",
+        "traderAccount"
+      ],
+      "rowContainers": [
+        "accounts",
+        "positions"
+      ],
+      "label": [
+        "label",
+        "ownerLabel",
+        "name"
+      ],
+      "side": [
+        "side",
+        "inferred from signed position size"
+      ],
+      "positionSize": [
+        "positionSize",
+        "basePosition",
+        "positionSizeBase",
+        "size",
+        "position"
+      ],
+      "positionNotionalUsd": [
+        "positionNotionalUsd",
+        "notionalUsd",
+        "notional",
+        "abs(positionSize) * price.mark"
+      ],
+      "collateralUsd": [
+        "collateralUsd",
+        "equityCollateralUsd"
+      ],
+      "unrealizedPnlUsd": [
+        "unrealizedPnlUsd",
+        "unrealizedPnl",
+        "uPnl"
+      ],
+      "realizedPnlUsd": [
+        "realizedPnlUsd",
+        "realizedPnl"
+      ],
+      "fundingPnlUsd": [
+        "fundingPnlUsd",
+        "fundingPnl"
+      ],
+      "maintenanceMarginUsd": [
+        "maintenanceMarginUsd",
+        "maintenanceMargin",
+        "derived from notional and maintenance margin bps"
+      ],
+      "initialMarginUsd": [
+        "initialMarginUsd",
+        "initialMargin",
+        "derived from notional and initial margin bps"
+      ],
+      "liquidationPrice": [
+        "liquidationPrice",
+        "liqPrice",
+        "liquidation_price"
+      ],
+      "pnlPath": [
+        "pnlPath",
+        "pnlHistory"
+      ]
+    },
+    "execution": {
+      "objectAliases": [
+        "execution",
+        "executionQuality"
+      ],
+      "bookAliases": [
+        "bestPrice",
+        "best-price",
+        "best_price",
+        "book",
+        "orderbook",
+        "quote"
+      ],
+      "bestBid": [
+        "bestBid",
+        "bid",
+        "best_bid",
+        "bestSell.priceUsd",
+        "bestSell.price with decimals"
+      ],
+      "bestAsk": [
+        "bestAsk",
+        "ask",
+        "best_ask",
+        "bestBuy.priceUsd",
+        "bestBuy.price with decimals"
+      ],
+      "impact10kBps": [
+        "impact10kBps",
+        "impact_10k_bps",
+        "impactBps",
+        "priceImpactBps",
+        "effectiveSpreadBps"
+      ],
+      "impact50kBps": [
+        "impact50kBps",
+        "impact_50k_bps"
+      ],
+      "markout1mBps": [
+        "markout1mBps",
+        "markout_1m_bps",
+        "markout60sBps"
+      ],
+      "markout5mBps": [
+        "markout5mBps",
+        "markout_5m_bps",
+        "markout300sBps"
+      ],
+      "fillQualityScore": [
+        "fillQualityScore",
+        "fill_quality_score",
+        "qualityScore"
+      ],
+      "routeLatencyMs": [
+        "routeLatencyMs",
+        "latencyMs",
+        "durationMs"
+      ],
+      "priorityFeeMicrolamports": [
+        "priorityFeeMicrolamports",
+        "priorityFee",
+        "priorityFeeMicroLamports"
+      ],
+      "receiptContainers": [
+        "receipts",
+        "executionReceipts",
+        "receiptTimeline",
+        "fillReceipts",
+        "fills",
+        "rows",
+        "items",
+        "accounts"
+      ]
+    },
+    "history": {
+      "commands": [
+        "funding-history",
+        "funding-skew-history",
+        "funding-rates",
+        "skew-history",
+        "market-carry-history"
+      ],
+      "containers": [
+        "fundingSkew",
+        "fundingHistory",
+        "fundingSkewHistory",
+        "history",
+        "rows",
+        "items",
+        "output",
+        "data",
+        "result",
+        "stdout",
+        "stdoutText"
+      ],
+      "fundingBpsPerHour": [
+        "fundingBpsPerHour",
+        "fundingRateBpsPerHour",
+        "funding_bps_per_hour"
+      ],
+      "oiSkewPct": [
+        "oiSkewPct",
+        "skewPct",
+        "derived from long/short/open interest"
+      ],
+      "stressUsedPct": [
+        "stressUsedPct",
+        "stressPct",
+        "stressConsumedBps / stressLimitBps"
+      ],
+      "oracleAgeSec": [
+        "oracleAgeSec",
+        "publishAgeSec",
+        "ageSecs",
+        "priceAgeSec"
+      ]
+    }
+  },
+  "watchtowerSignals": [
+    {
+      "id": "runway",
+      "fields": [
+        "account.liquidationDistancePct",
+        "account.marginBufferUsd",
+        "stress.projectedBufferUsd"
+      ]
+    },
+    {
+      "id": "freshness",
+      "fields": [
+        "price.freshnessScore",
+        "crank.freshnessScore",
+        "crank.ageSlots",
+        "price.publishAgeSec"
+      ]
+    },
+    {
+      "id": "execution",
+      "fields": [
+        "execution.receipts.markout5mBps",
+        "execution.receipts.routeLatencyMs",
+        "execution.receipts.priorityFeeMicrolamports",
+        "execution.markout5mBps",
+        "execution.routeLatencyMs",
+        "execution.priorityFeeMicrolamports"
+      ]
+    },
+    {
+      "id": "impact",
+      "fields": [
+        "execution.impact10kBps",
+        "execution.impact50kBps"
+      ]
+    },
+    {
+      "id": "carry",
+      "fields": [
+        "funding.bpsPerHour",
+        "funding.dailyUsd",
+        "marketStructure.oiSkewPct"
+      ]
+    },
+    {
+      "id": "solvency",
+      "fields": [
+        "solvency.coveragePct",
+        "solvency.insuranceUsd",
+        "solvency.socialLossUsd"
+      ]
+    }
+  ],
+  "carryHistoryRows": {
+    "commands": [
+      "funding-history",
+      "funding-skew-history",
+      "funding-rates",
+      "skew-history",
+      "market-carry-history"
+    ],
+    "requiredForTrend": [
+      "fundingBpsPerHour",
+      "oiSkewPct",
+      "stressUsedPct",
+      "oracleAgeSec",
+      "sourceTimestamp or slot"
+    ],
+    "fallbacks": [
+      "market.funding.bpsPerHour",
+      "market.marketStructure.openInterestUsd",
+      "market.marketStructure.longOpenInterestUsd",
+      "market.marketStructure.shortOpenInterestUsd",
+      "market.marketStructure.oiSkewPct",
+      "market.marketStructure.stressUsedPct",
+      "market.price.publishAgeSec",
+      "market.currentSlot"
+    ]
+  },
+  "ignoredBehavior": {
+    "unknownTopLevelFields": "reported in ignoredFields and not mapped into the cockpit",
+    "unknownCommandNames": "reported in ignoredFields and preserved as provenance only",
+    "maxIgnoredFields": 8
+  },
+  "rejectedFieldKeys": [
+    "instruction",
+    "instructions",
+    "order",
+    "orders",
+    "send",
+    "sendTransaction",
+    "sign",
+    "secretKey",
+    "signature in funding-history logs",
+    "signer",
+    "signTransaction",
+    "transaction",
+    "transactions",
+    "privateKey",
+    "keypair",
+    "mnemonic",
+    "seed",
+    "wallet",
+    "walletAdapter",
+    "walletPath"
+  ],
+  "safeFixtures": [
+    "examples/percolator-cli.bundle.json",
+    "examples/decoded-slab.snapshot.json",
+    "examples/execution-receipts.stdout.json",
+    "examples/funding-skew-history.stdout.json",
+    "examples/percolator-mainnet-sol.readonly-rpc.json",
+    "examples/percolator-devnet-wif.readonly-rpc.json",
+    "examples/terminal-dto-export.json"
+  ],
+  "unsafeExamples": [
+    {
+      "reason": "wallet path",
+      "field": "walletPath"
+    },
+    {
+      "reason": "private key",
+      "field": "privateKey"
+    },
+    {
+      "reason": "signer",
+      "field": "signer"
+    },
+    {
+      "reason": "transaction payload",
+      "field": "transaction"
+    },
+    {
+      "reason": "order intent",
+      "field": "order"
+    }
+  ]
+}

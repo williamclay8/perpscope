@@ -50,6 +50,8 @@ It does not connect wallets, sign, send, route, place orders, or submit transact
 - `missingFields`: useful fields the cockpit can render better when supplied
 - `ignoredFields`: top-level fields or command names preserved as provenance but not mapped yet
 
+The full field-level contract is documented in `../../docs/field-compatibility-map.md`, with a machine-readable manifest at `../../examples/field-compatibility-map.json`.
+
 ## DTO Example
 
 ```js

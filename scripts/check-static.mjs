@@ -11,6 +11,8 @@ const css = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const js = readFileSync(new URL("../src/app.js", import.meta.url), "utf8");
 const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+const fieldMapDoc = readFileSync(new URL("../docs/field-compatibility-map.md", import.meta.url), "utf8");
+const fieldMapJson = JSON.parse(readFileSync(new URL("../examples/field-compatibility-map.json", import.meta.url), "utf8"));
 const schemaDir = new URL("../schemas/", import.meta.url);
 const exampleDir = new URL("../examples/", import.meta.url);
 const packageEntry = readFileSync(new URL("../packages/percolator-adapter/index.js", import.meta.url), "utf8");
@@ -107,6 +109,47 @@ if (!/from "@perpscope\/percolator-adapter"/.test(consumerDemo) || !/buildTermin
 
 if (!readme.includes("examples/adapter-consumer/") || !readme.includes("docs/feedback-loop.md")) {
   failures.push("README should link the external consumer example and feedback loop.");
+}
+
+if (!readme.includes("docs/field-compatibility-map.md") || !readme.includes("examples/field-compatibility-map.json")) {
+  failures.push("README should link the field compatibility map and JSON manifest.");
+}
+
+for (const required of [
+  "market.slab",
+  "market.program",
+  "price.mark",
+  "Watchtower",
+  "fundingBpsPerHour",
+  "walletPath",
+  "privateKey",
+  "transaction"
+]) {
+  if (!fieldMapDoc.includes(required)) {
+    failures.push(`Field compatibility map should document ${required}.`);
+  }
+}
+
+if (fieldMapJson.version !== "0.4.0") {
+  failures.push("Field compatibility JSON should match package version 0.4.0.");
+}
+
+for (const field of ["market.slab", "market.program", "price.mark"]) {
+  if (!fieldMapJson.requiredFields?.some((entry) => entry.field === field && entry.severity === "danger")) {
+    failures.push(`Field compatibility JSON should require ${field}.`);
+  }
+}
+
+for (const signal of ["runway", "freshness", "execution", "impact", "carry", "solvency"]) {
+  if (!fieldMapJson.watchtowerSignals?.some((entry) => entry.id === signal)) {
+    failures.push(`Field compatibility JSON should include Watchtower signal ${signal}.`);
+  }
+}
+
+for (const fixture of fieldMapJson.safeFixtures || []) {
+  if (!existsSync(new URL(`../${fixture}`, import.meta.url))) {
+    failures.push(`Field compatibility safe fixture is missing: ${fixture}`);
+  }
 }
 
 for (const match of readme.matchAll(/!\[([^\]]*)\]\(([^)]+)\)/g)) {
