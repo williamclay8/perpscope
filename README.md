@@ -11,6 +11,8 @@ Live demo: [williamclay8.github.io/perpscope](https://williamclay8.github.io/per
 
 ![PerpScope desktop cockpit](docs/screenshots/perpscope-desktop.png)
 
+![PerpScope terminal integration mock](docs/screenshots/perpscope-v2-terminal-mock.png)
+
 ## Embed In Your Terminal In 60 Seconds
 
 ```html
@@ -30,7 +32,7 @@ if (payload.schema !== "perpscope.export.v1") throw new Error("Unexpected export
 const summary = summarizePerpScopeExport(payload);
 ```
 
-Use `docs/embed-integration.md` for the copy-paste guide, `examples/copy-integration/` for a live copy page, and `examples/embed-consumer/` for the terminal side-rail mock.
+Use `docs/embed-integration.md` for the copy-paste guide, `examples/copy-integration/` for a live copy page, `examples/embed-consumer/` for the terminal side-rail mock, and `examples/react-risk-rail/` for a React component.
 
 ## 2-Minute Terminal Builder Check
 
@@ -69,7 +71,7 @@ PerpScope rejects wallet paths, private keys, mnemonics, seeds, signers, signatu
 - live-by-default public site behavior with a compact Data Confidence strip and Trader Radar filters
 - Why Hot explanations, Feed Health, shareable market/filter links, and terminal Adapter Targets
 - exportable `perpscope.export.v1` JSON plus `?embed=feed`, `?embed=radar`, and `?embed=market` widgets
-- issue templates for sanitized decoded shapes, adapter mapping requests, and CLI doctor output
+- issue templates for sanitized decoded shapes, adapter mapping requests, terminal integration requests, and CLI doctor output
 
 ## Submit A Shape
 
@@ -77,6 +79,7 @@ Use one of the GitHub issue forms:
 
 - [Submit sanitized decoded shape](https://github.com/williamclay8/perpscope/issues/new?template=decoded-percolator-shape.yml) via `.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml`
 - [Request adapter mapping](https://github.com/williamclay8/perpscope/issues/new?template=adapter-mapping-request.yml) via `.github/ISSUE_TEMPLATE/adapter-mapping-request.yml`
+- [Use PerpScope in my terminal](https://github.com/williamclay8/perpscope/issues/new?template=use-perpscope-in-terminal.yml) via `.github/ISSUE_TEMPLATE/use-perpscope-in-terminal.yml`
 - [Share CLI doctor output](https://github.com/williamclay8/perpscope/issues/new?template=cli-doctor-output.yml) via `.github/ISSUE_TEMPLATE/cli-doctor-output.yml`
 
 Start with `CONTRIBUTING.md` if you are submitting public fixture data.
@@ -184,6 +187,7 @@ examples/funding-skew-history.stdout.json
 examples/adapter-consumer/
 examples/copy-integration/
 examples/embed-consumer/
+examples/react-risk-rail/
 examples/perpscope-export.sample.json
 examples/terminal-recipes.json
 examples/terminal-dto-export.json
@@ -429,11 +433,13 @@ The normalized market DTO includes:
 - `docs/release-v1.8.0.md` mirrors the public release notes for exportable JSON and embed widgets.
 - `docs/release-v1.9.0.md` mirrors the public release notes for copy-paste embeds and export consumer examples.
 - `docs/release-v2.0.0.md` mirrors the public release notes for the schema-locked terminal integration kit.
+- `docs/perpscope-v2-launch-post.md` contains launch copy for the v2 terminal integration kit.
 - `docs/adapter-targets.md` documents the terminal rail, risk overlay, execution lane, feed monitor, and embed contracts.
 - `docs/embed-integration.md` documents iframe widgets, the export fixture, and trusted display fields.
 - `docs/decoded-live-source.md` documents the CORS endpoint contract for decoded Percolator live feeds.
 - `docs/v0.5-plan.md` documents the shipped compatibility report export.
 - `.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml` is the structured intake form for sanitized builder samples.
+- `.github/ISSUE_TEMPLATE/use-perpscope-in-terminal.yml` is the structured intake form for terminal integration requests.
 - `src/fixtures/percolator-market.js` contains sample decoded market/account state plus execution receipt history.
 - `src/app.js` renders the read-only cockpit.
 - The website auto-loads the hosted read-only Percolator worker on GitHub Pages, with `?fixture=1` or `?live=0` available for fixture-first review. The Data Source panel can also load `examples/static-real-snapshot.json`, which is a sanitized real-backed static snapshot, `Load Live`, which pulls actual public prices from CoinGecko while keeping Percolator risk context simulated, or `Load Percolator`, which defaults to the hosted read-only decoder worker unless `?decodedSource=` points at another CORS-readable decoded protocol feed.

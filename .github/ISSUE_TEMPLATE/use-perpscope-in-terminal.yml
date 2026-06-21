@@ -1,0 +1,65 @@
+name: Use PerpScope in my terminal
+description: Ask for help embedding PerpScope in a Solana perps terminal or dashboard.
+title: "[terminal] "
+labels:
+  - terminal-adapter
+  - docs
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when you want PerpScope as a read-only risk rail, market drawer, feed monitor, or adapter helper in your terminal.
+
+        Do not include wallet paths, private keys, mnemonics, seeds, signers, signatures, transactions, instructions, order payloads, API keys, or user-identifying account data.
+  - type: input
+    id: terminal-name
+    attributes:
+      label: Terminal or dashboard
+      placeholder: "Example: Phoenix-style perps terminal"
+    validations:
+      required: true
+  - type: dropdown
+    id: integration-path
+    attributes:
+      label: Preferred integration path
+      options:
+        - iframe embeds
+        - React risk rail
+        - npm parser helpers
+        - perpscope.export.v1 schema
+        - decoded live source adapter
+        - not sure yet
+    validations:
+      required: true
+  - type: textarea
+    id: desired-surface
+    attributes:
+      label: Where should PerpScope appear?
+      placeholder: "Right rail beside chart, drawer under market selector, footer feed monitor, etc."
+    validations:
+      required: true
+  - type: textarea
+    id: sanitized-shape
+    attributes:
+      label: Sanitized read-only data shape
+      description: Optional. Include only the smallest sanitized shape needed to understand your feed.
+      render: json
+      placeholder: |
+        {
+          "schema": "perpscope.export.v1",
+          "market": { "id": "sol-perp" }
+        }
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshot or mock notes
+      description: Optional. Link a public screenshot/mock or describe the available space.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety checklist
+      options:
+        - label: This request is for read-only display or adapter work only.
+          required: true
+        - label: This request has no wallet, signer, transaction, instruction, order, private key, mnemonic, seed, or API key data.
+          required: true

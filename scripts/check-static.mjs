@@ -19,6 +19,7 @@ const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
 const feedbackLoopDoc = readFileSync(new URL("../docs/feedback-loop.md", import.meta.url), "utf8");
 const fieldMapDoc = readFileSync(new URL("../docs/field-compatibility-map.md", import.meta.url), "utf8");
 const launchPostDoc = readFileSync(new URL("../docs/launch-post.md", import.meta.url), "utf8");
+const v2LaunchPostDoc = readFileSync(new URL("../docs/perpscope-v2-launch-post.md", import.meta.url), "utf8");
 const outreachLoopDoc = readFileSync(new URL("../docs/outreach-loop.md", import.meta.url), "utf8");
 const releaseV04Doc = readFileSync(new URL("../docs/release-v0.4.0.md", import.meta.url), "utf8");
 const releaseV05Doc = readFileSync(new URL("../docs/release-v0.5.0.md", import.meta.url), "utf8");
@@ -59,6 +60,7 @@ const captureTemplate = JSON.parse(readFileSync(new URL("../examples/capture-tem
 const decodedLiveSourceSample = JSON.parse(readFileSync(new URL("../examples/decoded-live-source.sample.json", import.meta.url), "utf8"));
 const decodedShapeIssueTemplate = readFileSync(new URL("../.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml", import.meta.url), "utf8");
 const adapterMappingIssueTemplate = readFileSync(new URL("../.github/ISSUE_TEMPLATE/adapter-mapping-request.yml", import.meta.url), "utf8");
+const terminalUseIssueTemplate = readFileSync(new URL("../.github/ISSUE_TEMPLATE/use-perpscope-in-terminal.yml", import.meta.url), "utf8");
 const cliDoctorIssueTemplate = readFileSync(new URL("../.github/ISSUE_TEMPLATE/cli-doctor-output.yml", import.meta.url), "utf8");
 const schemaDir = new URL("../schemas/", import.meta.url);
 const exampleDir = new URL("../examples/", import.meta.url);
@@ -73,8 +75,12 @@ const embedConsumerDemo = readFileSync(new URL("../examples/embed-consumer/demo.
 const embedConsumerHtml = readFileSync(new URL("../examples/embed-consumer/index.html", import.meta.url), "utf8");
 const copyIntegrationReadme = readFileSync(new URL("../examples/copy-integration/README.md", import.meta.url), "utf8");
 const copyIntegrationHtml = readFileSync(new URL("../examples/copy-integration/index.html", import.meta.url), "utf8");
+const reactRiskRailReadme = readFileSync(new URL("../examples/react-risk-rail/README.md", import.meta.url), "utf8");
+const reactRiskRailApp = readFileSync(new URL("../examples/react-risk-rail/src/App.jsx", import.meta.url), "utf8");
+const reactRiskRailCss = readFileSync(new URL("../examples/react-risk-rail/src/styles.css", import.meta.url), "utf8");
 const perpscopeExportSample = JSON.parse(readFileSync(new URL("../examples/perpscope-export.sample.json", import.meta.url), "utf8"));
 const perpscopeExportSchema = JSON.parse(readFileSync(new URL("../schemas/perpscope-export.schema.json", import.meta.url), "utf8"));
+const npmPublishWorkflow = readFileSync(new URL("../.github/workflows/npm-publish.yml", import.meta.url), "utf8");
 
 const failures = [];
 
@@ -266,7 +272,7 @@ if (!readme.includes("examples/adapter-consumer/") || !readme.includes("docs/fee
   failures.push("README should link the external consumer example and feedback loop.");
 }
 
-if (!readme.includes("Embed In Your Terminal In 60 Seconds") || !readme.includes("docs/embed-integration.md") || !readme.includes("examples/copy-integration/") || !readme.includes("examples/embed-consumer/") || !readme.includes("examples/perpscope-export.sample.json") || !readme.includes("perpscope.export.v1")) {
+if (!readme.includes("Embed In Your Terminal In 60 Seconds") || !readme.includes("docs/embed-integration.md") || !readme.includes("examples/copy-integration/") || !readme.includes("examples/embed-consumer/") || !readme.includes("examples/react-risk-rail/") || !readme.includes("examples/perpscope-export.sample.json") || !readme.includes("perpscope.export.v1")) {
   failures.push("README should document the v1.9 embed and export integration path.");
 }
 
@@ -274,7 +280,7 @@ if (!readme.includes("npm install @perpscope/percolator-adapter") || !readme.inc
   failures.push("README should document the published adapter package.");
 }
 
-for (const required of ["CONTRIBUTING.md", "adapter-mapping-request.yml", "cli-doctor-output.yml"]) {
+for (const required of ["CONTRIBUTING.md", "adapter-mapping-request.yml", "use-perpscope-in-terminal.yml", "cli-doctor-output.yml"]) {
   if (!readme.includes(required)) failures.push(`README should link ${required}.`);
 }
 
@@ -285,6 +291,7 @@ if (!readme.includes("docs/field-compatibility-map.md") || !readme.includes("exa
 for (const doc of [
   "docs/terminal-builder-quickstart.md",
   "docs/launch-post.md",
+  "docs/perpscope-v2-launch-post.md",
   "docs/outreach-loop.md",
   "docs/release-v0.4.0.md",
   "docs/release-v0.5.0.md",
@@ -321,6 +328,7 @@ if (!readme.includes(".github/ISSUE_TEMPLATE/decoded-percolator-shape.yml")) {
 for (const [name, template] of [
   ["decoded shape", decodedShapeIssueTemplate],
   ["adapter mapping", adapterMappingIssueTemplate],
+  ["terminal integration", terminalUseIssueTemplate],
   ["CLI doctor", cliDoctorIssueTemplate]
 ]) {
   for (const unsafe of ["wallet", "private keys", "mnemonics", "signers", "transactions", "instructions", "order payloads", "API keys"]) {
@@ -542,6 +550,26 @@ for (const required of ["?embed=radar", "@perpscope/percolator-adapter", "perpsc
   if (!copyIntegrationReadme.includes(required)) {
     failures.push(`Copy integration README should include ${required}.`);
   }
+}
+
+for (const required of ["summarizePerpScopeExport", "@perpscope/percolator-adapter", "perpscope-export.sample.json", "read-only"]) {
+  if (!reactRiskRailReadme.includes(required) || !reactRiskRailApp.includes(required)) {
+    failures.push(`React risk rail example should include ${required}.`);
+  }
+}
+
+if (!/grid-template-columns:\s*minmax\(0,\s*1fr\)\s*360px/.test(reactRiskRailCss) || !/border-radius:\s*8px/.test(reactRiskRailCss)) {
+  failures.push("React risk rail CSS should keep a stable terminal rail layout.");
+}
+
+for (const required of ["@perpscope/percolator-adapter@2.0.0", "summarizePerpScopeExport", "examples/copy-integration", "examples/embed-consumer", "schemas/perpscope-export.schema.json", "no wallet connection"]) {
+  if (!v2LaunchPostDoc.includes(required)) {
+    failures.push(`v2 launch post should include ${required}.`);
+  }
+}
+
+if (!npmPublishWorkflow.includes("Expected 2.0.0") || !npmPublishWorkflow.includes("npm publish --access public --provenance")) {
+  failures.push("npm publish workflow should be configured for adapter v2.0.0 trusted publishing.");
 }
 
 for (const required of ["compatibility report", "Export", "wallet", "transaction", "npm run check", "0.5.0"]) {

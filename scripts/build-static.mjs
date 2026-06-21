@@ -14,6 +14,7 @@ const roots = [
   "packages",
   "docs"
 ];
+const IGNORED_DIRECTORIES = new Set(["node_modules", "dist"]);
 
 function listFiles(relativePath) {
   const absolutePath = join(root, relativePath);
@@ -22,6 +23,7 @@ function listFiles(relativePath) {
   if (stat.isFile()) return [relativePath];
 
   return readdirSync(absolutePath).flatMap((entry) => {
+    if (IGNORED_DIRECTORIES.has(entry)) return [];
     const child = join(relativePath, entry);
     const childStat = statSync(join(root, child));
     if (childStat.isDirectory()) return listFiles(child);

@@ -26,7 +26,7 @@ jobs:
         run: |
           node --version
           npm --version
-          node -e "const pkg=require('./packages/percolator-adapter/package.json'); if (pkg.version !== '1.1.0') throw new Error(`Expected 1.1.0, got ${pkg.version}`)"
+          node -e "const pkg=require('./packages/percolator-adapter/package.json'); if (pkg.version !== '2.0.0') throw new Error(`Expected 2.0.0, got ${pkg.version}`)"
 
       - name: Publish adapter
         working-directory: packages/percolator-adapter

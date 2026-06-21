@@ -1,0 +1,18 @@
+{
+  "name": "perpscope-react-risk-rail",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "React example for rendering a PerpScope read-only risk rail.",
+  "dependencies": {
+    "@perpscope/percolator-adapter": "file:../../packages/percolator-adapter",
+    "@vitejs/plugin-react": "^6.0.2",
+    "vite": "^8.0.16",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite --host 127.0.0.1"
+  }
+}
