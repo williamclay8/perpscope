@@ -63,6 +63,8 @@ The full field-level contract is documented in `../../docs/field-compatibility-m
 
 `compareCompatibilityReports(previous, current)` returns `perpscope.compatibility-diff` with score delta, status change, new/resolved fields, section drift, and merged alias suggestions.
 
+`buildCompatibilityRealityCheck(report, { input })` returns `perpscope.reality-check` with provenance, required/useful mapped counts, unknown fields, and alias counts. Use it when a terminal needs to show whether a capture is synthetic, real-backed candidate, or externally submitted.
+
 ## CLI
 
 ```bash
@@ -75,6 +77,8 @@ Try it locally with:
 ```bash
 perpscope compat diff ../../examples/fixture-pack-minimal-terminal.json ../../examples/fixture-pack-drifted-aliases.json
 ```
+
+For the real-backed candidate path, try `../../examples/fixture-pack-real-sanitized-rpc-shape.json`.
 
 ## DTO Example
 

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   assertReadOnlySnapshot,
+  buildCompatibilityRealityCheck,
   buildPercolatorCompatibilityReport,
   compareCompatibilityReports,
   detectPercolatorInputShape,
@@ -57,6 +58,9 @@ const driftedFixturePack = JSON.parse(
 );
 const receiptHeavyFixturePack = JSON.parse(
   readFileSync(new URL("../examples/fixture-pack-receipt-heavy-execution.json", import.meta.url), "utf8")
+);
+const realSanitizedFixturePack = JSON.parse(
+  readFileSync(new URL("../examples/fixture-pack-real-sanitized-rpc-shape.json", import.meta.url), "utf8")
 );
 
 test("normalizes Percolator-like market state into terminal DTOs", () => {
@@ -223,6 +227,27 @@ test("normalizes synthetic fixture packs for product-led discovery", () => {
   assert.ok(receiptReport.recognizedSections.some((section) => section.id === "receipts"));
   assert.equal(diff.schema, "perpscope.compatibility-diff");
   assert.ok(diff.summary.suggestionCount >= 1);
+});
+
+test("normalizes the real-backed sanitized RPC candidate fixture", () => {
+  const snapshot = buildReadOnlyRpcSnapshot(realSanitizedFixturePack);
+  const report = buildPercolatorCompatibilityReport(realSanitizedFixturePack, snapshot);
+  const reality = buildCompatibilityRealityCheck(report, {
+    input: realSanitizedFixturePack,
+    generatedAt: "2026-06-21T00:00:00.000Z"
+  });
+
+  assert.equal(detectPercolatorInputShape(realSanitizedFixturePack), "read-only-rpc-fetch");
+  assert.equal(snapshot.markets[0].name, "SOL-PERP");
+  assert.equal(snapshot.markets[0].execution.receipts.length, 1);
+  assert.equal(snapshot.markets[0].history.fundingSkew.length, 1);
+  assert.equal(report.source.slab, realSanitizedFixturePack.slab);
+  assert.ok(report.recognizedSections.some((section) => section.id === "receipts"));
+  assert.ok(report.recognizedSections.some((section) => section.id === "history"));
+  assert.equal(reality.schema, "perpscope.reality-check");
+  assert.equal(reality.status, "candidate");
+  assert.equal(reality.mapped.requiredCount, 3);
+  assert.equal(reality.gaps.dangerMissing, 0);
 });
 
 test("refuses to export secret-bearing compatibility captures", () => {

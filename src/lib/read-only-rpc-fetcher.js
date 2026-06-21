@@ -97,6 +97,10 @@ export function buildReadOnlyRpcSnapshot(request) {
   if (decoded.params) commands.push({ command: "slab:params", output: decoded.params });
   if (decoded.engine) commands.push({ command: "slab:engine", output: decoded.engine });
   if (decoded.bestPrice) commands.push({ command: "best-price", output: decoded.bestPrice });
+  if (decoded.receipts || decoded.executionReceipts) commands.push({ command: "execution:receipts", output: decoded.receipts || decoded.executionReceipts });
+  if (decoded.fundingSkew || decoded.fundingHistory || decoded.fundingSkewHistory) {
+    commands.push({ command: "funding-skew-history", output: decoded.fundingSkew || decoded.fundingHistory || decoded.fundingSkewHistory });
+  }
   if (decoded.accounts) commands.push({ command: "slab:accounts", output: decoded.accounts });
   if (decoded.bitmap) commands.push({ command: "slab:bitmap", output: decoded.bitmap });
 

@@ -102,6 +102,8 @@ Use `compareCompatibilityReports(previous, current)` when a terminal output chan
 
 Example output: `examples/compatibility-diff.json`.
 
+Use `buildCompatibilityRealityCheck(report, { input })` when you need a compact trust summary for a capture. It separates required mapped fields, useful mapped fields, unknown fields, alias suggestions, and provenance so a terminal can show whether a sample is synthetic, real-backed candidate, or submitted by an external builder.
+
 ## Use The CLI
 
 ```bash
@@ -114,6 +116,7 @@ Fixture packs for local testing:
 - `examples/fixture-pack-minimal-terminal.json`
 - `examples/fixture-pack-drifted-aliases.json`
 - `examples/fixture-pack-receipt-heavy-execution.json`
+- `examples/fixture-pack-real-sanitized-rpc-shape.json`
 
 ## Safety Boundary
 

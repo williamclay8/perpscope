@@ -433,6 +433,7 @@ h1 {
 .execution-panel,
 .watchtower-panel,
 .capture-panel,
+.reality-panel,
 .workbench-panel,
 .history-panel,
 .deployment-panel,
@@ -995,6 +996,80 @@ h1 {
 
 .workbench-panel {
   grid-column: span 2;
+}
+
+.reality-panel {
+  grid-column: span 1;
+  background:
+    linear-gradient(135deg, rgba(67, 229, 155, 0.055), transparent 52%),
+    var(--panel);
+}
+
+.reality-hero {
+  display: grid;
+  gap: 10px;
+  min-height: 106px;
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: var(--shadow-border);
+}
+
+.reality-hero div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.reality-hero strong,
+.reality-hero span,
+.reality-hero p {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.reality-hero strong {
+  font-size: 17px;
+  line-height: 1.1;
+}
+
+.reality-hero span,
+.reality-hero p,
+.reality-strip span {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.reality-hero p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.reality-lanes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.reality-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reality-strip span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  max-width: 100%;
+  padding: 0 9px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.045);
+  font-weight: 800;
+  box-shadow: var(--shadow-border);
 }
 
 .workbench-summary {
@@ -1974,6 +2049,10 @@ code {
     grid-column: span 2;
   }
 
+  .reality-panel {
+    grid-column: span 2;
+  }
+
   .workbench-panel {
     grid-column: span 2;
   }
@@ -2084,6 +2163,7 @@ code {
   .hero-panel,
   .watchtower-panel,
   .capture-panel,
+  .reality-panel,
   .workbench-panel,
   .history-panel,
   .deployment-panel,
@@ -2111,6 +2191,7 @@ code {
   .compat-gap-list,
   .compat-suggestions,
   .workbench-summary,
+  .reality-lanes,
   .workbench-editors,
   .capture-editor,
   .watchtower-grid,

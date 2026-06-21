@@ -1,5 +1,6 @@
 import { percolatorFixture } from "./fixtures/percolator-market.js";
 import {
+  buildCompatibilityRealityCheck,
   buildPercolatorCompatibilityReport,
   compareCompatibilityReports,
   detectPercolatorInputShape,
@@ -154,8 +155,72 @@ export const WORKBENCH_CURRENT_CAPTURE = {
   bestAskPx: 181.71
 };
 
+export const REALITY_CHECK_CAPTURE = {
+  label: "Real-backed sanitized RPC shape / SOL",
+  cluster: "mainnet-beta",
+  fixtureKind: "sanitized-real-shape-candidate",
+  fixture: "examples/fixture-pack-real-sanitized-rpc-shape.json",
+  source: {
+    kind: "read-only-rpc-decoded-account",
+    basis: "Derived from examples/percolator-mainnet-sol.readonly-rpc.json",
+    sanitized: true,
+    realBacked: true,
+    note: "candidate until a third-party decoded shape lands"
+  },
+  slab: "PERCOLAT_SOL_8k4q...Qp2",
+  programId: "Perco1ator111111111111111111111111111111111",
+  currentSlot: 346892118,
+  market: {
+    id: "sol-perp",
+    symbol: "SOL-PERP",
+    base: "SOL",
+    quote: "USDC",
+    status: "stable"
+  },
+  account: {
+    owner: "Perco1ator111111111111111111111111111111111",
+    dataLength: 524800,
+    magic: "50455243",
+    decoded: {
+      header: { magic: "50455243", version: 16 },
+      config: { maxStalenessSecs: 8, confFilterBps: 45, unitScale: 6 },
+      params: { maintenanceMarginBps: 500, initialMarginBps: 820, maxAccounts: 4096 },
+      engine: {
+        currentSlot: 346892118,
+        lastMarketSlot: 346892090,
+        fundingRateBpsPerHour: 0.82,
+        openInterestUsd: 2430000,
+        longOpenInterestUsd: 1320000,
+        shortOpenInterestUsd: 1110000,
+        insuranceUsd: 148000,
+        stressConsumedBps: 118,
+        stressLimitBps: 500
+      },
+      bestPrice: {
+        oracle: { price: "181610000", decimals: 6, ageSecs: 2 },
+        bestBuy: { price: "181710000", decimals: 6 },
+        bestSell: { price: "181520000", decimals: 6 },
+        effectiveSpreadBps: 10
+      },
+      accountUsd: {
+        label: "sanitized observer",
+        side: "long",
+        positionSize: 420,
+        positionNotionalUsd: 76276.2,
+        collateralUsd: 8400,
+        unrealizedPnlUsd: 3067.2,
+        liquidationPrice: 162.94
+      },
+      receipts: [{ label: "sanitized fill", markPriceUsd: 181.61, bestBid: 181.52, bestAsk: 181.71, spreadBps: 10.5, impactBps: 8.4 }],
+      fundingSkew: [{ slot: 346892086, fundingBpsPerHour: 0.82, longOpenInterestUsd: 1320000, shortOpenInterestUsd: 1110000 }]
+    }
+  }
+};
+
 const fixtureSnapshot = normalizePercolatorSnapshot(percolatorFixture);
 const fixtureCompatibilityReport = buildPercolatorCompatibilityReport(percolatorFixture, fixtureSnapshot);
+const realitySnapshot = buildReadOnlyRpcSnapshot(REALITY_CHECK_CAPTURE);
+const realityCompatibilityReport = buildPercolatorCompatibilityReport(REALITY_CHECK_CAPTURE, realitySnapshot);
 const workbenchPreviousText = JSON.stringify(WORKBENCH_PREVIOUS_CAPTURE, null, 2);
 const workbenchCurrentText = JSON.stringify(WORKBENCH_CURRENT_CAPTURE, null, 2);
 
@@ -165,6 +230,7 @@ const state = {
   shockPct: -3,
   compatibilityReport: fixtureCompatibilityReport,
   compatibilityDiff: compareCompatibilityReports(fixtureCompatibilityReport, fixtureCompatibilityReport),
+  realityCheck: buildCompatibilityRealityCheck(realityCompatibilityReport, { input: REALITY_CHECK_CAPTURE }),
   lastImportedInput: percolatorFixture,
   workbench: createCompatibilityWorkbenchState(WORKBENCH_PREVIOUS_CAPTURE, WORKBENCH_CURRENT_CAPTURE, {
     previousText: workbenchPreviousText,
@@ -258,6 +324,8 @@ function render() {
           ${watchtowerPanel(market, stress)}
 
           ${compatibilityPanel(state.compatibilityReport)}
+
+          ${realityCheckPanel(state.realityCheck)}
 
           ${workbenchPanel(state.workbench)}
 
@@ -408,6 +476,7 @@ function render() {
     state.shockPct = -3;
     state.compatibilityReport = fixtureCompatibilityReport;
     state.compatibilityDiff = compareCompatibilityReports(fixtureCompatibilityReport, fixtureCompatibilityReport);
+    state.realityCheck = buildCompatibilityRealityCheck(realityCompatibilityReport, { input: REALITY_CHECK_CAPTURE });
     state.lastImportedInput = percolatorFixture;
     state.workbench = createCompatibilityWorkbenchState(WORKBENCH_PREVIOUS_CAPTURE, WORKBENCH_CURRENT_CAPTURE, {
       previousText: workbenchPreviousText,
@@ -605,6 +674,35 @@ function workbenchPanel(workbench) {
   `;
 }
 
+function realityCheckPanel(check) {
+  return `
+    <article class="reality-panel panel stagger-item ${check.tone}">
+      <div class="panel-head">
+        <span class="panel-label">reality check</span>
+        <strong class="compat-status ${check.tone}">${esc(check.status)}</strong>
+      </div>
+      <div class="reality-hero">
+        <div>
+          <strong>${esc(check.provenance.label)}</strong>
+          <span>${esc(check.sourceKind)}</span>
+        </div>
+        <p>${esc(check.provenance.note || check.provenance.basis || "read-only decoded state")}</p>
+      </div>
+      <div class="reality-lanes" aria-label="Reality check summary">
+        ${check.lanes.map((lane) => compatTile(lane.label, lane.value, lane.tone)).join("")}
+      </div>
+      <div class="reality-strip">
+        ${[
+          check.provenance.cluster,
+          check.provenance.fixture,
+          check.provenance.sanitized ? "sanitized" : "",
+          `${check.mapped.recognizedCount} mapped sections`
+        ].filter(Boolean).map((chip) => `<span>${esc(chip)}</span>`).join("")}
+      </div>
+    </article>
+  `;
+}
+
 function captureEditor() {
   return `
     <div class="capture-editor">
@@ -626,6 +724,7 @@ async function importJsonFile(file) {
   } catch (error) {
     state.compatibilityReport = rejectedCompatibilityReport(error);
     state.compatibilityDiff = compareCompatibilityReports(fixtureCompatibilityReport, state.compatibilityReport);
+    state.realityCheck = buildCompatibilityRealityCheck(state.compatibilityReport, { input: state.lastImportedInput });
     state.importStatus = {
       tone: "danger",
       label: error.message.slice(0, 44),
@@ -647,6 +746,7 @@ function analyzePastedCapture(text) {
   } catch (error) {
     state.compatibilityReport = rejectedCompatibilityReport(error);
     state.compatibilityDiff = compareCompatibilityReports(fixtureCompatibilityReport, state.compatibilityReport);
+    state.realityCheck = buildCompatibilityRealityCheck(state.compatibilityReport, { input: state.lastImportedInput });
     state.importStatus = {
       tone: "danger",
       label: error.message.slice(0, 44),
@@ -666,6 +766,7 @@ async function loadCliDemo() {
   } catch (error) {
     state.compatibilityReport = rejectedCompatibilityReport(error);
     state.compatibilityDiff = compareCompatibilityReports(fixtureCompatibilityReport, state.compatibilityReport);
+    state.realityCheck = buildCompatibilityRealityCheck(state.compatibilityReport, { input: state.lastImportedInput });
     state.importStatus = {
       tone: "danger",
       label: error.message.slice(0, 44),
@@ -688,6 +789,7 @@ export function createImportedSnapshotState(imported, options = {}) {
     : normalizePercolatorSnapshot(imported);
   const compatibilityReport = buildPercolatorCompatibilityReport(imported, snapshot);
   const compatibilityDiff = compareCompatibilityReports(fixtureCompatibilityReport, compatibilityReport);
+  const realityCheck = buildCompatibilityRealityCheck(compatibilityReport, { input: imported });
   if (!snapshot.markets.length) {
     throw new Error("No markets found.");
   }
@@ -704,6 +806,7 @@ export function createImportedSnapshotState(imported, options = {}) {
     shockPct: -3,
     compatibilityReport,
     compatibilityDiff,
+    realityCheck,
     lastImportedInput: imported,
     captureOpen: false,
     importStatus: {
@@ -720,6 +823,7 @@ function loadImportedSnapshot(imported, options = {}) {
   } catch (error) {
     if (error.compatibilityReport) state.compatibilityReport = error.compatibilityReport;
     state.compatibilityDiff = compareCompatibilityReports(fixtureCompatibilityReport, state.compatibilityReport);
+    state.realityCheck = buildCompatibilityRealityCheck(state.compatibilityReport, { input: state.lastImportedInput });
     throw error;
   }
 }

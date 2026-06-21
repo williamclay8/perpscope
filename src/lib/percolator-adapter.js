@@ -1,6 +1,6 @@
 import { normalizeFundingSkewHistory } from "./funding-history.js";
 
-export const PERPSCOPE_ADAPTER_VERSION = "0.7.0";
+export const PERPSCOPE_ADAPTER_VERSION = "0.8.0";
 
 const KEYPAIR_FIELD_PATTERN = /(^|_)(secret|private|keypair|mnemonic|seed|walletPath|wallet)(_|$)/i;
 const HISTORY_COMMAND_KEYS = new Set([
@@ -228,6 +228,60 @@ export function exportCompatibilityReportFromReport(report, options = {}) {
       ...report.summary,
       suggestionCount: report.summary?.suggestionCount ?? (report.aliasSuggestions || []).length
     }
+  };
+}
+
+export function buildCompatibilityRealityCheck(inputOrReport, options = {}) {
+  const hasReportShape = inputOrReport && typeof inputOrReport === "object" && Array.isArray(inputOrReport.recognizedSections);
+  const input = hasReportShape ? options.input : inputOrReport;
+  const report = hasReportShape ? normalizeCompatibilityReport(inputOrReport) : buildPercolatorCompatibilityReport(inputOrReport);
+  const requiredFields = COMPATIBILITY_FIELD_SPECS.filter((field) => field.severity === "danger");
+  const optionalFields = COMPATIBILITY_FIELD_SPECS.filter((field) => field.severity !== "danger");
+  const missingFieldSet = new Set((report.missingFields || []).map((field) => field.field));
+  const mappedRequired = requiredFields.filter((field) => !missingFieldSet.has(field.field));
+  const mappedOptional = optionalFields.filter((field) => !missingFieldSet.has(field.field));
+  const provenance = realityProvenance(input, report);
+  const unknownCount = report.summary?.ignoredCount ?? report.ignoredFields.length;
+  const aliasCount = report.summary?.suggestionCount ?? report.aliasSuggestions.length;
+  const dangerMissing = (report.missingFields || []).filter((field) => field.severity === "danger").length;
+  const warningMissing = (report.missingFields || []).length - dangerMissing;
+  const tone = dangerMissing
+    ? "danger"
+    : warningMissing || unknownCount || provenance.status === "candidate"
+      ? "warning"
+      : "good";
+
+  return {
+    schema: "perpscope.reality-check",
+    version: 1,
+    package: {
+      name: "@perpscope/percolator-adapter",
+      version: options.packageVersion || PERPSCOPE_ADAPTER_VERSION
+    },
+    generatedAt: options.generatedAt || new Date().toISOString(),
+    tone,
+    status: provenance.status,
+    sourceKind: provenance.kind,
+    provenance,
+    mapped: {
+      requiredCount: mappedRequired.length,
+      requiredTotal: requiredFields.length,
+      optionalCount: mappedOptional.length,
+      optionalTotal: optionalFields.length,
+      recognizedCount: report.summary?.recognizedCount ?? report.recognizedSections.length
+    },
+    gaps: {
+      dangerMissing,
+      warningMissing,
+      unknownCount,
+      aliasCount
+    },
+    lanes: [
+      realityLane("required", `${mappedRequired.length}/${requiredFields.length}`, dangerMissing ? "danger" : "good"),
+      realityLane("useful", `${mappedOptional.length}/${optionalFields.length}`, warningMissing ? "warning" : "good"),
+      realityLane("unknown", String(unknownCount), unknownCount ? "warning" : "good"),
+      realityLane("aliases", String(aliasCount), aliasCount ? "good" : "neutral")
+    ]
   };
 }
 
@@ -656,6 +710,30 @@ function compatibilityDiffSummary(report) {
       ignoredCount: report.summary?.ignoredCount || report.ignoredFields.length,
       suggestionCount: report.summary?.suggestionCount || report.aliasSuggestions.length
     }
+  };
+}
+
+function realityLane(label, value, tone = "neutral") {
+  return { label, value, tone };
+}
+
+function realityProvenance(input, report) {
+  const source = report.source || {};
+  const inputSource = input && typeof input === "object" && !Array.isArray(input) ? input.source || {} : {};
+  const kind = stringOf(input, ["fixtureKind", "sourceKind"], inputSource.kind || source.shape || report.shape || "decoded-capture");
+  const candidate = /candidate|read-only-rpc|real/i.test(kind) || Boolean(inputSource.realBacked);
+  const submitted = Boolean(inputSource.submittedBy) || Boolean(inputSource.externalSubmission);
+  const status = submitted ? "submitted" : candidate ? "candidate" : "synthetic";
+  return {
+    status,
+    kind,
+    label: source.label || stringOf(input, ["label"], "decoded capture"),
+    cluster: source.cluster || stringOf(input, ["cluster"], "unknown"),
+    basis: inputSource.basis || inputSource.capture || "",
+    fixture: stringOf(input, ["fixture"], ""),
+    sanitized: inputSource.sanitized !== false,
+    submittedBy: inputSource.submittedBy || "",
+    note: inputSource.note || (status === "candidate" ? "real-backed candidate; still waiting on third-party decoded shape" : "")
   };
 }
 

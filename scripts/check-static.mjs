@@ -1,12 +1,13 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import {
+  buildCompatibilityRealityCheck,
   buildPercolatorCompatibilityReport,
   compareCompatibilityReports,
   exportCompatibilityReport,
   normalizePercolatorSnapshot
 } from "../src/lib/percolator-adapter.js";
 import { normalizeFundingSkewHistory } from "../src/lib/funding-history.js";
-import { summarizeReadOnlyRpcDeployment } from "../src/lib/read-only-rpc-fetcher.js";
+import { buildReadOnlyRpcSnapshot, summarizeReadOnlyRpcDeployment } from "../src/lib/read-only-rpc-fetcher.js";
 import { percolatorFixture } from "../src/fixtures/percolator-market.js";
 
 const css = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
@@ -21,6 +22,7 @@ const releaseV04Doc = readFileSync(new URL("../docs/release-v0.4.0.md", import.m
 const releaseV05Doc = readFileSync(new URL("../docs/release-v0.5.0.md", import.meta.url), "utf8");
 const releaseV06Doc = readFileSync(new URL("../docs/release-v0.6.0.md", import.meta.url), "utf8");
 const releaseV07Doc = readFileSync(new URL("../docs/release-v0.7.0.md", import.meta.url), "utf8");
+const releaseV08Doc = readFileSync(new URL("../docs/release-v0.8.0.md", import.meta.url), "utf8");
 const terminalQuickstartDoc = readFileSync(new URL("../docs/terminal-builder-quickstart.md", import.meta.url), "utf8");
 const v05PlanDoc = readFileSync(new URL("../docs/v0.5-plan.md", import.meta.url), "utf8");
 const fieldMapJson = JSON.parse(readFileSync(new URL("../examples/field-compatibility-map.json", import.meta.url), "utf8"));
@@ -29,6 +31,7 @@ const compatibilityDiff = JSON.parse(readFileSync(new URL("../examples/compatibi
 const minimalFixturePack = JSON.parse(readFileSync(new URL("../examples/fixture-pack-minimal-terminal.json", import.meta.url), "utf8"));
 const driftedFixturePack = JSON.parse(readFileSync(new URL("../examples/fixture-pack-drifted-aliases.json", import.meta.url), "utf8"));
 const receiptHeavyFixturePack = JSON.parse(readFileSync(new URL("../examples/fixture-pack-receipt-heavy-execution.json", import.meta.url), "utf8"));
+const realSanitizedFixturePack = JSON.parse(readFileSync(new URL("../examples/fixture-pack-real-sanitized-rpc-shape.json", import.meta.url), "utf8"));
 const decodedShapeIssueTemplate = readFileSync(new URL("../.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml", import.meta.url), "utf8");
 const schemaDir = new URL("../schemas/", import.meta.url);
 const exampleDir = new URL("../examples/", import.meta.url);
@@ -108,6 +111,10 @@ if (!/workbench-panel/.test(js) || !/createCompatibilityWorkbenchState/.test(js)
   failures.push("Cockpit should expose the local compatibility workbench.");
 }
 
+if (!/reality-panel/.test(js) || !/buildCompatibilityRealityCheck/.test(js) || !/REALITY_CHECK_CAPTURE/.test(js)) {
+  failures.push("Cockpit should expose the reality check panel and real-backed candidate capture.");
+}
+
 const dto = normalizePercolatorSnapshot(percolatorFixture);
 if (dto.markets.length < 3) {
   failures.push("Fixture should expose at least three markets for the cockpit.");
@@ -129,7 +136,7 @@ if (compatibilityReport.status !== "compatible") {
 const exportedCompatibility = exportCompatibilityReport(percolatorFixture, dto, {
   generatedAt: "2026-06-21T00:00:00.000Z"
 });
-if (exportedCompatibility.schema !== "perpscope.compatibility-report" || exportedCompatibility.package.version !== "0.7.0") {
+if (exportedCompatibility.schema !== "perpscope.compatibility-report" || exportedCompatibility.package.version !== "0.8.0") {
   failures.push("Exported compatibility report should include the stable schema and package version.");
 }
 
@@ -143,12 +150,20 @@ const driftReport = buildPercolatorCompatibilityReport({
 const drift = compareCompatibilityReports(compatibilityReport, driftReport, {
   generatedAt: "2026-06-21T00:00:00.000Z"
 });
-if (drift.schema !== "perpscope.compatibility-diff" || drift.package.version !== "0.7.0" || !drift.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd")) {
+if (drift.schema !== "perpscope.compatibility-diff" || drift.package.version !== "0.8.0" || !drift.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd")) {
   failures.push("Compatibility diff should include schema, version, and alias suggestions.");
 }
 
-if (!/normalizePercolatorSnapshot/.test(packageEntry) || !/buildWatchtowerSignals/.test(packageEntry) || !/normalizeFundingSkewHistory/.test(packageEntry) || !/buildPercolatorCompatibilityReport/.test(packageEntry) || !/exportCompatibilityReport/.test(packageEntry) || !/compareCompatibilityReports/.test(packageEntry)) {
-  failures.push("Adapter package should expose snapshot, compatibility export/diff, Watchtower, and funding history helpers.");
+const realityCheck = buildCompatibilityRealityCheck(
+  buildPercolatorCompatibilityReport(realSanitizedFixturePack, buildReadOnlyRpcSnapshot(realSanitizedFixturePack)),
+  { input: realSanitizedFixturePack, generatedAt: "2026-06-21T00:00:00.000Z" }
+);
+if (realityCheck.schema !== "perpscope.reality-check" || realityCheck.package.version !== "0.8.0" || realityCheck.status !== "candidate" || realityCheck.mapped.requiredCount !== 3) {
+  failures.push("Reality check should classify the real-backed sanitized fixture candidate.");
+}
+
+if (!/normalizePercolatorSnapshot/.test(packageEntry) || !/buildWatchtowerSignals/.test(packageEntry) || !/normalizeFundingSkewHistory/.test(packageEntry) || !/buildPercolatorCompatibilityReport/.test(packageEntry) || !/exportCompatibilityReport/.test(packageEntry) || !/compareCompatibilityReports/.test(packageEntry) || !/buildCompatibilityRealityCheck/.test(packageEntry)) {
+  failures.push("Adapter package should expose snapshot, compatibility export/diff, reality check, Watchtower, and funding history helpers.");
 }
 
 if (!/"bin"\s*:/.test(packageManifest) || !/"perpscope"\s*:/.test(packageManifest) || !/compat report/.test(packageCli) || !/compat diff/.test(packageCli)) {
@@ -167,11 +182,11 @@ if (!readme.includes("examples/adapter-consumer/") || !readme.includes("docs/fee
   failures.push("README should link the external consumer example and feedback loop.");
 }
 
-if (!readme.includes("npm install @perpscope/percolator-adapter") || !readme.includes("@perpscope/percolator-adapter@0.7.0")) {
+if (!readme.includes("npm install @perpscope/percolator-adapter") || !readme.includes("@perpscope/percolator-adapter@0.8.0")) {
   failures.push("README should document the published adapter package.");
 }
 
-if (!readme.includes("docs/field-compatibility-map.md") || !readme.includes("examples/field-compatibility-map.json") || !readme.includes("examples/compatibility-report-export.json") || !readme.includes("examples/compatibility-diff.json") || !readme.includes("examples/fixture-pack-drifted-aliases.json")) {
+if (!readme.includes("docs/field-compatibility-map.md") || !readme.includes("examples/field-compatibility-map.json") || !readme.includes("examples/compatibility-report-export.json") || !readme.includes("examples/compatibility-diff.json") || !readme.includes("examples/fixture-pack-drifted-aliases.json") || !readme.includes("examples/fixture-pack-real-sanitized-rpc-shape.json")) {
   failures.push("README should link the field compatibility map, JSON manifest, report export, diff, and fixture pack examples.");
 }
 
@@ -183,6 +198,7 @@ for (const doc of [
   "docs/release-v0.5.0.md",
   "docs/release-v0.6.0.md",
   "docs/release-v0.7.0.md",
+  "docs/release-v0.8.0.md",
   "docs/v0.5-plan.md"
 ]) {
   if (!readme.includes(doc)) {
@@ -249,6 +265,12 @@ for (const required of ["@perpscope/percolator-adapter@0.7.0", "perpscope compat
   }
 }
 
+for (const required of ["@perpscope/percolator-adapter@0.8.0", "buildCompatibilityRealityCheck", "reality check", "fixture-pack-real-sanitized-rpc-shape", "Safety Boundary"]) {
+  if (!releaseV08Doc.includes(required)) {
+    failures.push(`v0.8 release notes should include ${required}.`);
+  }
+}
+
 for (const required of ["compatibility report", "Export", "wallet", "transaction", "npm run check", "0.5.0"]) {
   if (!v05PlanDoc.toLowerCase().includes(required.toLowerCase())) {
     failures.push(`v0.5 plan should mention ${required}.`);
@@ -270,13 +292,13 @@ for (const required of [
   }
 }
 
-if (fieldMapJson.version !== "0.7.0") {
-  failures.push("Field compatibility JSON should match package version 0.7.0.");
+if (fieldMapJson.version !== "0.8.0") {
+  failures.push("Field compatibility JSON should match package version 0.8.0.");
 }
 
 if (
   compatibilityReportExport.schema !== "perpscope.compatibility-report" ||
-  compatibilityReportExport.package?.version !== "0.7.0" ||
+  compatibilityReportExport.package?.version !== "0.8.0" ||
   compatibilityReportExport.safety?.mode !== "read-only" ||
   !compatibilityReportExport.source?.commandSet?.length ||
   !compatibilityReportExport.missingFields?.some((field) => field.field === "history.fundingSkew") ||
@@ -287,7 +309,7 @@ if (
 
 if (
   compatibilityDiff.schema !== "perpscope.compatibility-diff" ||
-  compatibilityDiff.package?.version !== "0.7.0" ||
+  compatibilityDiff.package?.version !== "0.8.0" ||
   !compatibilityDiff.aliasSuggestions?.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd") ||
   compatibilityDiff.summary?.suggestionCount < 1
 ) {
@@ -297,7 +319,8 @@ if (
 for (const [name, fixture] of [
   ["minimal terminal", minimalFixturePack],
   ["drifted aliases", driftedFixturePack],
-  ["receipt-heavy execution", receiptHeavyFixturePack]
+  ["receipt-heavy execution", receiptHeavyFixturePack],
+  ["real-backed sanitized RPC shape", realSanitizedFixturePack]
 ]) {
   try {
     const report = buildPercolatorCompatibilityReport(fixture);

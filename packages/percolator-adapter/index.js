@@ -1,5 +1,6 @@
 export {
   assertReadOnlySnapshot,
+  buildCompatibilityRealityCheck,
   buildPercolatorCompatibilityReport,
   compareCompatibilityReports,
   detectPercolatorInputShape,

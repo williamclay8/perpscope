@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
+  buildCompatibilityRealityCheck,
   buildPercolatorCompatibilityReport,
   buildReadOnlyRpcSnapshot,
   buildWatchtowerSignals,
@@ -33,6 +34,9 @@ const cliFixture = fileURLToPath(new URL("../examples/percolator-cli.bundle.json
 const fundingFixture = fileURLToPath(new URL("../examples/funding-skew-history.stdout.json", import.meta.url));
 const minimalFixture = fileURLToPath(new URL("../examples/fixture-pack-minimal-terminal.json", import.meta.url));
 const driftedFixture = fileURLToPath(new URL("../examples/fixture-pack-drifted-aliases.json", import.meta.url));
+const realSanitizedFixture = JSON.parse(
+  readFileSync(new URL("../examples/fixture-pack-real-sanitized-rpc-shape.json", import.meta.url), "utf8")
+);
 const packageCli = fileURLToPath(new URL("../packages/percolator-adapter/bin/perpscope.mjs", import.meta.url));
 
 test("adapter package exposes read-only terminal DTO helpers", () => {
@@ -48,16 +52,23 @@ test("adapter package exposes read-only terminal DTO helpers", () => {
   const drift = compareCompatibilityReports(report, report, {
     generatedAt: "2026-06-21T00:00:00.000Z"
   });
+  const reality = buildCompatibilityRealityCheck(report, {
+    input: percolatorFixture,
+    generatedAt: "2026-06-21T00:00:00.000Z"
+  });
 
   assert.equal(detectPercolatorInputShape(percolatorFixture), "perpscope-snapshot");
-  assert.equal(PERPSCOPE_ADAPTER_VERSION, "0.7.0");
+  assert.equal(PERPSCOPE_ADAPTER_VERSION, "0.8.0");
   assert.equal(snapshot.markets.length, 3);
   assert.equal(report.compatible, true);
   assert.equal(report.status, "compatible");
   assert.equal(exported.schema, "perpscope.compatibility-report");
-  assert.equal(exported.package.version, "0.7.0");
+  assert.equal(exported.package.version, "0.8.0");
   assert.equal(drift.schema, "perpscope.compatibility-diff");
   assert.equal(drift.scoreDelta, 0);
+  assert.equal(reality.schema, "perpscope.reality-check");
+  assert.equal(reality.package.version, "0.8.0");
+  assert.equal(reality.mapped.requiredCount, 3);
   assert.equal(signals.find((signal) => signal.id === "carry").tone, "good");
   assert.equal(history.length, 6);
   assert.equal(history.at(-1).fundingBpsPerHour, 0.82);
@@ -75,11 +86,28 @@ test("adapter CLI exports reports and diffs", () => {
   const diff = JSON.parse(diffOutput);
 
   assert.equal(report.schema, "perpscope.compatibility-report");
-  assert.equal(report.package.version, "0.7.0");
+  assert.equal(report.package.version, "0.8.0");
   assert.ok(report.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd"));
   assert.equal(diff.schema, "perpscope.compatibility-diff");
-  assert.equal(diff.package.version, "0.7.0");
+  assert.equal(diff.package.version, "0.8.0");
   assert.ok(diff.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd"));
+});
+
+test("adapter package exposes reality checks for real-backed candidates", () => {
+  const snapshot = buildReadOnlyRpcSnapshot(realSanitizedFixture);
+  const report = buildPercolatorCompatibilityReport(realSanitizedFixture, snapshot);
+  const reality = buildCompatibilityRealityCheck(report, {
+    input: realSanitizedFixture,
+    generatedAt: "2026-06-21T00:00:00.000Z"
+  });
+
+  assert.equal(reality.schema, "perpscope.reality-check");
+  assert.equal(reality.status, "candidate");
+  assert.equal(reality.sourceKind, "sanitized-real-shape-candidate");
+  assert.equal(reality.mapped.requiredCount, 3);
+  assert.ok(reality.mapped.optionalCount >= 6);
+  assert.equal(snapshot.markets[0].execution.receipts.length, 1);
+  assert.equal(snapshot.markets[0].history.fundingSkew.length, 1);
 });
 
 test("adapter package normalizes captured carry history logs", () => {

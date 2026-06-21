@@ -51,6 +51,8 @@ test("loads Try CLI demo through the same import state path", async () => {
   assert.equal(nextState.compatibilityReport.shape, "percolator-cli-bundle");
   assert.equal(nextState.compatibilityReport.status, "partial");
   assert.equal(nextState.compatibilityDiff.schema, "perpscope.compatibility-diff");
+  assert.equal(nextState.realityCheck.schema, "perpscope.reality-check");
+  assert.equal(nextState.realityCheck.mapped.requiredCount, 3);
   assert.ok(nextState.compatibilityDiff.scoreDelta < 0);
   assert.ok(nextState.compatibilityReport.recognizedSections.some((section) => section.id === "receipts"));
   assert.ok(nextState.compatibilityReport.missingFields.some((field) => field.field === "history.fundingSkew"));
