@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: perpscope-decoder-worker
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm run decoder:start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: PERPSCOPE_ALLOWED_ORIGIN
+        value: https://williamclay8.github.io
+      - key: PERPSCOPE_DECODER_CLUSTER
+        value: devnet
+      - key: PERPSCOPE_MARKET_DIRECTORY_URL
+        value: https://percolatorlaunch.com/api/markets
+      - key: PERPSCOPE_DECODER_CACHE_TTL_MS
+        value: "12000"
+      - key: PERPSCOPE_DECODER_TIMEOUT_MS
+        value: "10000"
+      - key: PERPSCOPE_DECODER_RPC_URL
+        value: https://api.devnet.solana.com

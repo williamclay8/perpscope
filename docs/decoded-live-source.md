@@ -87,3 +87,38 @@ Discovery order for a hosted decoder worker:
 4. Fetch accounts with `getMultipleAccounts`, verify the owner/program id, decode with the SDK layout parser, and emit the PerpScope contract.
 
 The address directory is not the source of truth for market state. Treat it as a list of accounts to verify and decode from Solana RPC.
+
+## PerpScope Decoder Worker
+
+This repo now includes a read-only decoder worker:
+
+```bash
+npm run decoder:start
+```
+
+It serves:
+
+- `GET /healthz` for deploy health checks
+- `GET /perpscope.json` for the decoded live source contract
+
+Default environment:
+
+```text
+PORT=8787
+PERPSCOPE_ALLOWED_ORIGIN=https://williamclay8.github.io
+PERPSCOPE_DECODER_CLUSTER=devnet
+PERPSCOPE_DECODER_RPC_URL=https://api.devnet.solana.com
+PERPSCOPE_MARKET_DIRECTORY_URL=https://percolatorlaunch.com/api/markets
+PERPSCOPE_DECODER_CACHE_TTL_MS=12000
+PERPSCOPE_DECODER_TIMEOUT_MS=10000
+```
+
+The worker has no wallet, signer, transaction, instruction, or order path. It fetches public slab addresses, reads Solana accounts, verifies owner/program id through the SDK fetch path, decodes market state, and emits the same JSON contract that `Load Decoded` accepts.
+
+Hosted decode requests run behind a worker-thread timeout. If the Percolator SDK, public directory, or Solana RPC path stalls, `/perpscope.json` returns `decoded_source_unavailable` instead of leaving the cockpit waiting indefinitely.
+
+Render deployment is described by `render.yaml`; after deploy, use the HTTPS service URL as:
+
+```text
+https://williamclay8.github.io/perpscope/?decodedSource=https://your-render-service.onrender.com/perpscope.json
+```

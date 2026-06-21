@@ -1,6 +1,6 @@
 {
   "name": "perpscope",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "private": true,
   "type": "module",
   "description": "Read-only Percolator risk cockpit and terminal adapter kit.",
@@ -13,6 +13,7 @@
   ],
   "scripts": {
     "build": "node scripts/build-static.mjs",
+    "decoder:start": "node scripts/percolator-decoder-worker.mjs",
     "start": "node scripts/serve.mjs",
     "check": "node scripts/check-static.mjs && npm test && npm run build",
     "test": "node --test"
@@ -24,5 +25,8 @@
     "risk",
     "terminal"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@percolatorct/sdk": "2.0.9"
+  }
 }

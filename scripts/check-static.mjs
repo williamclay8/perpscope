@@ -31,7 +31,12 @@ const releaseV101Doc = readFileSync(new URL("../docs/release-v1.0.1.md", import.
 const releaseV11Doc = readFileSync(new URL("../docs/release-v1.1.0.md", import.meta.url), "utf8");
 const releaseV12Doc = readFileSync(new URL("../docs/release-v1.2.0.md", import.meta.url), "utf8");
 const releaseV13Doc = readFileSync(new URL("../docs/release-v1.3.0.md", import.meta.url), "utf8");
+const releaseV14Doc = readFileSync(new URL("../docs/release-v1.4.0.md", import.meta.url), "utf8");
 const decodedLiveSourceDoc = readFileSync(new URL("../docs/decoded-live-source.md", import.meta.url), "utf8");
+const decoderWorker = readFileSync(new URL("../scripts/percolator-decoder-worker.mjs", import.meta.url), "utf8");
+const decoderWorkerLib = readFileSync(new URL("../src/lib/percolator-decoder-worker.js", import.meta.url), "utf8");
+const decoderWorkerThread = readFileSync(new URL("../src/lib/percolator-decoder-thread.js", import.meta.url), "utf8");
+const renderYaml = readFileSync(new URL("../render.yaml", import.meta.url), "utf8");
 const contributingDoc = readFileSync(new URL("../CONTRIBUTING.md", import.meta.url), "utf8");
 const terminalQuickstartDoc = readFileSync(new URL("../docs/terminal-builder-quickstart.md", import.meta.url), "utf8");
 const v05PlanDoc = readFileSync(new URL("../docs/v0.5-plan.md", import.meta.url), "utf8");
@@ -132,6 +137,14 @@ if (!/reality-panel/.test(js) || !/buildCompatibilityRealityCheck/.test(js) || !
 
 if (!/data-source-panel/.test(js) || !/STATIC_REAL_SNAPSHOT_PATH/.test(js) || !/fetchStaticRealSnapshot/.test(js) || !/createDataSourceState/.test(js) || !/ACTUAL_PRICE_ENDPOINT/.test(js) || !/fetchActualMarketSnapshot/.test(js) || !/load-actual-prices/.test(js) || !/fetchLiveDecodedSource/.test(js) || !/load-live-decoded/.test(js) || !/LIVE_DECODED_SOURCE_PARAM/.test(js)) {
   failures.push("Cockpit should expose fixture/static-real/live/decoded data source disclosure and actual public price loading.");
+}
+
+if (!/createDecoderHttpHandler/.test(decoderWorker) || !/perpscope\.json/.test(decoderWorkerLib) || !/getMarketsByAddress/.test(decoderWorkerLib) || !/new Worker/.test(decoderWorkerLib) || !/buildPerpScopeDecodedSnapshot/.test(decoderWorkerThread) || !/PERPSCOPE_ALLOWED_ORIGIN/.test(decoderWorker) || !/PERPSCOPE_DECODER_TIMEOUT_MS/.test(decoderWorker) || !/healthz/.test(decoderWorkerLib)) {
+  failures.push("Decoder worker should expose health and PerpScope JSON endpoints backed by read-only SDK account reads.");
+}
+
+if (!/perpscope-decoder-worker/.test(renderYaml) || !/npm run decoder:start/.test(renderYaml) || !/PERPSCOPE_ALLOWED_ORIGIN/.test(renderYaml) || !/PERPSCOPE_DECODER_TIMEOUT_MS/.test(renderYaml)) {
+  failures.push("Render Blueprint should deploy the read-only decoder worker with CORS configuration.");
 }
 
 const dto = normalizePercolatorSnapshot(percolatorFixture);
@@ -245,6 +258,7 @@ for (const doc of [
   "docs/release-v1.1.0.md",
   "docs/release-v1.2.0.md",
   "docs/release-v1.3.0.md",
+  "docs/release-v1.4.0.md",
   "docs/decoded-live-source.md",
   "docs/v0.5-plan.md"
 ]) {
@@ -371,6 +385,12 @@ for (const required of ["Load Decoded", "?decodedSource=", "decoded live source"
 for (const required of ["@percolatorct/sdk", "getMultipleAccounts", "percolatorlaunch.com/api/markets", "?decodedSource=", "account.decoded", "source.live"]) {
   if (!decodedLiveSourceDoc.includes(required)) {
     failures.push(`Decoded live source doc should include ${required}.`);
+  }
+}
+
+for (const required of ["perpscope-decoder-worker", "/perpscope.json", "/healthz", "render.yaml", "Safety"]) {
+  if (!releaseV14Doc.includes(required)) {
+    failures.push(`v1.4 release notes should include ${required}.`);
   }
 }
 
