@@ -47,6 +47,7 @@ PerpScope rejects wallet paths, private keys, mnemonics, seeds, signers, signatu
 - a Trader Radar board that ranks live markets by heat, stress, skew, funding pressure, freshness, and unit-confidence checks
 - live-by-default public site behavior with a compact Data Confidence strip and Trader Radar filters
 - Why Hot explanations, Feed Health, shareable market/filter links, and terminal Adapter Targets
+- exportable `perpscope.export.v1` JSON plus `?embed=feed`, `?embed=radar`, and `?embed=market` widgets
 - issue templates for sanitized decoded shapes, adapter mapping requests, and CLI doctor output
 
 ## Submit A Shape
@@ -395,6 +396,8 @@ The normalized market DTO includes:
 - `docs/release-v1.5.0.md` mirrors the public release notes for default live Percolator loading and Trader Radar.
 - `docs/release-v1.6.0.md` mirrors the public release notes for automatic live loading, confidence, and radar filters.
 - `docs/release-v1.7.0.md` mirrors the public release notes for why-hot explanations, feed health, share links, and adapter targets.
+- `docs/release-v1.8.0.md` mirrors the public release notes for exportable JSON and embed widgets.
+- `docs/adapter-targets.md` documents the terminal rail, risk overlay, execution lane, feed monitor, and embed contracts.
 - `docs/decoded-live-source.md` documents the CORS endpoint contract for decoded Percolator live feeds.
 - `docs/v0.5-plan.md` documents the shipped compatibility report export.
 - `.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml` is the structured intake form for sanitized builder samples.
@@ -450,4 +453,5 @@ Current public site: [williamclay8.github.io/perpscope](https://williamclay8.git
 - v1.5 shipped: default hosted Percolator loading, decoded value sanity checks, and Trader Radar market ranking.
 - v1.6 shipped: automatic public-site live loading, Data Confidence summary, Trader Radar filters, and live loading/fallback states.
 - v1.7 shipped: Why Hot explanations, Feed Health, shareable cockpit links, and terminal Adapter Targets.
+- v1.8 shipped: exportable PerpScope JSON, radar/market copy actions, and feed/radar/market embeds.
 - More deployment fixtures as Percolator terminal teams share read-only shapes.

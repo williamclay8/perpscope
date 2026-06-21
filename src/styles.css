@@ -1053,6 +1053,13 @@ h1 {
   grid-column: span 2;
 }
 
+.export-hub-panel {
+  grid-column: span 1;
+  background:
+    linear-gradient(135deg, rgba(115, 216, 255, 0.055), transparent 58%),
+    var(--panel);
+}
+
 .data-source-grid {
   display: grid;
   gap: 8px;
@@ -1556,6 +1563,113 @@ h1 {
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.055);
   box-shadow: var(--shadow-border);
+}
+
+.export-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.export-actions .utility-button {
+  width: 100%;
+}
+
+.embed-mode-strip {
+  display: grid;
+  gap: 8px;
+}
+
+.embed-mode-strip span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 34px;
+  min-width: 0;
+  padding: 0 9px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  box-shadow: var(--shadow-border);
+}
+
+.embed-mode-strip b {
+  color: var(--cyan);
+  font-weight: 900;
+}
+
+.embed-shell {
+  display: block;
+  min-height: 100vh;
+}
+
+.embed-shell .workspace {
+  min-height: 100vh;
+}
+
+.embed-topbar h1 {
+  font-size: clamp(34px, 5vw, 64px);
+}
+
+.embed-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.42fr);
+  grid-auto-rows: minmax(0, auto);
+}
+
+.embed-grid .feed-health-panel,
+.embed-grid .confidence-strip,
+.embed-grid .trader-radar-panel,
+.embed-grid .market-embed-panel {
+  grid-column: span 1;
+}
+
+.market-embed-panel {
+  grid-column: span 1;
+}
+
+.market-embed-hero {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.market-embed-hero section {
+  display: grid;
+  gap: 4px;
+  min-height: 78px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: var(--shadow-border);
+}
+
+.market-embed-hero span,
+.market-embed-hero strong,
+.market-embed-hero small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.market-embed-hero span,
+.market-embed-hero small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.market-embed-hero strong {
+  color: var(--ink);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
 }
 
 .reality-panel {
@@ -2669,8 +2783,24 @@ code {
     grid-column: span 2;
   }
 
+  .export-hub-panel {
+    grid-column: span 2;
+  }
+
   .confidence-rail {
     grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .embed-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .embed-grid .feed-health-panel,
+  .embed-grid .confidence-strip,
+  .embed-grid .trader-radar-panel,
+  .embed-grid .market-embed-panel,
+  .embed-grid .export-hub-panel {
+    grid-column: span 1;
   }
 
   .feed-health-grid,
@@ -2795,6 +2925,8 @@ code {
   .trader-radar-panel,
   .hot-reasons-panel,
   .adapter-targets-panel,
+  .export-hub-panel,
+  .market-embed-panel,
   .workbench-panel,
   .history-panel,
   .deployment-panel,
@@ -2828,6 +2960,8 @@ code {
   .confidence-rail,
   .reason-list,
   .adapter-target-grid,
+  .export-actions,
+  .market-embed-hero,
   .workbench-editors,
   .capture-editor,
   .watchtower-grid,

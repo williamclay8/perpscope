@@ -35,6 +35,8 @@ const releaseV14Doc = readFileSync(new URL("../docs/release-v1.4.0.md", import.m
 const releaseV15Doc = readFileSync(new URL("../docs/release-v1.5.0.md", import.meta.url), "utf8");
 const releaseV16Doc = readFileSync(new URL("../docs/release-v1.6.0.md", import.meta.url), "utf8");
 const releaseV17Doc = readFileSync(new URL("../docs/release-v1.7.0.md", import.meta.url), "utf8");
+const releaseV18Doc = readFileSync(new URL("../docs/release-v1.8.0.md", import.meta.url), "utf8");
+const adapterTargetsDoc = readFileSync(new URL("../docs/adapter-targets.md", import.meta.url), "utf8");
 const decodedLiveSourceDoc = readFileSync(new URL("../docs/decoded-live-source.md", import.meta.url), "utf8");
 const decoderWorker = readFileSync(new URL("../scripts/percolator-decoder-worker.mjs", import.meta.url), "utf8");
 const decoderWorkerLib = readFileSync(new URL("../src/lib/percolator-decoder-worker.js", import.meta.url), "utf8");
@@ -152,6 +154,10 @@ if (!/shouldAutoLoadLivePercolator/.test(js) || !/dataConfidenceStrip/.test(js) 
 
 if (!/hot-reasons-panel/.test(js) || !/buildMarketHotReasons/.test(js) || !/feed-health-panel/.test(js) || !/buildFeedHealth/.test(js) || !/buildShareUrl/.test(js) || !/copy-market-link/.test(js) || !/TERMINAL_ADAPTER_TARGETS/.test(js) || !/adapter-targets-panel/.test(js)) {
   failures.push("Cockpit should expose v1.7 why-hot explanations, feed health, share links, and adapter targets.");
+}
+
+if (!/buildPerpScopeExport/.test(js) || !/perpscope\.export\.v1/.test(js) || !/export-hub-panel/.test(js) || !/export-cockpit-json/.test(js) || !/export-radar-json/.test(js) || !/copy-market-json/.test(js) || !/EMBED_MODES/.test(js) || !/\?embed=/.test(js) || !/buildEmbedUrl/.test(js)) {
+  failures.push("Cockpit should expose v1.8 exportable JSON and feed/radar/market embeds.");
 }
 
 if (!/createDecoderHttpHandler/.test(decoderWorker) || !/perpscope\.json/.test(decoderWorkerLib) || !/getMarketsByAddress/.test(decoderWorkerLib) || !/new Worker/.test(decoderWorkerLib) || !/buildPerpScopeDecodedSnapshot/.test(decoderWorkerThread) || !/PERPSCOPE_ALLOWED_ORIGIN/.test(decoderWorker) || !/PERPSCOPE_DECODER_TIMEOUT_MS/.test(decoderWorker) || !/localhost\|127/.test(decoderWorkerLib) || !/healthz/.test(decoderWorkerLib)) {
@@ -281,6 +287,8 @@ for (const doc of [
   "docs/release-v1.5.0.md",
   "docs/release-v1.6.0.md",
   "docs/release-v1.7.0.md",
+  "docs/release-v1.8.0.md",
+  "docs/adapter-targets.md",
   "docs/decoded-live-source.md",
   "docs/v0.5-plan.md"
 ]) {
@@ -431,6 +439,18 @@ for (const required of ["Auto-loads", "Data Confidence", "Trader Radar filters",
 for (const required of ["Why Hot", "Feed Health", "?market=", "Adapter Targets", "Safety"]) {
   if (!releaseV17Doc.includes(required)) {
     failures.push(`v1.7 release notes should include ${required}.`);
+  }
+}
+
+for (const required of ["perpscope.export.v1", "?embed=feed", "Export Hub", "adapter target", "Safety"]) {
+  if (!releaseV18Doc.includes(required)) {
+    failures.push(`v1.8 release notes should include ${required}.`);
+  }
+}
+
+for (const required of ["Terminal Rail", "Risk Overlay", "Execution Lane", "Feed Monitor", "?embed=market"]) {
+  if (!adapterTargetsDoc.includes(required)) {
+    failures.push(`Adapter target docs should include ${required}.`);
   }
 }
 

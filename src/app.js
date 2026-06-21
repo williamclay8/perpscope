@@ -31,6 +31,11 @@ export const RADAR_FILTERS = [
   { id: "normalized", label: "Normalized" },
   { id: "fresh", label: "Fresh" }
 ];
+export const EMBED_MODES = [
+  { id: "feed", label: "Feed" },
+  { id: "radar", label: "Radar" },
+  { id: "market", label: "Market" }
+];
 export const TERMINAL_ADAPTER_TARGETS = [
   {
     id: "generic-terminal",
@@ -323,6 +328,7 @@ const state = {
   }),
   captureOpen: false,
   radarFilter: initialUrlState.filter || "all",
+  embedMode: initialUrlState.embed || "",
   liveLoad: { status: "idle", sourceUrl: DEFAULT_LIVE_DECODED_SOURCE_URL },
   importStatus: {
     tone: "neutral",
@@ -344,6 +350,10 @@ function render() {
   const radar = buildTraderRadar(state.snapshot.markets, state.radarFilter);
   const hotReasons = buildMarketHotReasons(market, radar.allRows.find((row) => row.id === market.id));
   const feedHealth = buildFeedHealth(state.snapshot, state.dataSource, state.liveLoad, state.compatibilityReport);
+  if (state.embedMode) {
+    renderEmbed({ market, stress, radar, hotReasons, feedHealth });
+    return;
+  }
   const activeColor = market.status === "stable" ? "var(--mint)" : market.status === "watch" ? "var(--amber)" : "var(--red)";
   app.innerHTML = `
     <main class="shell ${market.status}-mode" style="--active-color:${activeColor}" aria-label="PerpScope read-only risk cockpit">
@@ -426,6 +436,8 @@ function render() {
           ${feedHealthPanel(feedHealth)}
 
           ${dataConfidenceStrip(state)}
+
+          ${exportHubPanel(state.embedMode)}
 
           ${traderRadarPanel(radar, market.id)}
 
@@ -534,6 +546,35 @@ function render() {
       </section>
     </main>
   `;
+  bindInteractiveControls();
+}
+
+function renderEmbed({ market, stress, radar, hotReasons, feedHealth }) {
+  const activeColor = market.status === "stable" ? "var(--mint)" : market.status === "watch" ? "var(--amber)" : "var(--red)";
+  app.innerHTML = `
+    <main class="shell embed-shell ${market.status}-mode" style="--active-color:${activeColor}" aria-label="PerpScope ${state.embedMode} embed">
+      <section class="workspace">
+        <header class="topbar embed-topbar stagger-item">
+          <div>
+            <p class="eyebrow">${esc(state.snapshot.cluster)} / ${esc(state.embedMode)} embed</p>
+            <h1>${esc(embedTitle(state.embedMode, market))}</h1>
+          </div>
+          <div class="topbar-actions" aria-label="Embed actions">
+            <span class="status-chip ${toneClass(market.status)}">${esc(market.status)}</span>
+            <button class="status-chip action" data-copy-embed-url type="button">copy embed</button>
+          </div>
+        </header>
+        <section class="cockpit-grid embed-grid">
+          ${embedPanelMarkup(state.embedMode, { market, stress, radar, hotReasons, feedHealth })}
+          ${exportHubPanel(state.embedMode)}
+        </section>
+      </section>
+    </main>
+  `;
+  bindInteractiveControls();
+}
+
+function bindInteractiveControls() {
 
   app.querySelectorAll("[data-market-id]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -561,15 +602,21 @@ function render() {
     });
   });
 
-  app.querySelector("#shock").addEventListener("input", (event) => {
+  app.querySelector("#shock")?.addEventListener("input", (event) => {
     state.shockPct = Number(event.target.value);
     render();
   });
 
   const fileInput = app.querySelector("#json-file");
-  app.querySelector("#import-json").addEventListener("click", () => fileInput.click());
+  app.querySelector("#import-json")?.addEventListener("click", () => fileInput.click());
   app.querySelector("#capture-import-json")?.addEventListener("click", () => fileInput.click());
   app.querySelector("#export-compatibility")?.addEventListener("click", exportCurrentCompatibilityReport);
+  app.querySelector("#export-cockpit-json")?.addEventListener("click", exportCockpitJson);
+  app.querySelector("#export-radar-json")?.addEventListener("click", exportRadarJson);
+  app.querySelector("#copy-market-json")?.addEventListener("click", copyMarketJson);
+  app.querySelectorAll("[data-copy-embed-url]").forEach((button) => {
+    button.addEventListener("click", copyEmbedUrl);
+  });
   app.querySelector("#analyze-workbench")?.addEventListener("click", analyzeWorkbench);
   app.querySelector("#sample-workbench")?.addEventListener("click", loadWorkbenchSample);
   app.querySelector("#export-workbench-diff")?.addEventListener("click", exportWorkbenchDiff);
@@ -577,7 +624,7 @@ function render() {
   app.querySelector("#load-actual-prices")?.addEventListener("click", loadActualPricesSnapshot);
   app.querySelector("#load-live-decoded")?.addEventListener("click", loadLiveDecodedSource);
   app.querySelector("#copy-market-link")?.addEventListener("click", copyMarketLink);
-  app.querySelector("#try-cli").addEventListener("click", loadCliDemo);
+  app.querySelector("#try-cli")?.addEventListener("click", loadCliDemo);
   app.querySelectorAll("[data-capture-open]").forEach((button) => {
     button.addEventListener("click", () => {
       state.captureOpen = true;
@@ -592,12 +639,12 @@ function render() {
   app.querySelector("#analyze-capture")?.addEventListener("click", () => {
     analyzePastedCapture(app.querySelector("#capture-text")?.value || "");
   });
-  fileInput.addEventListener("change", async (event) => {
+  fileInput?.addEventListener("change", async (event) => {
     const [file] = event.target.files || [];
     if (file) await importJsonFile(file);
   });
 
-  app.querySelector("#reset-fixture").addEventListener("click", () => {
+  app.querySelector("#reset-fixture")?.addEventListener("click", () => {
     const snapshot = normalizePercolatorSnapshot(percolatorFixture);
     state.snapshot = snapshot;
     state.selectedMarketId = "sol-perp";
@@ -904,6 +951,26 @@ function dataConfidenceStrip(appState) {
   `;
 }
 
+function exportHubPanel(embedMode = "") {
+  return `
+    <article class="export-hub-panel panel stagger-item">
+      <div class="panel-head">
+        <span class="panel-label">export hub</span>
+        <strong>${embedMode ? `${embedMode} embed` : "json ready"}</strong>
+      </div>
+      <div class="export-actions" aria-label="PerpScope export actions">
+        <button class="utility-button primary" id="export-cockpit-json" type="button">Export Cockpit</button>
+        <button class="utility-button" id="export-radar-json" type="button">Export Radar</button>
+        <button class="utility-button ghost" id="copy-market-json" type="button">Copy Market</button>
+        <button class="utility-button ghost" data-copy-embed-url type="button">Copy Embed</button>
+      </div>
+      <div class="embed-mode-strip" aria-label="Embed URLs">
+        ${EMBED_MODES.map((mode) => `<span>${esc(mode.label)} <b>?embed=${esc(mode.id)}</b></span>`).join("")}
+      </div>
+    </article>
+  `;
+}
+
 function hotReasonsPanel(summary) {
   return `
     <article class="hot-reasons-panel panel stagger-item ${summary.tone}">
@@ -926,6 +993,63 @@ function hotReasonsPanel(summary) {
       </div>
     </article>
   `;
+}
+
+function marketEmbedPanel(market, stress, hotReasons) {
+  return `
+    <article class="market-embed-panel panel stagger-item ${market.status}">
+      <div class="panel-head">
+        <span class="panel-label">market widget</span>
+        <strong>${esc(market.status)}</strong>
+      </div>
+      <div class="market-embed-hero">
+        <section>
+          <span>mark</span>
+          <strong>${money(market.price.mark, market.base === "WIF" ? 3 : 2)}</strong>
+          <small>${signedBps(market.price.driftBps)} vs index</small>
+        </section>
+        <section>
+          <span>runway</span>
+          <strong>${pct(market.account.liquidationDistancePct)}</strong>
+          <small>${money(market.account.marginBufferUsd, 0)} buffer</small>
+        </section>
+        <section>
+          <span>shock</span>
+          <strong>${money(stress.nextPrice, market.base === "WIF" ? 3 : 2)}</strong>
+          <small>${esc(stress.projectedStatus)}</small>
+        </section>
+      </div>
+      <div class="reason-hero">
+        <strong>${esc(hotReasons.market)}</strong>
+        <span>${esc(hotReasons.lede)}</span>
+      </div>
+      <div class="reason-list" aria-label="Market heat reasons">
+        ${hotReasons.reasons.map((reason) => `
+          <section class="${reason.tone}">
+            <span>${esc(reason.label)}</span>
+            <strong>${esc(reason.value)}</strong>
+            <small>${esc(reason.detail)}</small>
+          </section>
+        `).join("")}
+      </div>
+    </article>
+  `;
+}
+
+function embedTitle(mode, market) {
+  if (mode === "feed") return "Feed Health";
+  if (mode === "radar") return "Trader Radar";
+  return market.name;
+}
+
+function embedPanelMarkup(mode, parts) {
+  if (mode === "feed") {
+    return `${feedHealthPanel(parts.feedHealth)}${dataConfidenceStrip(state)}`;
+  }
+  if (mode === "radar") {
+    return traderRadarPanel(parts.radar, parts.market.id);
+  }
+  return marketEmbedPanel(parts.market, parts.stress, parts.hotReasons);
 }
 
 function traderRadarPanel(radar, selectedMarketId) {
@@ -1150,7 +1274,8 @@ async function loadLiveDecodedSource() {
 async function copyMarketLink() {
   const url = buildShareUrl(globalThis.location, {
     market: state.selectedMarketId,
-    filter: state.radarFilter
+    filter: state.radarFilter,
+    embed: state.embedMode
   });
   try {
     await globalThis.navigator?.clipboard?.writeText?.(url);
@@ -1168,6 +1293,19 @@ async function copyMarketLink() {
   }
   updateUrlState();
   render();
+}
+
+async function copyEmbedUrl() {
+  const url = buildEmbedUrl(globalThis.location, state.embedMode || "market", {
+    market: state.selectedMarketId,
+    filter: state.radarFilter
+  });
+  await copyTextToClipboard(url, "embed copied", "embed ready");
+}
+
+async function copyMarketJson() {
+  const payload = buildPerpScopeExport(currentExportContext()).market;
+  await copyTextToClipboard(`${JSON.stringify(payload, null, 2)}\n`, "market copied", "market ready");
 }
 
 function maybeAutoLoadLivePercolator(locationLike = globalThis.location) {
@@ -1189,9 +1327,11 @@ export function shouldAutoLoadLivePercolator(locationLike = globalThis.location)
 export function readUrlState(locationLike = globalThis.location) {
   const params = new URLSearchParams(locationLike?.search || "");
   const filter = params.get("filter");
+  const embed = params.get("embed");
   return {
     market: params.get("market") || "",
-    filter: RADAR_FILTERS.some((entry) => entry.id === filter) ? filter : ""
+    filter: RADAR_FILTERS.some((entry) => entry.id === filter) ? filter : "",
+    embed: EMBED_MODES.some((entry) => entry.id === embed) ? embed : ""
   };
 }
 
@@ -1204,15 +1344,28 @@ export function buildShareUrl(locationLike = globalThis.location, selection = {}
   } else {
     url.searchParams.delete("filter");
   }
+  if (selection.embed) {
+    url.searchParams.set("embed", selection.embed);
+  } else if (selection.embed === "") {
+    url.searchParams.delete("embed");
+  }
   url.hash = "";
   return url.toString();
+}
+
+export function buildEmbedUrl(locationLike = globalThis.location, mode = "feed", selection = {}) {
+  return buildShareUrl(locationLike, {
+    ...selection,
+    embed: EMBED_MODES.some((entry) => entry.id === mode) ? mode : "feed"
+  });
 }
 
 function updateUrlState(locationLike = globalThis.location, historyLike = globalThis.history) {
   if (!historyLike?.replaceState || !locationLike?.href) return;
   const url = buildShareUrl(locationLike, {
     market: state.selectedMarketId,
-    filter: state.radarFilter
+    filter: state.radarFilter,
+    embed: state.embedMode
   });
   historyLike.replaceState({}, "", url);
 }
@@ -1843,6 +1996,116 @@ export function buildCompatibilityReportExport(input, snapshot, report, options 
   return exportCompatibilityReportFromReport(report, options);
 }
 
+function currentExportContext() {
+  const market = selectedMarket();
+  const radar = buildTraderRadar(state.snapshot.markets, state.radarFilter);
+  return {
+    snapshot: state.snapshot,
+    market,
+    radar,
+    hotReasons: buildMarketHotReasons(market, radar.allRows.find((row) => row.id === market.id)),
+    feedHealth: buildFeedHealth(state.snapshot, state.dataSource, state.liveLoad, state.compatibilityReport),
+    adapterTargets: buildAdapterTargets(state.snapshot, state.compatibilityReport),
+    dataSource: state.dataSource,
+    liveLoad: state.liveLoad,
+    compatibilityReport: state.compatibilityReport,
+    radarFilter: state.radarFilter,
+    embedMode: state.embedMode,
+    location: globalThis.location
+  };
+}
+
+export function buildPerpScopeExport(context = {}, options = {}) {
+  const snapshot = context.snapshot || {};
+  const market = context.market || (snapshot.markets || [])[0] || {};
+  const radar = context.radar || buildTraderRadar(snapshot.markets || [], context.radarFilter || "all");
+  const hotReasons = context.hotReasons || buildMarketHotReasons(market, radar.allRows?.find((row) => row.id === market.id));
+  const feedHealth = context.feedHealth || buildFeedHealth(snapshot, context.dataSource, context.liveLoad, context.compatibilityReport);
+  const adapterTargets = context.adapterTargets || buildAdapterTargets(snapshot, context.compatibilityReport);
+  const generatedAt = options.generatedAt || new Date().toISOString();
+  return {
+    schema: "perpscope.export.v1",
+    version: "1.8.0",
+    generatedAt,
+    selection: {
+      market: market.id || "",
+      filter: context.radarFilter || radar.filter || "all",
+      embed: context.embedMode || "",
+      shareUrl: buildShareUrl(context.location, {
+        market: market.id,
+        filter: context.radarFilter || radar.filter || "all",
+        embed: context.embedMode || ""
+      })
+    },
+    source: {
+      label: snapshot.source?.label || snapshot.label || "PerpScope snapshot",
+      cluster: snapshot.cluster || "unknown",
+      currentSlot: snapshot.currentSlot || 0,
+      live: snapshot.source?.live === true,
+      provider: snapshot.source?.provider || "",
+      mode: context.dataSource?.mode || "fixture"
+    },
+    feedHealth,
+    radar: {
+      filter: radar.filter,
+      rows: radar.rows,
+      allRows: radar.allRows,
+      tiles: radar.tiles
+    },
+    market: {
+      id: market.id || "",
+      name: market.name || "",
+      status: market.status || "",
+      healthScore: market.healthScore || 0,
+      price: market.price || {},
+      account: market.account || {},
+      marketStructure: market.marketStructure || {},
+      funding: market.funding || {},
+      execution: market.execution || {},
+      flags: market.flags || [],
+      whyHot: hotReasons
+    },
+    adapterTargets,
+    safety: {
+      mode: "read-only",
+      wallet: false,
+      signer: false,
+      transaction: false,
+      orderRouting: false
+    }
+  };
+}
+
+function exportCockpitJson() {
+  const payload = buildPerpScopeExport(currentExportContext());
+  downloadJson("perpscope-export.json", payload);
+  state.importStatus = {
+    tone: "good",
+    label: "cockpit exported",
+    detail: "perpscope-export.json"
+  };
+  render();
+}
+
+function exportRadarJson() {
+  const payload = buildPerpScopeExport(currentExportContext());
+  downloadJson("perpscope-radar.json", {
+    schema: "perpscope.radar.v1",
+    generatedAt: payload.generatedAt,
+    source: payload.source,
+    selection: payload.selection,
+    feedHealth: payload.feedHealth,
+    radar: payload.radar,
+    safety: payload.safety
+  });
+  state.importStatus = {
+    tone: "good",
+    label: "radar exported",
+    detail: "perpscope-radar.json"
+  };
+  render();
+}
+
 function exportCurrentCompatibilityReport() {
   const report = buildCompatibilityReportExport(state.lastImportedInput, state.snapshot, state.compatibilityReport);
   const filename = compatibilityReportFilename(report);
@@ -1852,6 +2115,24 @@ function exportCurrentCompatibilityReport() {
     label: "report exported",
     detail: filename
   };
+  render();
+}
+
+async function copyTextToClipboard(text, successLabel, fallbackLabel) {
+  try {
+    await globalThis.navigator?.clipboard?.writeText?.(text);
+    state.importStatus = {
+      tone: "good",
+      label: successLabel,
+      detail: text.slice(0, 140)
+    };
+  } catch {
+    state.importStatus = {
+      tone: "neutral",
+      label: fallbackLabel,
+      detail: text.slice(0, 140)
+    };
+  }
   render();
 }
 

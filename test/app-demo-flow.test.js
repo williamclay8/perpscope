@@ -10,7 +10,9 @@ import {
   buildAdapterTargets,
   buildDataConfidence,
   buildFeedHealth,
+  buildEmbedUrl,
   buildMarketHotReasons,
+  buildPerpScopeExport,
   buildShareUrl,
   buildTraderRadar,
   buildTerminalRecipeSummaries,
@@ -333,7 +335,51 @@ test("builds v1.7 trader explanations, feed health, adapter targets, and share l
   assert.equal(targets.targets.length, 4);
   assert.ok(targets.ready >= 3);
   assert.equal(shareUrl, `https://williamclay8.github.io/perpscope/?fixture=1&market=${snapshot.markets[0].id}&filter=hot`);
-  assert.deepEqual(urlState, { market: "devnet-small-1", filter: "hot" });
+  assert.deepEqual(urlState, { market: "devnet-small-1", filter: "hot", embed: "" });
+});
+
+test("builds v1.8 export payloads and embed URLs", () => {
+  const snapshot = normalizePercolatorSnapshot(decodedLiveSource);
+  snapshot.markets[0].dataQuality = { status: "uncertain" };
+  const report = buildPercolatorCompatibilityReport(decodedLiveSource, snapshot);
+  const dataSource = createDataSourceState("live-decoded", decodedLiveSource, snapshot, report);
+  const radar = buildTraderRadar(snapshot.markets, "unit-checked");
+  const context = {
+    snapshot,
+    market: snapshot.markets[0],
+    radar,
+    hotReasons: buildMarketHotReasons(snapshot.markets[0], radar.allRows[0]),
+    feedHealth: buildFeedHealth(snapshot, dataSource, {
+      status: "loaded",
+      sourceUrl: DEFAULT_LIVE_DECODED_SOURCE_URL
+    }, report),
+    adapterTargets: buildAdapterTargets(snapshot, report),
+    dataSource,
+    liveLoad: { status: "loaded", sourceUrl: DEFAULT_LIVE_DECODED_SOURCE_URL },
+    compatibilityReport: report,
+    radarFilter: "unit-checked",
+    embedMode: "radar",
+    location: { href: "https://williamclay8.github.io/perpscope/?market=devnet-small-1" }
+  };
+  const exported = buildPerpScopeExport(context, {
+    generatedAt: "2026-06-21T00:00:00.000Z"
+  });
+  const embedUrl = buildEmbedUrl({
+    href: "https://williamclay8.github.io/perpscope/?fixture=1"
+  }, "feed", {
+    market: snapshot.markets[0].id,
+    filter: "hot"
+  });
+  const urlState = readUrlState({ search: "?market=devnet-small-1&filter=hot&embed=market" });
+
+  assert.equal(exported.schema, "perpscope.export.v1");
+  assert.equal(exported.version, "1.8.0");
+  assert.equal(exported.selection.embed, "radar");
+  assert.equal(exported.radar.filter, "unit-checked");
+  assert.equal(exported.market.whyHot.reasons.length, 6);
+  assert.equal(exported.safety.orderRouting, false);
+  assert.equal(embedUrl, `https://williamclay8.github.io/perpscope/?fixture=1&market=${snapshot.markets[0].id}&filter=hot&embed=feed`);
+  assert.deepEqual(urlState, { market: "devnet-small-1", filter: "hot", embed: "market" });
 });
 
 test("rejects raw or non-live decoded source payloads", async () => {
