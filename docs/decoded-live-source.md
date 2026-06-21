@@ -59,7 +59,7 @@ Then open:
 http://127.0.0.1:4173/?decodedSource=./examples/decoded-live-source.sample.json
 ```
 
-Click `Load Decoded`. The Data Source panel should switch to `decoded` and show `live decoded protocol state`.
+Click `Load Percolator`. The Data Source panel should switch to `percolator` and show `live decoded protocol state`.
 
 ## Production Decoder Options
 
@@ -113,9 +113,11 @@ PERPSCOPE_DECODER_CACHE_TTL_MS=12000
 PERPSCOPE_DECODER_TIMEOUT_MS=10000
 ```
 
-The worker has no wallet, signer, transaction, instruction, or order path. It fetches public slab addresses, reads Solana accounts, verifies owner/program id through the SDK fetch path, decodes market state, and emits the same JSON contract that `Load Decoded` accepts.
+The worker has no wallet, signer, transaction, instruction, or order path. It fetches public slab addresses, reads Solana accounts, verifies owner/program id through the SDK fetch path, decodes market state, and emits the same JSON contract that `Load Percolator` accepts.
 
 Hosted decode requests run behind a worker-thread timeout. If the Percolator SDK, public directory, or Solana RPC path stalls, `/perpscope.json` returns `decoded_source_unavailable` instead of leaving the cockpit waiting indefinitely.
+
+The worker sends CORS for the configured production origin and localhost preview origins, so contributors can verify `Load Percolator` from `http://127.0.0.1:4173` without opening wallet or signing paths.
 
 Render deployment is described by `render.yaml`; after deploy, use the HTTPS service URL as:
 

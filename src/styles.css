@@ -1003,6 +1003,13 @@ h1 {
   grid-column: span 1;
 }
 
+.trader-radar-panel {
+  grid-column: span 1;
+  background:
+    linear-gradient(135deg, rgba(115, 216, 255, 0.055), transparent 54%),
+    var(--panel);
+}
+
 .data-source-grid {
   display: grid;
   gap: 8px;
@@ -1081,12 +1088,106 @@ h1 {
 .data-source-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
 .data-source-actions span {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.radar-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.radar-list {
+  display: grid;
+  gap: 8px;
+}
+
+.radar-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 62px;
+  padding: 10px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  box-shadow: var(--shadow-border);
+  transition-property: background-color, box-shadow, transform;
+  transition-duration: 160ms;
+  transition-timing-function: ease-out;
+}
+
+.radar-row:hover,
+.radar-row:focus-visible,
+.radar-row.active {
+  box-shadow: var(--shadow-border-hover);
+}
+
+.radar-row:active {
+  transform: scale(0.96);
+}
+
+.radar-row.good {
+  background: var(--mint-soft);
+}
+
+.radar-row.warning {
+  background: var(--amber-soft);
+}
+
+.radar-row.danger {
+  background: var(--red-soft);
+}
+
+.radar-rank,
+.radar-market small,
+.radar-metrics small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.radar-rank {
+  font-variant-numeric: tabular-nums;
+}
+
+.radar-market {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.radar-market strong,
+.radar-market small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.radar-metrics {
+  display: grid;
+  gap: 4px;
+  justify-items: end;
+  min-width: 76px;
+  font-variant-numeric: tabular-nums;
+}
+
+.radar-metrics b {
+  font-size: 12px;
+  text-transform: uppercase;
 }
 
 .reality-panel {
@@ -1833,6 +1934,16 @@ h1 {
   color: var(--muted);
 }
 
+.utility-button.primary {
+  background: rgba(67, 229, 155, 0.14);
+  color: var(--mint);
+}
+
+.utility-button.primary:hover,
+.utility-button.primary:focus-visible {
+  background: rgba(67, 229, 155, 0.2);
+}
+
 .source-strip {
   display: flex;
   flex-wrap: wrap;
@@ -2148,6 +2259,10 @@ code {
     grid-column: span 2;
   }
 
+  .trader-radar-panel {
+    grid-column: span 2;
+  }
+
   .workbench-panel {
     grid-column: span 2;
   }
@@ -2260,6 +2375,7 @@ code {
   .capture-panel,
   .reality-panel,
   .data-source-panel,
+  .trader-radar-panel,
   .workbench-panel,
   .history-panel,
   .deployment-panel,
@@ -2288,6 +2404,7 @@ code {
   .compat-suggestions,
   .workbench-summary,
   .reality-lanes,
+  .radar-summary,
   .workbench-editors,
   .capture-editor,
   .watchtower-grid,

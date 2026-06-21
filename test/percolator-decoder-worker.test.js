@@ -92,6 +92,34 @@ test("maps SDK decoded markets into the PerpScope snapshot contract", () => {
   assert.equal(mapped.account.label, "protocol aggregate");
   assert.equal(mapped.execution.receipts.length, 0);
   assert.equal(mapped.history.fundingSkew[0].source, "Percolator SDK decoded market");
+  assert.equal(mapped.dataQuality.status, "normalized");
+  assert.equal(mapped.dataQuality.confidence, "high");
+});
+
+test("marks raw-scale decoded values as uncertain instead of displaying them as USD", () => {
+  const rawScaleMarket = {
+    ...fakeMarket,
+    engine: {
+      ...fakeMarket.engine,
+      totalOpenInterest: 9000000000000000000000000000000n,
+      longOi: 9000000000000000000000000000000n,
+      shortOi: 8000000000000000000000000000000n,
+      vault: 7000000000000000000000000000000n,
+      pnlPosTot: 5000000000000000000000000000000n
+    },
+    config: {
+      ...fakeMarket.config,
+      authorityPriceE6: 999999999999999999999999n
+    }
+  };
+
+  const mapped = marketToPerpScope(rawScaleMarket, { symbol: "RAW-PERP" });
+
+  assert.equal(mapped.status, "watch");
+  assert.equal(mapped.dataQuality.status, "uncertain");
+  assert.equal(mapped.engine.openInterestUsd, 0);
+  assert.equal(mapped.engine.vaultUsd, 0);
+  assert.ok(mapped.dataQuality.issues.some((issue) => /raw scale/.test(issue)));
 });
 
 test("builds decoded snapshots with injected SDK, fetch, and web3 seams", async () => {
@@ -163,10 +191,12 @@ test("serves decoded snapshots over CORS HTTP", async () => {
   const { port } = server.address();
 
   try {
-    const response = await fetch(`http://127.0.0.1:${port}/perpscope.json`);
+    const response = await fetch(`http://127.0.0.1:${port}/perpscope.json`, {
+      headers: { origin: "http://127.0.0.1:4173" }
+    });
     const body = await response.json();
     assert.equal(response.status, 200);
-    assert.equal(response.headers.get("access-control-allow-origin"), "https://williamclay8.github.io");
+    assert.equal(response.headers.get("access-control-allow-origin"), "http://127.0.0.1:4173");
     assert.equal(body.source.live, true);
     assert.equal(body.markets[0].name, "SOL-PERP");
   } finally {

@@ -5,6 +5,7 @@ export const DEFAULT_PERPSCOPE_ORIGIN = "https://williamclay8.github.io";
 export const DEFAULT_BATCH_SIZE = 25;
 export const DEFAULT_CACHE_TTL_MS = 12_000;
 export const DEFAULT_DECODE_TIMEOUT_MS = 10_000;
+export const MAX_REASONABLE_LIVE_USD = 1_000_000_000_000;
 export const DEVNET_RPC_URL = "https://api.devnet.solana.com";
 export const MAINNET_RPC_URL = "https://api.mainnet-beta.solana.com";
 
@@ -98,7 +99,7 @@ export function marketToPerpScope(market, directoryEntry = {}) {
   const spreadBps = Math.max(numberOf(config.confFilterBps), 1);
   const halfSpread = markPrice > 0 ? markPrice * spreadBps / 20000 : 0;
 
-  return {
+  const dto = {
     id: slug(symbol || market.slabAddress.toBase58()),
     name: symbol,
     base,
@@ -191,6 +192,7 @@ export function marketToPerpScope(market, directoryEntry = {}) {
       ]
     }
   };
+  return applyDecodedSanity(dto);
 }
 
 export function createDecoderHttpHandler(options = {}) {
@@ -201,7 +203,7 @@ export function createDecoderHttpHandler(options = {}) {
 
   return async function handleDecoderRequest(request, response) {
     const url = new URL(request.url || "/", "http://decoder.local");
-    setCors(response, allowedOrigin);
+    setCors(request, response, allowedOrigin);
     if (request.method === "OPTIONS") {
       response.writeHead(204);
       response.end();
@@ -310,8 +312,12 @@ export function rpcUrlForCluster(cluster = "devnet") {
   return cluster === "mainnet" || cluster === "mainnet-beta" ? MAINNET_RPC_URL : DEVNET_RPC_URL;
 }
 
-function setCors(response, allowedOrigin) {
-  response.setHeader("access-control-allow-origin", allowedOrigin);
+function setCors(request, response, allowedOrigin) {
+  const requestOrigin = request.headers?.origin || "";
+  const origin = requestOrigin === allowedOrigin || /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/.test(requestOrigin)
+    ? requestOrigin
+    : allowedOrigin;
+  response.setHeader("access-control-allow-origin", origin);
   response.setHeader("access-control-allow-methods", "GET, OPTIONS");
   response.setHeader("access-control-allow-headers", "content-type");
   response.setHeader("vary", "origin");
@@ -339,6 +345,108 @@ function stressConsumedBps(engine, params) {
   if (!openInterest || !vault) return 0;
   const consumed = openInterest / Math.max(vault, 1) * 100;
   return Math.min(Math.round(consumed), numberOf(params?.riskReductionThreshold) || 500);
+}
+
+function applyDecodedSanity(market) {
+  const issues = [];
+  const normalized = {
+    ...market,
+    config: {
+      ...market.config,
+      initialMarginBps: saneBps(market.config.initialMarginBps, "initial margin", issues),
+      maintenanceMarginBps: saneBps(market.config.maintenanceMarginBps, "maintenance margin", issues),
+      liquidationFeeBps: saneBps(market.config.liquidationFeeBps, "liquidation fee", issues)
+    },
+    oracle: {
+      ...market.oracle,
+      indexPrice: sanePrice(market.oracle.indexPrice, "index price", issues),
+      markPrice: sanePrice(market.oracle.markPrice, "mark price", issues),
+      effectivePrice: sanePrice(market.oracle.effectivePrice, "effective price", issues)
+    },
+    engine: {
+      ...market.engine,
+      openInterestUsd: saneUsd(market.engine.openInterestUsd, "open interest", issues),
+      longOpenInterestUsd: saneUsd(market.engine.longOpenInterestUsd, "long OI", issues),
+      shortOpenInterestUsd: saneUsd(market.engine.shortOpenInterestUsd, "short OI", issues),
+      insuranceUsd: saneUsd(market.engine.insuranceUsd, "insurance", issues),
+      vaultUsd: saneUsd(market.engine.vaultUsd, "vault", issues),
+      claimUsd: saneUsd(market.engine.claimUsd, "claim", issues),
+      stressConsumedBps: saneBps(market.engine.stressConsumedBps, "stress consumed", issues),
+      stressLimitBps: saneBps(market.engine.stressLimitBps, "stress limit", issues) || 500
+    },
+    account: {
+      ...market.account,
+      collateralUsd: saneUsd(market.account.collateralUsd, "aggregate collateral", issues),
+      positionNotionalUsd: saneUsd(market.account.positionNotionalUsd, "aggregate notional", issues),
+      unrealizedPnlUsd: saneUsd(market.account.unrealizedPnlUsd, "aggregate uPnL", issues),
+      maintenanceMarginUsd: saneUsd(market.account.maintenanceMarginUsd, "maintenance margin", issues),
+      initialMarginUsd: saneUsd(market.account.initialMarginUsd, "initial margin", issues)
+    }
+  };
+
+  const price = normalized.oracle.markPrice || normalized.oracle.indexPrice || normalized.oracle.effectivePrice;
+  normalized.oracle.markPrice = normalized.oracle.markPrice || price;
+  normalized.oracle.indexPrice = normalized.oracle.indexPrice || price;
+  normalized.oracle.effectivePrice = normalized.oracle.effectivePrice || price;
+  normalized.account.entryPrice = sanePrice(normalized.account.entryPrice || price, "entry price", issues);
+  normalized.execution.bestBid = sanePrice(normalized.execution.bestBid, "best bid", issues);
+  normalized.execution.bestAsk = sanePrice(normalized.execution.bestAsk, "best ask", issues);
+  normalized.status = issues.length ? "watch" : normalized.status;
+  normalized.dataQuality = {
+    status: issues.length ? "uncertain" : "normalized",
+    confidence: issues.length ? "low" : "high",
+    badges: issues.length
+      ? ["live decoded", "sanity checked", "raw scale hidden"]
+      : ["live decoded", "normalized"],
+    issues,
+    note: issues.length
+      ? "Some decoded values looked raw or unit-ambiguous, so PerpScope hid those figures instead of presenting them as USD."
+      : "Decoded values passed PerpScope display sanity checks."
+  };
+  normalized.flags = [
+    ...(normalized.flags || []),
+    ...(issues.length ? [{ tone: "warning", label: "unit check" }] : [])
+  ].slice(0, 5);
+  return normalized;
+}
+
+function saneUsd(value, label, issues) {
+  const next = Number(value);
+  if (!Number.isFinite(next) || next < 0) {
+    issues.push(`${label} unavailable`);
+    return 0;
+  }
+  if (next > MAX_REASONABLE_LIVE_USD) {
+    issues.push(`${label} raw scale`);
+    return 0;
+  }
+  return next;
+}
+
+function sanePrice(value, label, issues) {
+  const next = Number(value);
+  if (!Number.isFinite(next) || next < 0) {
+    issues.push(`${label} unavailable`);
+    return 0;
+  }
+  if (next > 1_000_000) {
+    issues.push(`${label} raw scale`);
+    return 0;
+  }
+  return next;
+}
+
+function saneBps(value, label, issues) {
+  const next = Number(value);
+  if (!Number.isFinite(next) || next < 0) {
+    issues.push(`${label} unavailable`);
+    return 0;
+  }
+  if (next > 10_000) {
+    issues.push(`${label} raw scale`);
+    return 0;
+  }
+  return next;
 }
 
 function atomsToUsd(value, decimals = 6) {

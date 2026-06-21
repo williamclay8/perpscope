@@ -1489,6 +1489,7 @@ export function toTerminalMarketDto(market, currentSlot = 0) {
     history: {
       fundingSkew: fundingSkewHistory
     },
+    dataQuality: market.dataQuality || {},
     flags,
     healthScore
   };
@@ -1540,6 +1541,7 @@ function buildFlags(context) {
   if (context.insuranceCoveragePct < 100) flags.push({ tone: "warning", label: "insurance thin" });
   if (context.spreadBps > 35) flags.push({ tone: "warning", label: "wide spread" });
   if (context.market.engine?.catchupRequired) flags.push({ tone: "danger", label: "catchup required" });
+  if (context.market.dataQuality?.status === "uncertain") flags.push({ tone: "warning", label: "unit checked" });
   if (!flags.length) flags.push({ tone: "good", label: "read-only healthy" });
   return flags.slice(0, 4);
 }

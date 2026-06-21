@@ -7,6 +7,7 @@ import {
   createActualMarketSnapshot,
   createCompatibilityWorkbenchState,
   createDataSourceState,
+  buildTraderRadar,
   buildTerminalRecipeSummaries,
   createImportedSnapshotState,
   fetchActualMarketSnapshot,
@@ -14,6 +15,7 @@ import {
   getLiveDecodedSourceUrl,
   sanitizeLiveDecodedSourceUrl,
   ACTUAL_PRICE_ENDPOINT,
+  DEFAULT_LIVE_DECODED_SOURCE_URL,
   DEMO_CLI_PATH,
   fetchCliDemoSnapshot,
   fetchStaticRealSnapshot,
@@ -40,6 +42,7 @@ const decodedLiveSourceText = readFileSync(
   new URL("../examples/decoded-live-source.sample.json", import.meta.url),
   "utf8"
 );
+const decodedLiveSource = JSON.parse(decodedLiveSourceText);
 
 test("loads Try CLI demo through the same import state path", async () => {
   let requestedUrl = "";
@@ -219,6 +222,10 @@ test("validates decoded live source URL configuration", () => {
     sanitizeLiveDecodedSourceUrl("http://127.0.0.1:4173/feed.json"),
     "http://127.0.0.1:4173/feed.json"
   );
+  assert.equal(
+    getLiveDecodedSourceUrl({ search: "", href: "https://perpscope.local/" }, {}),
+    DEFAULT_LIVE_DECODED_SOURCE_URL
+  );
   assert.throws(
     () => sanitizeLiveDecodedSourceUrl("javascript:alert(1)", locationLike),
     /HTTPS or localhost/
@@ -231,10 +238,26 @@ test("validates decoded live source URL configuration", () => {
     () => sanitizeLiveDecodedSourceUrl("https://192.168.0.2/perpscope.json", locationLike),
     /private network/
   );
-  assert.throws(
-    () => getLiveDecodedSourceUrl({ search: "", href: "https://perpscope.local/" }, {}),
-    /decodedSource/
-  );
+});
+
+test("ranks trader radar by heat and unit-confidence checks", () => {
+  const snapshot = normalizePercolatorSnapshot(decodedLiveSource);
+  snapshot.markets.push({
+    ...JSON.parse(JSON.stringify(snapshot.markets[0])),
+    id: "btc-perp",
+    name: "BTC-PERP"
+  });
+  snapshot.markets[0].dataQuality = { status: "uncertain" };
+  snapshot.markets[0].flags = [{ tone: "warning", label: "unit checked" }];
+  snapshot.markets[1].marketStructure.stressUsedPct = 91;
+  snapshot.markets[1].flags = [{ tone: "danger", label: "stress cap hot" }];
+
+  const radar = buildTraderRadar(snapshot.markets);
+
+  assert.equal(radar.rows[0].id, snapshot.markets[1].id);
+  assert.equal(radar.hot.length, 1);
+  assert.equal(radar.tiles.find((tile) => tile.label === "unit checks").value, "1");
+  assert.equal(radar.rows.find((row) => row.id === snapshot.markets[0].id).qualityLabel, "unit check");
 });
 
 test("rejects raw or non-live decoded source payloads", async () => {

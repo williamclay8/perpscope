@@ -23,6 +23,7 @@ export const STATIC_REAL_SNAPSHOT_PATH = "./examples/static-real-snapshot.json";
 export const LIVE_DECODED_SOURCE_PARAM = "decodedSource";
 export const LIVE_DECODED_SOURCE_GLOBAL = "PERPSCOPE_DECODED_SOURCE_URL";
 export const LIVE_DECODED_SOURCE_MAX_BYTES = 1_000_000;
+export const DEFAULT_LIVE_DECODED_SOURCE_URL = "https://perpscope-decoder-worker.onrender.com/perpscope.json";
 export const ACTUAL_PRICE_ENDPOINT = "https://api.coingecko.com/api/v3/simple/price?ids=solana,bitcoin,dogwifcoin&vs_currencies=usd&include_24hr_change=true&include_last_updated_at=true";
 export const ACTUAL_PRICE_MARKETS = {
   SOL: "solana",
@@ -53,10 +54,10 @@ export const DATA_SOURCE_MODES = [
   },
   {
     id: "live-decoded",
-    label: "decoded",
+    label: "percolator",
     tone: "good",
-    detail: "protocol feed",
-    status: "connectable"
+    detail: "decoded protocol feed",
+    status: "ready"
   }
 ];
 export const READ_ONLY_DEPLOYMENTS = [
@@ -293,6 +294,7 @@ if (app) render();
 function render() {
   const market = selectedMarket();
   const stress = simulatePriceShock(market, state.shockPct);
+  const radar = buildTraderRadar(state.snapshot.markets);
   const activeColor = market.status === "stable" ? "var(--mint)" : market.status === "watch" ? "var(--amber)" : "var(--red)";
   app.innerHTML = `
     <main class="shell ${market.status}-mode" style="--active-color:${activeColor}" aria-label="PerpScope read-only risk cockpit">
@@ -370,6 +372,8 @@ function render() {
           ${realityCheckPanel(state.realityCheck)}
 
           ${dataSourcePanel(state.dataSource)}
+
+          ${traderRadarPanel(radar, market.id)}
 
           ${workbenchPanel(state.workbench)}
 
@@ -476,6 +480,14 @@ function render() {
   app.querySelectorAll("[data-market-id]").forEach((button) => {
     button.addEventListener("click", () => {
       state.selectedMarketId = button.dataset.marketId;
+      state.shockPct = state.selectedMarketId === "wif-perp" ? -5 : -3;
+      render();
+    });
+  });
+
+  app.querySelectorAll("[data-radar-market-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedMarketId = button.dataset.radarMarketId;
       state.shockPct = state.selectedMarketId === "wif-perp" ? -5 : -3;
       render();
     });
@@ -773,10 +785,43 @@ function dataSourcePanel(dataSource) {
       <div class="data-source-actions">
         <button class="utility-button" id="load-static-real" type="button">Load Snapshot</button>
         <button class="utility-button" id="load-actual-prices" type="button">Load Live</button>
-        <button class="utility-button" id="load-live-decoded" type="button">Load Decoded</button>
+        <button class="utility-button primary" id="load-live-decoded" type="button">Load Percolator</button>
         <span>${esc(dataSource.note)}</span>
       </div>
     </article>
+  `;
+}
+
+function traderRadarPanel(radar, selectedMarketId) {
+  return `
+    <article class="trader-radar-panel panel stagger-item">
+      <div class="panel-head">
+        <span class="panel-label">trader radar</span>
+        <strong>${radar.hot.length} hot / ${radar.watch.length} watch</strong>
+      </div>
+      <div class="radar-summary" aria-label="Live market radar summary">
+        ${radar.tiles.map((tile) => compatTile(tile.label, tile.value, tile.tone)).join("")}
+      </div>
+      <div class="radar-list" aria-label="Ranked market health list">
+        ${radar.rows.map((row) => radarRow(row, selectedMarketId)).join("")}
+      </div>
+    </article>
+  `;
+}
+
+function radarRow(row, selectedMarketId) {
+  return `
+    <button class="radar-row ${row.tone} ${row.id === selectedMarketId ? "active" : ""}" data-radar-market-id="${esc(row.id)}" type="button" aria-pressed="${row.id === selectedMarketId}">
+      <span class="radar-rank">${esc(row.rank)}</span>
+      <span class="radar-market">
+        <strong>${esc(row.name)}</strong>
+        <small>${esc(row.detail)}</small>
+      </span>
+      <span class="radar-metrics">
+        <b>${esc(row.scoreLabel)}</b>
+        <small>${esc(row.qualityLabel)}</small>
+      </span>
+    </button>
   `;
 }
 
@@ -951,10 +996,7 @@ export async function fetchLiveDecodedSource(fetcher, sourceUrl, options = {}) {
 
 export function getLiveDecodedSourceUrl(locationLike = globalThis.location, globalLike = globalThis) {
   const params = new URLSearchParams(locationLike?.search || "");
-  const configured = params.get(LIVE_DECODED_SOURCE_PARAM) || globalLike?.[LIVE_DECODED_SOURCE_GLOBAL] || "";
-  if (!String(configured).trim()) {
-    throw new Error(`Add ?${LIVE_DECODED_SOURCE_PARAM}=https://... to load decoded protocol state.`);
-  }
+  const configured = params.get(LIVE_DECODED_SOURCE_PARAM) || globalLike?.[LIVE_DECODED_SOURCE_GLOBAL] || DEFAULT_LIVE_DECODED_SOURCE_URL;
   return sanitizeLiveDecodedSourceUrl(configured, locationLike);
 }
 
@@ -1092,6 +1134,62 @@ export function createDataSourceState(modeId, input, snapshot, report) {
         : mode.id === "live-decoded"
           ? "decoded protocol feed; read-only"
           : "default cockpit data is a local fixture"
+  };
+}
+
+export function buildTraderRadar(markets = []) {
+  const rows = markets.map((market) => {
+    const quality = market.dataQuality || {};
+    const dangerFlags = (market.flags || []).filter((flag) => flag.tone === "danger").length;
+    const warningFlags = (market.flags || []).filter((flag) => flag.tone === "warning").length;
+    const stress = Number(market.marketStructure?.stressUsedPct || 0);
+    const skew = Math.abs(Number(market.marketStructure?.oiSkewPct || 0));
+    const funding = Math.abs(Number(market.funding?.bpsPerHour || 0));
+    const oracleAge = Number(market.price?.publishAgeSec || 0);
+    const qualityPenalty = quality.status === "uncertain" ? 18 : 0;
+    const heat = clamp(
+      dangerFlags * 28 +
+      warningFlags * 12 +
+      stress * 0.42 +
+      skew * 0.2 +
+      funding * 5 +
+      oracleAge * 1.2 +
+      qualityPenalty,
+      0,
+      100
+    );
+    const tone = heat >= 68 ? "danger" : heat >= 34 ? "warning" : "good";
+    const detail = [
+      `${pct(stress)} stress`,
+      `${signedPct(Number(market.marketStructure?.oiSkewPct || 0))} skew`,
+      `${signedBps(Number(market.funding?.bpsPerHour || 0))} carry`
+    ].join(" / ");
+    return {
+      id: market.id,
+      name: market.name,
+      heat,
+      tone,
+      detail,
+      scoreLabel: `${Math.round(heat)} heat`,
+      qualityLabel: quality.status === "uncertain" ? "unit check" : "normalized"
+    };
+  }).sort((a, b) => b.heat - a.heat).map((row, index) => ({
+    ...row,
+    rank: String(index + 1).padStart(2, "0")
+  }));
+
+  const hot = rows.filter((row) => row.tone === "danger");
+  const watch = rows.filter((row) => row.tone === "warning");
+  const uncertain = markets.filter((market) => market.dataQuality?.status === "uncertain").length;
+  return {
+    rows,
+    hot,
+    watch,
+    tiles: [
+      { label: "hottest", value: rows[0]?.name || "none", tone: rows[0]?.tone || "neutral" },
+      { label: "unit checks", value: String(uncertain), tone: uncertain ? "warning" : "good" },
+      { label: "markets", value: String(rows.length), tone: "neutral" }
+    ]
   };
 }
 
