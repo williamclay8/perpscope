@@ -2,6 +2,10 @@
 
 Read-only adapter helpers for Solana perps terminals that want PerpScope DTOs without adopting the cockpit UI.
 
+```bash
+npm install @perpscope/percolator-adapter
+```
+
 ```js
 import {
   buildPercolatorCompatibilityReport,

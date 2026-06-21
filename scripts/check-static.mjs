@@ -113,6 +113,10 @@ if (!readme.includes("examples/adapter-consumer/") || !readme.includes("docs/fee
   failures.push("README should link the external consumer example and feedback loop.");
 }
 
+if (!readme.includes("npm install @perpscope/percolator-adapter") || !readme.includes("@perpscope/percolator-adapter@0.4.0")) {
+  failures.push("README should document the published adapter package.");
+}
+
 if (!readme.includes("docs/field-compatibility-map.md") || !readme.includes("examples/field-compatibility-map.json")) {
   failures.push("README should link the field compatibility map and JSON manifest.");
 }

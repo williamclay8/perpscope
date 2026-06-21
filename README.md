@@ -67,6 +67,14 @@ Star PerpScope if you are building a Solana perps terminal, risk dashboard, or a
 
 `examples/adapter-consumer/` is a tiny outside-terminal package that imports `@perpscope/percolator-adapter` by package name and prints the normalized fields a frontend would usually consume first.
 
+For terminal projects outside this repo:
+
+```bash
+npm install @perpscope/percolator-adapter
+```
+
+For the local example:
+
 ```bash
 cd examples/adapter-consumer
 npm install
@@ -368,5 +376,5 @@ Current public site: [williamclay8.github.io/perpscope](https://williamclay8.git
 
 - v0.4 shipped: capture intake for pasted/dropped decoded outputs, compatibility scoring, missing-field warnings, and ignored-field mapping.
 - v0.4 follow-up: field-level compatibility map for terminal import/export adapters.
+- npm package shipped: `@perpscope/percolator-adapter@0.4.0`.
 - More deployment fixtures as Percolator terminal teams share read-only shapes.
-- npm publication for `@perpscope/percolator-adapter` once package ownership/auth is confirmed.

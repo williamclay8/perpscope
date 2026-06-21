@@ -16,7 +16,13 @@ The dependency points at the local package while developing this repo:
 "@perpscope/percolator-adapter": "file:../../packages/percolator-adapter"
 ```
 
-When the package is published, replace that with a version range:
+In an outside terminal package, install the published package:
+
+```bash
+npm install @perpscope/percolator-adapter
+```
+
+or use a version range:
 
 ```json
 "@perpscope/percolator-adapter": "^0.4.0"
