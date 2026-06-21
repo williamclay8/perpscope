@@ -33,6 +33,7 @@ const releaseV12Doc = readFileSync(new URL("../docs/release-v1.2.0.md", import.m
 const releaseV13Doc = readFileSync(new URL("../docs/release-v1.3.0.md", import.meta.url), "utf8");
 const releaseV14Doc = readFileSync(new URL("../docs/release-v1.4.0.md", import.meta.url), "utf8");
 const releaseV15Doc = readFileSync(new URL("../docs/release-v1.5.0.md", import.meta.url), "utf8");
+const releaseV16Doc = readFileSync(new URL("../docs/release-v1.6.0.md", import.meta.url), "utf8");
 const decodedLiveSourceDoc = readFileSync(new URL("../docs/decoded-live-source.md", import.meta.url), "utf8");
 const decoderWorker = readFileSync(new URL("../scripts/percolator-decoder-worker.mjs", import.meta.url), "utf8");
 const decoderWorkerLib = readFileSync(new URL("../src/lib/percolator-decoder-worker.js", import.meta.url), "utf8");
@@ -142,6 +143,10 @@ if (!/data-source-panel/.test(js) || !/STATIC_REAL_SNAPSHOT_PATH/.test(js) || !/
 
 if (!/trader-radar-panel/.test(js) || !/buildTraderRadar/.test(js) || !/DEFAULT_LIVE_DECODED_SOURCE_URL/.test(js) || !/Load Percolator/.test(js)) {
   failures.push("Cockpit should expose default live Percolator loading and the Trader Radar market ranking.");
+}
+
+if (!/shouldAutoLoadLivePercolator/.test(js) || !/dataConfidenceStrip/.test(js) || !/buildDataConfidence/.test(js) || !/RADAR_FILTERS/.test(js) || !/data-radar-filter/.test(js) || !/loading decoded Percolator feed/.test(js)) {
+  failures.push("Cockpit should auto-load live Percolator on the public site and expose confidence plus radar filters.");
 }
 
 if (!/createDecoderHttpHandler/.test(decoderWorker) || !/perpscope\.json/.test(decoderWorkerLib) || !/getMarketsByAddress/.test(decoderWorkerLib) || !/new Worker/.test(decoderWorkerLib) || !/buildPerpScopeDecodedSnapshot/.test(decoderWorkerThread) || !/PERPSCOPE_ALLOWED_ORIGIN/.test(decoderWorker) || !/PERPSCOPE_DECODER_TIMEOUT_MS/.test(decoderWorker) || !/localhost\|127/.test(decoderWorkerLib) || !/healthz/.test(decoderWorkerLib)) {
@@ -269,6 +274,7 @@ for (const doc of [
   "docs/release-v1.3.0.md",
   "docs/release-v1.4.0.md",
   "docs/release-v1.5.0.md",
+  "docs/release-v1.6.0.md",
   "docs/decoded-live-source.md",
   "docs/v0.5-plan.md"
 ]) {
@@ -407,6 +413,12 @@ for (const required of ["perpscope-decoder-worker", "/perpscope.json", "/healthz
 for (const required of ["Load Percolator", "Trader Radar", "dataQuality", "unit-ambiguous", "Safety"]) {
   if (!releaseV15Doc.includes(required)) {
     failures.push(`v1.5 release notes should include ${required}.`);
+  }
+}
+
+for (const required of ["Auto-loads", "Data Confidence", "Trader Radar filters", "?fixture=1", "Safety"]) {
+  if (!releaseV16Doc.includes(required)) {
+    failures.push(`v1.6 release notes should include ${required}.`);
   }
 }
 

@@ -7,12 +7,14 @@ import {
   createActualMarketSnapshot,
   createCompatibilityWorkbenchState,
   createDataSourceState,
+  buildDataConfidence,
   buildTraderRadar,
   buildTerminalRecipeSummaries,
   createImportedSnapshotState,
   fetchActualMarketSnapshot,
   fetchLiveDecodedSource,
   getLiveDecodedSourceUrl,
+  shouldAutoLoadLivePercolator,
   sanitizeLiveDecodedSourceUrl,
   ACTUAL_PRICE_ENDPOINT,
   DEFAULT_LIVE_DECODED_SOURCE_URL,
@@ -253,11 +255,43 @@ test("ranks trader radar by heat and unit-confidence checks", () => {
   snapshot.markets[1].flags = [{ tone: "danger", label: "stress cap hot" }];
 
   const radar = buildTraderRadar(snapshot.markets);
+  const hotRadar = buildTraderRadar(snapshot.markets, "hot");
+  const unitRadar = buildTraderRadar(snapshot.markets, "unit-checked");
+  const normalizedRadar = buildTraderRadar(snapshot.markets, "normalized");
+  const freshRadar = buildTraderRadar(snapshot.markets, "fresh");
 
   assert.equal(radar.rows[0].id, snapshot.markets[1].id);
   assert.equal(radar.hot.length, 1);
   assert.equal(radar.tiles.find((tile) => tile.label === "unit checks").value, "1");
   assert.equal(radar.rows.find((row) => row.id === snapshot.markets[0].id).qualityLabel, "unit check");
+  assert.deepEqual(hotRadar.rows.map((row) => row.id), [snapshot.markets[1].id]);
+  assert.deepEqual(unitRadar.rows.map((row) => row.id), [snapshot.markets[0].id]);
+  assert.ok(normalizedRadar.rows.every((row) => row.qualityLabel === "normalized"));
+  assert.ok(freshRadar.rows.every((row) => row.qualityLabel === "normalized" && row.tone !== "danger"));
+});
+
+test("builds live data confidence and public-site auto-load decisions", () => {
+  const snapshot = normalizePercolatorSnapshot(decodedLiveSource);
+  snapshot.markets.push({
+    ...JSON.parse(JSON.stringify(snapshot.markets[0])),
+    id: "btc-perp",
+    name: "BTC-PERP"
+  });
+  snapshot.markets[0].dataQuality = { status: "uncertain" };
+  snapshot.markets[1].dataQuality = { status: "normalized" };
+  const dataSource = createDataSourceState("live-decoded", decodedLiveSource, snapshot, {
+    shape: "perpscope-snapshot"
+  });
+  const confidence = buildDataConfidence(snapshot, dataSource, { status: "loaded" });
+  const loadingConfidence = buildDataConfidence(snapshot, dataSource, { status: "loading" });
+
+  assert.equal(confidence.items.find((item) => item.label === "source").value, "decoded live");
+  assert.equal(confidence.items.find((item) => item.label === "unit checked").value, "1");
+  assert.equal(confidence.items.find((item) => item.label === "normalized").value, "1");
+  assert.equal(loadingConfidence.items.find((item) => item.label === "source").value, "loading");
+  assert.equal(shouldAutoLoadLivePercolator({ origin: "https://williamclay8.github.io", search: "" }), true);
+  assert.equal(shouldAutoLoadLivePercolator({ origin: "https://williamclay8.github.io", search: "?fixture=1" }), false);
+  assert.equal(shouldAutoLoadLivePercolator({ origin: "http://127.0.0.1:4173", search: "" }), false);
 });
 
 test("rejects raw or non-live decoded source payloads", async () => {

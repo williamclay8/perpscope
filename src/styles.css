@@ -1003,6 +1003,11 @@ h1 {
   grid-column: span 1;
 }
 
+.confidence-strip {
+  grid-column: span 2;
+  padding: 12px;
+}
+
 .trader-radar-panel {
   grid-column: span 1;
   background:
@@ -1097,6 +1102,87 @@ h1 {
   overflow-wrap: anywhere;
 }
 
+.confidence-rail {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.confidence-rail section {
+  display: grid;
+  gap: 4px;
+  min-height: 54px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: var(--shadow-border);
+}
+
+.confidence-rail section.good {
+  background: var(--mint-soft);
+}
+
+.confidence-rail section.warning {
+  background: var(--amber-soft);
+}
+
+.confidence-rail span,
+.confidence-rail strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.confidence-rail span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.confidence-rail strong {
+  color: var(--ink);
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.radar-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.radar-filters button {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  box-shadow: var(--shadow-border);
+  transition-property: background-color, box-shadow, transform;
+  transition-duration: 160ms;
+  transition-timing-function: ease-out;
+}
+
+.radar-filters button:hover,
+.radar-filters button:focus-visible,
+.radar-filters button.active {
+  background: rgba(115, 216, 255, 0.14);
+  color: var(--cyan);
+  box-shadow: var(--shadow-border-hover);
+}
+
+.radar-filters button:active {
+  transform: scale(0.96);
+}
+
 .radar-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1188,6 +1274,32 @@ h1 {
 .radar-metrics b {
   font-size: 12px;
   text-transform: uppercase;
+}
+
+.radar-empty {
+  display: grid;
+  gap: 5px;
+  min-height: 72px;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: var(--shadow-border);
+}
+
+.radar-empty strong,
+.radar-empty span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.radar-empty strong {
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.radar-empty span {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .reality-panel {
@@ -1944,6 +2056,22 @@ h1 {
   background: rgba(67, 229, 155, 0.2);
 }
 
+.utility-button.loading {
+  position: relative;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.74);
+  cursor: progress;
+}
+
+.utility-button.loading::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+  content: "";
+  transform: translateX(-100%);
+  animation: load-sheen 1.1s ease-in-out infinite;
+}
+
 .source-strip {
   display: flex;
   flex-wrap: wrap;
@@ -2214,6 +2342,12 @@ code {
   }
 }
 
+@keyframes load-sheen {
+  to {
+    transform: translateX(100%);
+  }
+}
+
 @media (max-width: 1120px) {
   .shell {
     grid-template-columns: 1fr;
@@ -2259,8 +2393,16 @@ code {
     grid-column: span 2;
   }
 
+  .confidence-strip {
+    grid-column: span 2;
+  }
+
   .trader-radar-panel {
     grid-column: span 2;
+  }
+
+  .confidence-rail {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .workbench-panel {
@@ -2375,6 +2517,7 @@ code {
   .capture-panel,
   .reality-panel,
   .data-source-panel,
+  .confidence-strip,
   .trader-radar-panel,
   .workbench-panel,
   .history-panel,
@@ -2405,6 +2548,7 @@ code {
   .workbench-summary,
   .reality-lanes,
   .radar-summary,
+  .confidence-rail,
   .workbench-editors,
   .capture-editor,
   .watchtower-grid,

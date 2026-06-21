@@ -24,6 +24,13 @@ export const LIVE_DECODED_SOURCE_PARAM = "decodedSource";
 export const LIVE_DECODED_SOURCE_GLOBAL = "PERPSCOPE_DECODED_SOURCE_URL";
 export const LIVE_DECODED_SOURCE_MAX_BYTES = 1_000_000;
 export const DEFAULT_LIVE_DECODED_SOURCE_URL = "https://perpscope-decoder-worker.onrender.com/perpscope.json";
+export const RADAR_FILTERS = [
+  { id: "all", label: "All" },
+  { id: "hot", label: "Hot" },
+  { id: "unit-checked", label: "Unit checked" },
+  { id: "normalized", label: "Normalized" },
+  { id: "fresh", label: "Fresh" }
+];
 export const ACTUAL_PRICE_ENDPOINT = "https://api.coingecko.com/api/v3/simple/price?ids=solana,bitcoin,dogwifcoin&vs_currencies=usd&include_24hr_change=true&include_last_updated_at=true";
 export const ACTUAL_PRICE_MARKETS = {
   SOL: "solana",
@@ -280,6 +287,8 @@ const state = {
     currentText: workbenchCurrentText
   }),
   captureOpen: false,
+  radarFilter: "all",
+  liveLoad: { status: "idle", sourceUrl: DEFAULT_LIVE_DECODED_SOURCE_URL },
   importStatus: {
     tone: "neutral",
     label: "fixture loaded",
@@ -289,12 +298,15 @@ const state = {
 
 const app = typeof document === "undefined" ? null : document.querySelector("#app");
 
-if (app) render();
+if (app) {
+  render();
+  maybeAutoLoadLivePercolator();
+}
 
 function render() {
   const market = selectedMarket();
   const stress = simulatePriceShock(market, state.shockPct);
-  const radar = buildTraderRadar(state.snapshot.markets);
+  const radar = buildTraderRadar(state.snapshot.markets, state.radarFilter);
   const activeColor = market.status === "stable" ? "var(--mint)" : market.status === "watch" ? "var(--amber)" : "var(--red)";
   app.innerHTML = `
     <main class="shell ${market.status}-mode" style="--active-color:${activeColor}" aria-label="PerpScope read-only risk cockpit">
@@ -372,6 +384,8 @@ function render() {
           ${realityCheckPanel(state.realityCheck)}
 
           ${dataSourcePanel(state.dataSource)}
+
+          ${dataConfidenceStrip(state)}
 
           ${traderRadarPanel(radar, market.id)}
 
@@ -489,6 +503,13 @@ function render() {
     button.addEventListener("click", () => {
       state.selectedMarketId = button.dataset.radarMarketId;
       state.shockPct = state.selectedMarketId === "wif-perp" ? -5 : -3;
+      render();
+    });
+  });
+
+  app.querySelectorAll("[data-radar-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.radarFilter = button.dataset.radarFilter;
       render();
     });
   });
@@ -764,6 +785,8 @@ function realityCheckPanel(check) {
 }
 
 function dataSourcePanel(dataSource) {
+  const loading = state.liveLoad.status === "loading";
+  const actionLabel = loading ? "Loading..." : "Load Percolator";
   return `
     <article class="data-source-panel panel stagger-item ${dataSource.tone}">
       <div class="panel-head">
@@ -785,8 +808,24 @@ function dataSourcePanel(dataSource) {
       <div class="data-source-actions">
         <button class="utility-button" id="load-static-real" type="button">Load Snapshot</button>
         <button class="utility-button" id="load-actual-prices" type="button">Load Live</button>
-        <button class="utility-button primary" id="load-live-decoded" type="button">Load Percolator</button>
+        <button class="utility-button primary ${loading ? "loading" : ""}" id="load-live-decoded" type="button" ${loading ? "disabled" : ""}>${esc(actionLabel)}</button>
         <span>${esc(dataSource.note)}</span>
+      </div>
+    </article>
+  `;
+}
+
+function dataConfidenceStrip(appState) {
+  const confidence = buildDataConfidence(appState.snapshot, appState.dataSource, appState.liveLoad);
+  return `
+    <article class="confidence-strip panel stagger-item ${confidence.tone}">
+      <div class="confidence-rail" aria-label="Live data confidence">
+        ${confidence.items.map((item) => `
+          <section class="${item.tone}">
+            <span>${esc(item.label)}</span>
+            <strong>${esc(item.value)}</strong>
+          </section>
+        `).join("")}
       </div>
     </article>
   `;
@@ -797,13 +836,18 @@ function traderRadarPanel(radar, selectedMarketId) {
     <article class="trader-radar-panel panel stagger-item">
       <div class="panel-head">
         <span class="panel-label">trader radar</span>
-        <strong>${radar.hot.length} hot / ${radar.watch.length} watch</strong>
+        <strong>${radar.rows.length} shown</strong>
+      </div>
+      <div class="radar-filters" aria-label="Trader radar filters">
+        ${RADAR_FILTERS.map((filter) => `
+          <button class="${radar.filter === filter.id ? "active" : ""}" data-radar-filter="${esc(filter.id)}" type="button" aria-pressed="${radar.filter === filter.id}">${esc(filter.label)}</button>
+        `).join("")}
       </div>
       <div class="radar-summary" aria-label="Live market radar summary">
         ${radar.tiles.map((tile) => compatTile(tile.label, tile.value, tile.tone)).join("")}
       </div>
       <div class="radar-list" aria-label="Ranked market health list">
-        ${radar.rows.map((row) => radarRow(row, selectedMarketId)).join("")}
+        ${radar.rows.length ? radar.rows.map((row) => radarRow(row, selectedMarketId)).join("") : radarEmptyRow(radar.filter)}
       </div>
     </article>
   `;
@@ -822,6 +866,15 @@ function radarRow(row, selectedMarketId) {
         <small>${esc(row.qualityLabel)}</small>
       </span>
     </button>
+  `;
+}
+
+function radarEmptyRow(filter) {
+  return `
+    <div class="radar-empty">
+      <strong>No ${esc(filter.replace("-", " "))} markets</strong>
+      <span>Switch filters or load the live Percolator feed.</span>
+    </div>
   `;
 }
 
@@ -939,15 +992,28 @@ async function loadActualPricesSnapshot() {
 }
 
 async function loadLiveDecodedSource() {
+  const sourceUrl = getLiveDecodedSourceUrl();
+  state.liveLoad = { status: "loading", sourceUrl, startedAt: Date.now() };
+  state.dataSource = {
+    ...state.dataSource,
+    note: "loading decoded Percolator feed"
+  };
+  state.importStatus = {
+    tone: "neutral",
+    label: "loading percolator",
+    detail: sourceUrl
+  };
+  render();
   try {
-    const sourceUrl = getLiveDecodedSourceUrl();
     const imported = await fetchLiveDecodedSource(fetch, sourceUrl);
     loadImportedSnapshot(imported, {
       label: "decoded live loaded",
       detailPrefix: decodedSourceLabel(sourceUrl),
       dataSourceMode: "live-decoded"
     });
+    state.liveLoad = { status: "loaded", sourceUrl, loadedAt: Date.now() };
   } catch (error) {
+    state.liveLoad = { status: "error", sourceUrl, error: error.message };
     state.importStatus = {
       tone: "danger",
       label: error.message.slice(0, 44),
@@ -959,6 +1025,22 @@ async function loadLiveDecodedSource() {
     };
   }
   render();
+}
+
+function maybeAutoLoadLivePercolator(locationLike = globalThis.location) {
+  if (!shouldAutoLoadLivePercolator(locationLike)) return;
+  queueMicrotask(() => {
+    if (state.dataSource.mode === "fixture" && state.liveLoad.status === "idle") {
+      loadLiveDecodedSource();
+    }
+  });
+}
+
+export function shouldAutoLoadLivePercolator(locationLike = globalThis.location) {
+  const origin = locationLike?.origin || "";
+  const params = new URLSearchParams(locationLike?.search || "");
+  if (params.get("fixture") === "1" || params.get("live") === "0") return false;
+  return origin === "https://williamclay8.github.io";
 }
 
 export async function fetchStaticRealSnapshot(fetcher) {
@@ -1137,8 +1219,26 @@ export function createDataSourceState(modeId, input, snapshot, report) {
   };
 }
 
-export function buildTraderRadar(markets = []) {
-  const rows = markets.map((market) => {
+export function buildDataConfidence(snapshot, dataSource = {}, liveLoad = {}) {
+  const markets = snapshot?.markets || [];
+  const unitChecked = markets.filter((market) => market.dataQuality?.status === "uncertain").length;
+  const normalized = markets.filter((market) => market.dataQuality?.status !== "uncertain").length;
+  const live = dataSource.mode === "live-decoded";
+  const loading = liveLoad.status === "loading";
+  return {
+    tone: loading ? "warning" : live ? "good" : "neutral",
+    items: [
+      { label: "source", value: loading ? "loading" : live ? "decoded live" : dataSource.modeLabel || "fixture", tone: live ? "good" : loading ? "warning" : "neutral" },
+      { label: "markets", value: String(markets.length), tone: markets.length ? "good" : "warning" },
+      { label: "unit checked", value: String(unitChecked), tone: unitChecked ? "warning" : "good" },
+      { label: "normalized", value: String(normalized), tone: normalized ? "good" : "neutral" },
+      { label: "wallet", value: "read-only", tone: "good" }
+    ]
+  };
+}
+
+export function buildTraderRadar(markets = [], filter = "all") {
+  const allRows = markets.map((market) => {
     const quality = market.dataQuality || {};
     const dangerFlags = (market.flags || []).filter((flag) => flag.tone === "danger").length;
     const warningFlags = (market.flags || []).filter((flag) => flag.tone === "warning").length;
@@ -1178,19 +1278,30 @@ export function buildTraderRadar(markets = []) {
     rank: String(index + 1).padStart(2, "0")
   }));
 
-  const hot = rows.filter((row) => row.tone === "danger");
-  const watch = rows.filter((row) => row.tone === "warning");
+  const rows = filterRadarRows(allRows, filter);
+  const hot = allRows.filter((row) => row.tone === "danger");
+  const watch = allRows.filter((row) => row.tone === "warning");
   const uncertain = markets.filter((market) => market.dataQuality?.status === "uncertain").length;
   return {
+    allRows,
     rows,
+    filter,
     hot,
     watch,
     tiles: [
-      { label: "hottest", value: rows[0]?.name || "none", tone: rows[0]?.tone || "neutral" },
+      { label: "hottest", value: allRows[0]?.name || "none", tone: allRows[0]?.tone || "neutral" },
       { label: "unit checks", value: String(uncertain), tone: uncertain ? "warning" : "good" },
-      { label: "markets", value: String(rows.length), tone: "neutral" }
+      { label: "markets", value: `${rows.length}/${allRows.length}`, tone: "neutral" }
     ]
   };
+}
+
+function filterRadarRows(rows, filter) {
+  if (filter === "hot") return rows.filter((row) => row.tone === "danger");
+  if (filter === "unit-checked") return rows.filter((row) => row.qualityLabel === "unit check");
+  if (filter === "normalized") return rows.filter((row) => row.qualityLabel === "normalized");
+  if (filter === "fresh") return rows.filter((row) => row.tone !== "danger" && row.qualityLabel === "normalized");
+  return rows;
 }
 
 function dataSourceModeForInput(input) {

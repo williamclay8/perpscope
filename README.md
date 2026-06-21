@@ -45,6 +45,7 @@ PerpScope rejects wallet paths, private keys, mnemonics, seeds, signers, signatu
 - decoded live source loading via `?decodedSource=https://...` for CORS-readable read-only protocol feeds
 - a read-only decoder worker that emits `/perpscope.json` from Percolator SDK decoded market accounts
 - a Trader Radar board that ranks live markets by heat, stress, skew, funding pressure, freshness, and unit-confidence checks
+- live-by-default public site behavior with a compact Data Confidence strip and Trader Radar filters
 - issue templates for sanitized decoded shapes, adapter mapping requests, and CLI doctor output
 
 ## Submit A Shape
@@ -391,12 +392,13 @@ The normalized market DTO includes:
 - `docs/release-v1.3.0.md` mirrors the public release notes for decoded live source loading.
 - `docs/release-v1.4.0.md` mirrors the public release notes for the decoder worker.
 - `docs/release-v1.5.0.md` mirrors the public release notes for default live Percolator loading and Trader Radar.
+- `docs/release-v1.6.0.md` mirrors the public release notes for automatic live loading, confidence, and radar filters.
 - `docs/decoded-live-source.md` documents the CORS endpoint contract for decoded Percolator live feeds.
 - `docs/v0.5-plan.md` documents the shipped compatibility report export.
 - `.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml` is the structured intake form for sanitized builder samples.
 - `src/fixtures/percolator-market.js` contains sample decoded market/account state plus execution receipt history.
 - `src/app.js` renders the read-only cockpit.
-- The website starts in fixture mode. The Data Source panel can load `examples/static-real-snapshot.json`, which is a sanitized real-backed static snapshot, `Load Live`, which pulls actual public prices from CoinGecko while keeping Percolator risk context simulated, or `Load Percolator`, which defaults to the hosted read-only decoder worker unless `?decodedSource=` points at another CORS-readable decoded protocol feed.
+- The website auto-loads the hosted read-only Percolator worker on GitHub Pages, with `?fixture=1` or `?live=0` available for fixture-first review. The Data Source panel can also load `examples/static-real-snapshot.json`, which is a sanitized real-backed static snapshot, `Load Live`, which pulls actual public prices from CoinGecko while keeping Percolator risk context simulated, or `Load Percolator`, which defaults to the hosted read-only decoder worker unless `?decodedSource=` points at another CORS-readable decoded protocol feed.
 - `scripts/percolator-decoder-worker.mjs` serves a read-only `/perpscope.json` decoded source from public Percolator market directories and Solana RPC reads.
 - `schemas/` contains the public input contracts.
 - `test/percolator-adapter.test.js` covers adapter safety and risk math.
@@ -444,4 +446,5 @@ Current public site: [williamclay8.github.io/perpscope](https://williamclay8.git
 - v1.3 shipped: `Load Decoded`, `?decodedSource=`, and the decoded live source contract for read-only protocol feeds.
 - v1.4 shipped: `perpscope-decoder-worker`, Render Blueprint deployment, and SDK-backed decoded market account output.
 - v1.5 shipped: default hosted Percolator loading, decoded value sanity checks, and Trader Radar market ranking.
+- v1.6 shipped: automatic public-site live loading, Data Confidence summary, Trader Radar filters, and live loading/fallback states.
 - More deployment fixtures as Percolator terminal teams share read-only shapes.
