@@ -19,8 +19,14 @@ jobs:
         with:
           node-version: 22
 
+      - name: Setup npm trusted publishing CLI
+        run: npm install -g npm@11.5.1
+
       - name: Verify package version
-        run: node -e "const pkg=require('./packages/percolator-adapter/package.json'); if (pkg.version !== '1.1.0') throw new Error(`Expected 1.1.0, got ${pkg.version}`)"
+        run: |
+          node --version
+          npm --version
+          node -e "const pkg=require('./packages/percolator-adapter/package.json'); if (pkg.version !== '1.1.0') throw new Error(`Expected 1.1.0, got ${pkg.version}`)"
 
       - name: Publish adapter
         working-directory: packages/percolator-adapter
