@@ -18,11 +18,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
 
       - name: Verify package version
         run: node -e "const pkg=require('./packages/percolator-adapter/package.json'); if (pkg.version !== '1.1.0') throw new Error(`Expected 1.1.0, got ${pkg.version}`)"
 
       - name: Publish adapter
         working-directory: packages/percolator-adapter
+        env:
+          NODE_AUTH_TOKEN: ""
         run: npm publish --access public --provenance
