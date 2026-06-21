@@ -13,6 +13,11 @@ const js = readFileSync(new URL("../src/app.js", import.meta.url), "utf8");
 const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
 const feedbackLoopDoc = readFileSync(new URL("../docs/feedback-loop.md", import.meta.url), "utf8");
 const fieldMapDoc = readFileSync(new URL("../docs/field-compatibility-map.md", import.meta.url), "utf8");
+const launchPostDoc = readFileSync(new URL("../docs/launch-post.md", import.meta.url), "utf8");
+const outreachLoopDoc = readFileSync(new URL("../docs/outreach-loop.md", import.meta.url), "utf8");
+const releaseV04Doc = readFileSync(new URL("../docs/release-v0.4.0.md", import.meta.url), "utf8");
+const terminalQuickstartDoc = readFileSync(new URL("../docs/terminal-builder-quickstart.md", import.meta.url), "utf8");
+const v05PlanDoc = readFileSync(new URL("../docs/v0.5-plan.md", import.meta.url), "utf8");
 const fieldMapJson = JSON.parse(readFileSync(new URL("../examples/field-compatibility-map.json", import.meta.url), "utf8"));
 const decodedShapeIssueTemplate = readFileSync(new URL("../.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml", import.meta.url), "utf8");
 const schemaDir = new URL("../schemas/", import.meta.url);
@@ -121,6 +126,18 @@ if (!readme.includes("docs/field-compatibility-map.md") || !readme.includes("exa
   failures.push("README should link the field compatibility map and JSON manifest.");
 }
 
+for (const doc of [
+  "docs/terminal-builder-quickstart.md",
+  "docs/launch-post.md",
+  "docs/outreach-loop.md",
+  "docs/release-v0.4.0.md",
+  "docs/v0.5-plan.md"
+]) {
+  if (!readme.includes(doc)) {
+    failures.push(`README should link ${doc}.`);
+  }
+}
+
 if (!readme.includes(".github/ISSUE_TEMPLATE/decoded-percolator-shape.yml")) {
   failures.push("README should link the decoded shape issue template.");
 }
@@ -144,6 +161,27 @@ for (const unsafe of ["wallet paths", "private keys", "mnemonics", "signatures",
 for (const required of ["Source kind", "Trader-facing question", "Sanitized read-only payload", "Safety checklist", "Can this become a public fixture?"]) {
   if (!decodedShapeIssueTemplate.includes(required)) {
     failures.push(`Decoded shape issue template should include ${required}.`);
+  }
+}
+
+for (const doc of [launchPostDoc, outreachLoopDoc, terminalQuickstartDoc]) {
+  if (!doc.includes("npm install @perpscope/percolator-adapter")) {
+    failures.push("Launch, outreach, and quickstart docs should include the npm install command.");
+  }
+  if (!doc.includes("https://github.com/williamclay8/perpscope/issues/new?template=decoded-percolator-shape.yml")) {
+    failures.push("Launch, outreach, and quickstart docs should link the decoded-shape intake form.");
+  }
+}
+
+for (const required of ["@perpscope/percolator-adapter@0.4.0", "npm install @perpscope/percolator-adapter", "57 node tests", "Safety Boundary"]) {
+  if (!releaseV04Doc.includes(required)) {
+    failures.push(`v0.4 release notes should include ${required}.`);
+  }
+}
+
+for (const required of ["compatibility report", "Export", "wallet", "transaction", "npm run check"]) {
+  if (!v05PlanDoc.toLowerCase().includes(required.toLowerCase())) {
+    failures.push(`v0.5 plan should mention ${required}.`);
   }
 }
 

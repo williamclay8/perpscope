@@ -123,6 +123,8 @@ Terminal builders can use the field-level contract in `docs/field-compatibility-
 
 Real decoded shapes can be submitted through `docs/feedback-loop.md` or the GitHub issue form at `.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml`.
 
+Start with `docs/terminal-builder-quickstart.md` if you are wiring the npm adapter into a terminal.
+
 ## Live Read-Only Deployment Examples
 
 PerpScope v0.2 adds deployment-style read fixtures that mirror how a terminal can validate a selected Percolator slab through an injected RPC client:
@@ -224,6 +226,8 @@ schemas/funding-skew-history.schema.json
 ```
 
 The source-backed adapter field map lives in `docs/field-compatibility-map.md`, with a JSON manifest at `examples/field-compatibility-map.json`.
+
+The terminal-builder quickstart lives in `docs/terminal-builder-quickstart.md`.
 
 ## Embeddable Adapter Package
 
@@ -340,6 +344,10 @@ The normalized market DTO includes:
 - `examples/adapter-consumer/` shows the package from an outside-terminal point of view.
 - `docs/field-compatibility-map.md` documents accepted aliases, required fields, Watchtower dependencies, and read-only rejection rules.
 - `docs/feedback-loop.md` is the public intake loop for decoded Percolator shapes and missing terminal fields.
+- `docs/terminal-builder-quickstart.md` shows the npm install path and the first DTO/signals to render.
+- `docs/launch-post.md` and `docs/outreach-loop.md` contain launch copy and the first builder outreach loop.
+- `docs/release-v0.4.0.md` mirrors the public release notes for the npm-live v0.4 release.
+- `docs/v0.5-plan.md` scopes compatibility report export.
 - `.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml` is the structured intake form for sanitized builder samples.
 - `src/fixtures/percolator-market.js` contains sample decoded market/account state plus execution receipt history.
 - `src/app.js` renders the read-only cockpit.
@@ -377,4 +385,5 @@ Current public site: [williamclay8.github.io/perpscope](https://williamclay8.git
 - v0.4 shipped: capture intake for pasted/dropped decoded outputs, compatibility scoring, missing-field warnings, and ignored-field mapping.
 - v0.4 follow-up: field-level compatibility map for terminal import/export adapters.
 - npm package shipped: `@perpscope/percolator-adapter@0.4.0`.
+- v0.5 planned: downloadable compatibility report export for terminal builders.
 - More deployment fixtures as Percolator terminal teams share read-only shapes.
