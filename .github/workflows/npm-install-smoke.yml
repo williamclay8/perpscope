@@ -1,0 +1,58 @@
+name: Npm install smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 15 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  npm-install-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Create outside project
+        run: |
+          mkdir -p /tmp/perpscope-npm-smoke
+          cd /tmp/perpscope-npm-smoke
+          npm init -y
+
+      - name: Install published adapter
+        run: |
+          cd /tmp/perpscope-npm-smoke
+          npm install @perpscope/percolator-adapter@2.0.0
+
+      - name: Parse hosted export fixture
+        run: |
+          cd /tmp/perpscope-npm-smoke
+          node --input-type=module <<'NODE'
+          import { parsePerpScopeExport, summarizePerpScopeExport } from "@perpscope/percolator-adapter";
+
+          const response = await fetch("https://williamclay8.github.io/perpscope/examples/perpscope-export.sample.json");
+          if (!response.ok) throw new Error(`fixture ${response.status}`);
+
+          const payload = parsePerpScopeExport(await response.json());
+          const summary = summarizePerpScopeExport(payload);
+          const result = {
+            package: "@perpscope/percolator-adapter",
+            version: "2.0.0",
+            schema: payload.schema,
+            market: summary.market,
+            heat: summary.heat,
+            readOnly: summary.readOnly,
+            unitChecks: summary.feedHealth.unitChecks,
+            gaps: summary.feedHealth.gaps
+          };
+
+          console.log(JSON.stringify(result, null, 2));
+
+          if (result.schema !== "perpscope.export.v1") throw new Error("unexpected schema");
+          if (result.market !== "WIF-PERP") throw new Error("unexpected market");
+          if (result.readOnly !== true) throw new Error("export must be read-only");
+          NODE

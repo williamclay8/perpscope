@@ -20,6 +20,7 @@ const feedbackLoopDoc = readFileSync(new URL("../docs/feedback-loop.md", import.
 const fieldMapDoc = readFileSync(new URL("../docs/field-compatibility-map.md", import.meta.url), "utf8");
 const launchPostDoc = readFileSync(new URL("../docs/launch-post.md", import.meta.url), "utf8");
 const v2LaunchPostDoc = readFileSync(new URL("../docs/perpscope-v2-launch-post.md", import.meta.url), "utf8");
+const npmInstallReceiptDoc = readFileSync(new URL("../docs/npm-v2-install-receipt.md", import.meta.url), "utf8");
 const outreachLoopDoc = readFileSync(new URL("../docs/outreach-loop.md", import.meta.url), "utf8");
 const releaseV04Doc = readFileSync(new URL("../docs/release-v0.4.0.md", import.meta.url), "utf8");
 const releaseV05Doc = readFileSync(new URL("../docs/release-v0.5.0.md", import.meta.url), "utf8");
@@ -81,6 +82,7 @@ const reactRiskRailCss = readFileSync(new URL("../examples/react-risk-rail/src/s
 const perpscopeExportSample = JSON.parse(readFileSync(new URL("../examples/perpscope-export.sample.json", import.meta.url), "utf8"));
 const perpscopeExportSchema = JSON.parse(readFileSync(new URL("../schemas/perpscope-export.schema.json", import.meta.url), "utf8"));
 const npmPublishWorkflow = readFileSync(new URL("../.github/workflows/npm-publish.yml", import.meta.url), "utf8");
+const npmInstallSmokeWorkflow = readFileSync(new URL("../.github/workflows/npm-install-smoke.yml", import.meta.url), "utf8");
 
 const failures = [];
 
@@ -276,7 +278,7 @@ if (!readme.includes("Embed In Your Terminal In 60 Seconds") || !readme.includes
   failures.push("README should document the v1.9 embed and export integration path.");
 }
 
-if (!readme.includes("npm install @perpscope/percolator-adapter") || !readme.includes("@perpscope/percolator-adapter@2.0.0") || !readme.includes("2-Minute Terminal Builder Check") || !readme.includes("Submit A Shape")) {
+if (!readme.includes("npm install @perpscope/percolator-adapter") || !readme.includes("@perpscope/percolator-adapter@2.0.0") || !readme.includes("docs/npm-v2-install-receipt.md") || !readme.includes("2-Minute Terminal Builder Check") || !readme.includes("Submit A Shape")) {
   failures.push("README should document the published adapter package.");
 }
 
@@ -292,6 +294,7 @@ for (const doc of [
   "docs/terminal-builder-quickstart.md",
   "docs/launch-post.md",
   "docs/perpscope-v2-launch-post.md",
+  "docs/npm-v2-install-receipt.md",
   "docs/outreach-loop.md",
   "docs/release-v0.4.0.md",
   "docs/release-v0.5.0.md",
@@ -570,6 +573,18 @@ for (const required of ["@perpscope/percolator-adapter@2.0.0", "summarizePerpSco
 
 if (!npmPublishWorkflow.includes("Expected 2.0.0") || !npmPublishWorkflow.includes("npm publish --access public --provenance")) {
   failures.push("npm publish workflow should be configured for adapter v2.0.0 trusted publishing.");
+}
+
+for (const required of ["@perpscope/percolator-adapter@2.0.0", "parsePerpScopeExport", "summarizePerpScopeExport", "WIF-PERP", "found 0 vulnerabilities", "read-only"]) {
+  if (!npmInstallReceiptDoc.includes(required)) {
+    failures.push(`npm v2 install receipt should include ${required}.`);
+  }
+}
+
+for (const required of ["workflow_dispatch", "schedule", "@perpscope/percolator-adapter@2.0.0", "parsePerpScopeExport", "summarizePerpScopeExport", "perpscope-export.sample.json", "readOnly"]) {
+  if (!npmInstallSmokeWorkflow.includes(required)) {
+    failures.push(`npm install smoke workflow should include ${required}.`);
+  }
 }
 
 for (const required of ["compatibility report", "Export", "wallet", "transaction", "npm run check", "0.5.0"]) {

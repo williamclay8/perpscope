@@ -34,6 +34,8 @@ const summary = summarizePerpScopeExport(payload);
 
 Use `docs/embed-integration.md` for the copy-paste guide, `examples/copy-integration/` for a live copy page, `examples/embed-consumer/` for the terminal side-rail mock, and `examples/react-risk-rail/` for a React component.
 
+Install proof: `docs/npm-v2-install-receipt.md` shows a clean outside project installing `@perpscope/percolator-adapter@2.0.0` and parsing the hosted export fixture.
+
 ## 2-Minute Terminal Builder Check
 
 ```bash
@@ -434,6 +436,7 @@ The normalized market DTO includes:
 - `docs/release-v1.9.0.md` mirrors the public release notes for copy-paste embeds and export consumer examples.
 - `docs/release-v2.0.0.md` mirrors the public release notes for the schema-locked terminal integration kit.
 - `docs/perpscope-v2-launch-post.md` contains launch copy for the v2 terminal integration kit.
+- `docs/npm-v2-install-receipt.md` records the clean external npm install smoke for the v2 adapter.
 - `docs/adapter-targets.md` documents the terminal rail, risk overlay, execution lane, feed monitor, and embed contracts.
 - `docs/embed-integration.md` documents iframe widgets, the export fixture, and trusted display fields.
 - `docs/decoded-live-source.md` documents the CORS endpoint contract for decoded Percolator live feeds.
