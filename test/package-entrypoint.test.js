@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -60,16 +60,16 @@ test("adapter package exposes read-only terminal DTO helpers", () => {
   });
 
   assert.equal(detectPercolatorInputShape(percolatorFixture), "perpscope-snapshot");
-  assert.equal(PERPSCOPE_ADAPTER_VERSION, "0.9.0");
+  assert.equal(PERPSCOPE_ADAPTER_VERSION, "1.0.0");
   assert.equal(snapshot.markets.length, 3);
   assert.equal(report.compatible, true);
   assert.equal(report.status, "compatible");
   assert.equal(exported.schema, "perpscope.compatibility-report");
-  assert.equal(exported.package.version, "0.9.0");
+  assert.equal(exported.package.version, "1.0.0");
   assert.equal(drift.schema, "perpscope.compatibility-diff");
   assert.equal(drift.scoreDelta, 0);
   assert.equal(reality.schema, "perpscope.reality-check");
-  assert.equal(reality.package.version, "0.9.0");
+  assert.equal(reality.package.version, "1.0.0");
   assert.equal(reality.mapped.requiredCount, 3);
   assert.equal(signals.find((signal) => signal.id === "carry").tone, "good");
   assert.equal(history.length, 6);
@@ -86,7 +86,7 @@ test("adapter CLI exports reports and diffs", () => {
     encoding: "utf8"
   });
   const diff = JSON.parse(diffOutput);
-  const doctorOutput = execFileSync("node", [packageCli, "compat", "doctor", driftedFixture], {
+  const doctorRun = spawnSync("node", [packageCli, "compat", "doctor", driftedFixture], {
     encoding: "utf8"
   });
   const badgeMarkdown = execFileSync("node", [packageCli, "compat", "badge", driftedFixture], {
@@ -97,17 +97,48 @@ test("adapter CLI exports reports and diffs", () => {
   }));
 
   assert.equal(report.schema, "perpscope.compatibility-report");
-  assert.equal(report.package.version, "0.9.0");
+  assert.equal(report.package.version, "1.0.0");
   assert.ok(report.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd"));
   assert.equal(diff.schema, "perpscope.compatibility-diff");
-  assert.equal(diff.package.version, "0.9.0");
+  assert.equal(diff.package.version, "1.0.0");
   assert.ok(diff.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd"));
-  assert.match(doctorOutput, /PerpScope compat doctor: CHECK/);
-  assert.match(doctorOutput, /required: 2\/3/);
-  assert.match(doctorOutput, /Map required fields: price\.mark/);
+  assert.equal(doctorRun.status, 1);
+  assert.match(doctorRun.stdout, /PerpScope compat doctor: CHECK/);
+  assert.match(doctorRun.stdout, /required: 2\/3/);
+  assert.match(doctorRun.stdout, /Map required fields: price\.mark/);
   assert.match(badgeMarkdown, /\*\*PerpScope compatible:\*\* partial, 0\/100, 5 alias suggestions/);
   assert.equal(badgeJson.schema, "perpscope.compatibility-badge");
-  assert.equal(badgeJson.package.version, "0.9.0");
+  assert.equal(badgeJson.package.version, "1.0.0");
+});
+
+test("adapter CLI initializes captures and exposes CI-ready doctor exit codes", () => {
+  const tempDir = mkdtempSync(join(tmpdir(), "perpscope-cli-init-"));
+  try {
+    const outputPath = join(tempDir, "perpscope.capture.json");
+    const initRun = spawnSync("node", [packageCli, "init", outputPath], {
+      encoding: "utf8"
+    });
+    const passRun = spawnSync("node", [packageCli, "compat", "doctor", outputPath], {
+      encoding: "utf8"
+    });
+    const strictWarningRun = spawnSync("node", [packageCli, "compat", "doctor", minimalFixture, "--strict"], {
+      encoding: "utf8"
+    });
+    const strictFailureRun = spawnSync("node", [packageCli, "compat", "doctor", driftedFixture, "--strict"], {
+      encoding: "utf8"
+    });
+
+    assert.equal(initRun.status, 0);
+    assert.equal(existsSync(outputPath), true);
+    assert.match(initRun.stdout, /perpscope compat doctor/);
+    assert.equal(passRun.status, 0);
+    assert.match(passRun.stdout, /PerpScope compat doctor: PASS/);
+    assert.equal(strictWarningRun.status, 2);
+    assert.match(strictWarningRun.stdout, /Add useful trader fields/);
+    assert.equal(strictFailureRun.status, 1);
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
 });
 
 test("adapter package exposes reality checks for real-backed candidates", () => {

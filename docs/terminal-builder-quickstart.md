@@ -107,11 +107,20 @@ Use `buildCompatibilityRealityCheck(report, { input })` when you need a compact 
 ## Use The CLI
 
 ```bash
+perpscope init perpscope.capture.json
 perpscope compat report examples/fixture-pack-drifted-aliases.json
 perpscope compat diff examples/fixture-pack-minimal-terminal.json examples/fixture-pack-drifted-aliases.json
 perpscope compat doctor examples/capture-template.json
 perpscope compat badge examples/capture-template.json --json
 ```
+
+`perpscope init` creates a local `perpscope.capture.json` from the public capture template and prints the next doctor/badge commands.
+
+`perpscope compat doctor` is CI-friendly:
+
+- exit `0`: required fields pass
+- exit `1`: rejected capture or required fields missing
+- exit `2`: strict mode found useful-field gaps, unknown fields, or alias suggestions
 
 Fixture packs for local testing:
 

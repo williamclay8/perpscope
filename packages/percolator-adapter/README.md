@@ -72,11 +72,14 @@ The full field-level contract is documented in `../../docs/field-compatibility-m
 ## CLI
 
 ```bash
+perpscope init perpscope.capture.json
 perpscope compat report capture.json
 perpscope compat diff previous.json current.json
-perpscope compat doctor capture.json
+perpscope compat doctor capture.json --strict
 perpscope compat badge capture.json --json
 ```
+
+Doctor exit codes are CI-ready: `0` means required fields pass, `1` means rejected or required fields missing, and `2` means strict mode found useful-field gaps, unknown fields, or alias suggestions.
 
 Try it locally with:
 

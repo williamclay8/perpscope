@@ -26,6 +26,7 @@ const releaseV06Doc = readFileSync(new URL("../docs/release-v0.6.0.md", import.m
 const releaseV07Doc = readFileSync(new URL("../docs/release-v0.7.0.md", import.meta.url), "utf8");
 const releaseV08Doc = readFileSync(new URL("../docs/release-v0.8.0.md", import.meta.url), "utf8");
 const releaseV09Doc = readFileSync(new URL("../docs/release-v0.9.0.md", import.meta.url), "utf8");
+const releaseV10Doc = readFileSync(new URL("../docs/release-v1.0.0.md", import.meta.url), "utf8");
 const terminalQuickstartDoc = readFileSync(new URL("../docs/terminal-builder-quickstart.md", import.meta.url), "utf8");
 const v05PlanDoc = readFileSync(new URL("../docs/v0.5-plan.md", import.meta.url), "utf8");
 const fieldMapJson = JSON.parse(readFileSync(new URL("../examples/field-compatibility-map.json", import.meta.url), "utf8"));
@@ -140,7 +141,7 @@ if (compatibilityReport.status !== "compatible") {
 const exportedCompatibility = exportCompatibilityReport(percolatorFixture, dto, {
   generatedAt: "2026-06-21T00:00:00.000Z"
 });
-if (exportedCompatibility.schema !== "perpscope.compatibility-report" || exportedCompatibility.package.version !== "0.9.0") {
+if (exportedCompatibility.schema !== "perpscope.compatibility-report" || exportedCompatibility.package.version !== "1.0.0") {
   failures.push("Exported compatibility report should include the stable schema and package version.");
 }
 
@@ -154,7 +155,7 @@ const driftReport = buildPercolatorCompatibilityReport({
 const drift = compareCompatibilityReports(compatibilityReport, driftReport, {
   generatedAt: "2026-06-21T00:00:00.000Z"
 });
-if (drift.schema !== "perpscope.compatibility-diff" || drift.package.version !== "0.9.0" || !drift.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd")) {
+if (drift.schema !== "perpscope.compatibility-diff" || drift.package.version !== "1.0.0" || !drift.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd")) {
   failures.push("Compatibility diff should include schema, version, and alias suggestions.");
 }
 
@@ -162,7 +163,7 @@ const realityCheck = buildCompatibilityRealityCheck(
   buildPercolatorCompatibilityReport(realSanitizedFixturePack, buildReadOnlyRpcSnapshot(realSanitizedFixturePack)),
   { input: realSanitizedFixturePack, generatedAt: "2026-06-21T00:00:00.000Z" }
 );
-if (realityCheck.schema !== "perpscope.reality-check" || realityCheck.package.version !== "0.9.0" || realityCheck.status !== "candidate" || realityCheck.mapped.requiredCount !== 3) {
+if (realityCheck.schema !== "perpscope.reality-check" || realityCheck.package.version !== "1.0.0" || realityCheck.status !== "candidate" || realityCheck.mapped.requiredCount !== 3) {
   failures.push("Reality check should classify the real-backed sanitized fixture candidate.");
 }
 
@@ -172,7 +173,7 @@ const templateDoctor = buildCompatibilityDoctor(captureTemplate, {
 const templateBadge = buildCompatibilityBadge(templateDoctor, {
   generatedAt: "2026-06-21T00:00:00.000Z"
 });
-if (templateDoctor.schema !== "perpscope.compatibility-doctor" || templateDoctor.package.version !== "0.9.0" || templateDoctor.required.mapped !== 3 || !templateDoctor.nextActions.length) {
+if (templateDoctor.schema !== "perpscope.compatibility-doctor" || templateDoctor.package.version !== "1.0.0" || templateDoctor.required.mapped !== 3 || !templateDoctor.nextActions.length) {
   failures.push("Capture template should produce a useful compatibility doctor summary.");
 }
 if (templateBadge.schema !== "perpscope.compatibility-badge" || !templateBadge.markdown.includes("PerpScope compatible")) {
@@ -183,8 +184,8 @@ if (!/normalizePercolatorSnapshot/.test(packageEntry) || !/buildWatchtowerSignal
   failures.push("Adapter package should expose snapshot, compatibility export/diff, reality check, doctor, badge, Watchtower, and funding history helpers.");
 }
 
-if (!/"bin"\s*:/.test(packageManifest) || !/"perpscope"\s*:/.test(packageManifest) || !/compat report/.test(packageCli) || !/compat diff/.test(packageCli) || !/compat doctor/.test(packageCli) || !/compat badge/.test(packageCli)) {
-  failures.push("Adapter package should expose the perpscope compat CLI report, diff, doctor, and badge commands.");
+if (!/"bin"\s*:/.test(packageManifest) || !/"perpscope"\s*:/.test(packageManifest) || !/perpscope init/.test(packageCli) || !/compat report/.test(packageCli) || !/compat diff/.test(packageCli) || !/compat doctor/.test(packageCli) || !/compat badge/.test(packageCli)) {
+  failures.push("Adapter package should expose the perpscope init, report, diff, doctor, and badge commands.");
 }
 
 if (!/"@perpscope\/percolator-adapter": "file:\.\.\/\.\.\/packages\/percolator-adapter"/.test(consumerPackage)) {
@@ -199,7 +200,7 @@ if (!readme.includes("examples/adapter-consumer/") || !readme.includes("docs/fee
   failures.push("README should link the external consumer example and feedback loop.");
 }
 
-if (!readme.includes("npm install @perpscope/percolator-adapter") || !readme.includes("@perpscope/percolator-adapter@0.9.0")) {
+if (!readme.includes("npm install @perpscope/percolator-adapter") || !readme.includes("@perpscope/percolator-adapter@1.0.0") || !readme.includes("2-Minute Terminal Builder Check")) {
   failures.push("README should document the published adapter package.");
 }
 
@@ -217,6 +218,7 @@ for (const doc of [
   "docs/release-v0.7.0.md",
   "docs/release-v0.8.0.md",
   "docs/release-v0.9.0.md",
+  "docs/release-v1.0.0.md",
   "docs/v0.5-plan.md"
 ]) {
   if (!readme.includes(doc)) {
@@ -295,6 +297,12 @@ for (const required of ["@perpscope/percolator-adapter@0.9.0", "buildCompatibili
   }
 }
 
+for (const required of ["@perpscope/percolator-adapter@1.0.0", "perpscope init", "CI-ready", "2-minute terminal-builder check", "exit codes", "Safety Boundary"]) {
+  if (!releaseV10Doc.includes(required)) {
+    failures.push(`v1.0 release notes should include ${required}.`);
+  }
+}
+
 for (const required of ["compatibility report", "Export", "wallet", "transaction", "npm run check", "0.5.0"]) {
   if (!v05PlanDoc.toLowerCase().includes(required.toLowerCase())) {
     failures.push(`v0.5 plan should mention ${required}.`);
@@ -316,13 +324,13 @@ for (const required of [
   }
 }
 
-if (fieldMapJson.version !== "0.9.0") {
-  failures.push("Field compatibility JSON should match package version 0.9.0.");
+if (fieldMapJson.version !== "1.0.0") {
+  failures.push("Field compatibility JSON should match package version 1.0.0.");
 }
 
 if (
   compatibilityReportExport.schema !== "perpscope.compatibility-report" ||
-  compatibilityReportExport.package?.version !== "0.9.0" ||
+  compatibilityReportExport.package?.version !== "1.0.0" ||
   compatibilityReportExport.safety?.mode !== "read-only" ||
   !compatibilityReportExport.source?.commandSet?.length ||
   !compatibilityReportExport.missingFields?.some((field) => field.field === "history.fundingSkew") ||
@@ -333,7 +341,7 @@ if (
 
 if (
   compatibilityDiff.schema !== "perpscope.compatibility-diff" ||
-  compatibilityDiff.package?.version !== "0.9.0" ||
+  compatibilityDiff.package?.version !== "1.0.0" ||
   !compatibilityDiff.aliasSuggestions?.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd") ||
   compatibilityDiff.summary?.suggestionCount < 1
 ) {

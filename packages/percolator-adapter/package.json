@@ -1,6 +1,6 @@
 {
   "name": "@perpscope/percolator-adapter",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "type": "module",
   "description": "Read-only Percolator adapter helpers for Solana perps terminals.",
   "main": "./index.js",

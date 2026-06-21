@@ -269,11 +269,23 @@ The package is intentionally side-effect free. It does not create wallets, sign,
 CLI:
 
 ```bash
+perpscope init perpscope.capture.json
 perpscope compat report examples/fixture-pack-drifted-aliases.json
 perpscope compat diff examples/fixture-pack-minimal-terminal.json examples/fixture-pack-drifted-aliases.json
 perpscope compat doctor examples/capture-template.json
 perpscope compat badge examples/capture-template.json --json
 ```
+
+## 2-Minute Terminal Builder Check
+
+```bash
+npm install @perpscope/percolator-adapter
+npx perpscope init perpscope.capture.json
+npx perpscope compat doctor perpscope.capture.json --strict
+npx perpscope compat badge perpscope.capture.json
+```
+
+Edit `perpscope.capture.json` with sanitized read-only decoded state, rerun doctor, then open the decoded-shape issue with the capture and badge when it is clean enough to share.
 
 ## Terminal Builder Quickstart
 
@@ -382,6 +394,7 @@ The normalized market DTO includes:
 - `docs/release-v0.7.0.md` mirrors the public release notes for the workbench, CLI, and fixture-pack release.
 - `docs/release-v0.8.0.md` mirrors the public release notes for the reality check and real-backed candidate fixture.
 - `docs/release-v0.9.0.md` mirrors the public release notes for the doctor, badge, and capture-template release.
+- `docs/release-v1.0.0.md` mirrors the public release notes for init and CI-ready doctor exit codes.
 - `docs/v0.5-plan.md` documents the shipped compatibility report export.
 - `.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml` is the structured intake form for sanitized builder samples.
 - `src/fixtures/percolator-market.js` contains sample decoded market/account state plus execution receipt history.
@@ -419,10 +432,11 @@ Current public site: [williamclay8.github.io/perpscope](https://williamclay8.git
 
 - v0.4 shipped: capture intake for pasted/dropped decoded outputs, compatibility scoring, missing-field warnings, and ignored-field mapping.
 - v0.4 follow-up: field-level compatibility map for terminal import/export adapters.
-- npm package shipped: `@perpscope/percolator-adapter@0.9.0`.
+- npm package shipped: `@perpscope/percolator-adapter@1.0.0`.
 - v0.5 shipped: downloadable compatibility report export for terminal builders.
 - v0.6 shipped: compatibility diffing and alias suggestions for drifting terminal shapes.
 - v0.7 shipped: local compatibility workbench, CLI report/diff commands, and fixture packs.
 - v0.8 shipped: reality check panel, `buildCompatibilityRealityCheck()`, and `examples/fixture-pack-real-sanitized-rpc-shape.json`.
 - v0.9 shipped: `compat doctor`, `compat badge`, and `examples/capture-template.json`.
+- v1.0 shipped: `perpscope init`, CI-ready `compat doctor` exit codes, and the 2-minute terminal-builder check.
 - More deployment fixtures as Percolator terminal teams share read-only shapes.
