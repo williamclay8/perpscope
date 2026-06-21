@@ -7,13 +7,18 @@ import {
   createActualMarketSnapshot,
   createCompatibilityWorkbenchState,
   createDataSourceState,
+  buildAdapterTargets,
   buildDataConfidence,
+  buildFeedHealth,
+  buildMarketHotReasons,
+  buildShareUrl,
   buildTraderRadar,
   buildTerminalRecipeSummaries,
   createImportedSnapshotState,
   fetchActualMarketSnapshot,
   fetchLiveDecodedSource,
   getLiveDecodedSourceUrl,
+  readUrlState,
   shouldAutoLoadLivePercolator,
   sanitizeLiveDecodedSourceUrl,
   ACTUAL_PRICE_ENDPOINT,
@@ -31,6 +36,7 @@ import {
   summarizeFundingSkewHistory
 } from "../src/lib/funding-history.js";
 import {
+  buildPercolatorCompatibilityReport,
   normalizePercolatorSnapshot,
   simulatePriceShock
 } from "../src/lib/percolator-adapter.js";
@@ -292,6 +298,42 @@ test("builds live data confidence and public-site auto-load decisions", () => {
   assert.equal(shouldAutoLoadLivePercolator({ origin: "https://williamclay8.github.io", search: "" }), true);
   assert.equal(shouldAutoLoadLivePercolator({ origin: "https://williamclay8.github.io", search: "?fixture=1" }), false);
   assert.equal(shouldAutoLoadLivePercolator({ origin: "http://127.0.0.1:4173", search: "" }), false);
+});
+
+test("builds v1.7 trader explanations, feed health, adapter targets, and share links", () => {
+  const snapshot = normalizePercolatorSnapshot(decodedLiveSource);
+  snapshot.markets[0].marketStructure.stressUsedPct = 88;
+  snapshot.markets[0].marketStructure.oiSkewPct = 42;
+  snapshot.markets[0].funding.bpsPerHour = 2.4;
+  snapshot.markets[0].price.publishAgeSec = 12;
+  snapshot.markets[0].dataQuality = { status: "uncertain" };
+  snapshot.markets[0].flags = [{ tone: "danger", label: "stress cap hot" }];
+  const report = buildPercolatorCompatibilityReport(decodedLiveSource, snapshot);
+  const dataSource = createDataSourceState("live-decoded", decodedLiveSource, snapshot, report);
+  const radar = buildTraderRadar(snapshot.markets);
+  const reasons = buildMarketHotReasons(snapshot.markets[0], radar.rows[0]);
+  const feed = buildFeedHealth(snapshot, dataSource, {
+    status: "loaded",
+    sourceUrl: DEFAULT_LIVE_DECODED_SOURCE_URL
+  }, report);
+  const targets = buildAdapterTargets(snapshot, report);
+  const shareUrl = buildShareUrl({
+    href: "https://williamclay8.github.io/perpscope/?fixture=1"
+  }, {
+    market: snapshot.markets[0].id,
+    filter: "hot"
+  });
+  const urlState = readUrlState({ search: "?market=devnet-small-1&filter=hot" });
+
+  assert.equal(reasons.tone, "danger");
+  assert.equal(reasons.reasons.find((reason) => reason.label === "decode").value, "unit check");
+  assert.equal(feed.status, "live");
+  assert.equal(feed.items.find((item) => item.label === "markets").value, String(snapshot.markets.length));
+  assert.ok(feed.chips.some((chip) => chip.includes("perpscope-decoder-worker")));
+  assert.equal(targets.targets.length, 4);
+  assert.ok(targets.ready >= 3);
+  assert.equal(shareUrl, `https://williamclay8.github.io/perpscope/?fixture=1&market=${snapshot.markets[0].id}&filter=hot`);
+  assert.deepEqual(urlState, { market: "devnet-small-1", filter: "hot" });
 });
 
 test("rejects raw or non-live decoded source payloads", async () => {

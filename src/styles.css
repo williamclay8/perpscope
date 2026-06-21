@@ -292,6 +292,26 @@ h1 {
   color: var(--muted);
 }
 
+.status-chip.action {
+  border: 0;
+  color: var(--cyan);
+  cursor: pointer;
+  font: inherit;
+  transition-property: background-color, box-shadow, transform;
+  transition-duration: 160ms;
+  transition-timing-function: ease-out;
+}
+
+.status-chip.action:hover,
+.status-chip.action:focus-visible {
+  background: rgba(115, 216, 255, 0.14);
+  box-shadow: var(--shadow-border-hover);
+}
+
+.status-chip.action:active {
+  transform: scale(0.96);
+}
+
 .cockpit-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr) minmax(280px, 0.65fr);
@@ -1003,6 +1023,13 @@ h1 {
   grid-column: span 1;
 }
 
+.feed-health-panel {
+  grid-column: span 1;
+  background:
+    linear-gradient(135deg, rgba(67, 229, 155, 0.055), transparent 58%),
+    var(--panel);
+}
+
 .confidence-strip {
   grid-column: span 2;
   padding: 12px;
@@ -1013,6 +1040,17 @@ h1 {
   background:
     linear-gradient(135deg, rgba(115, 216, 255, 0.055), transparent 54%),
     var(--panel);
+}
+
+.hot-reasons-panel {
+  grid-column: span 1;
+  background:
+    linear-gradient(135deg, rgba(255, 199, 107, 0.06), transparent 58%),
+    var(--panel);
+}
+
+.adapter-targets-panel {
+  grid-column: span 2;
 }
 
 .data-source-grid {
@@ -1100,6 +1138,71 @@ h1 {
 .data-source-actions span {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.feed-health-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.feed-health-grid section {
+  display: grid;
+  gap: 4px;
+  min-height: 56px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: var(--shadow-border);
+}
+
+.feed-health-grid section.good {
+  background: var(--mint-soft);
+}
+
+.feed-health-grid section.warning {
+  background: var(--amber-soft);
+}
+
+.feed-health-grid span,
+.feed-health-grid strong,
+.feed-health-strip span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feed-health-grid span,
+.feed-health-strip span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.feed-health-grid strong {
+  color: var(--ink);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.feed-health-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.feed-health-strip span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  max-width: 100%;
+  padding: 0 9px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: var(--shadow-border);
 }
 
 .confidence-rail {
@@ -1300,6 +1403,159 @@ h1 {
 .radar-empty span {
   color: var(--muted);
   font-size: 12px;
+}
+
+.reason-hero {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: var(--shadow-border);
+}
+
+.reason-hero strong,
+.reason-hero span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reason-hero strong {
+  color: var(--ink);
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
+.reason-hero span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.reason-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.reason-list section {
+  display: grid;
+  gap: 4px;
+  min-height: 74px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: var(--shadow-border);
+}
+
+.reason-list section.good {
+  background: var(--mint-soft);
+}
+
+.reason-list section.warning {
+  background: var(--amber-soft);
+}
+
+.reason-list section.danger {
+  background: var(--red-soft);
+}
+
+.reason-list span,
+.reason-list strong,
+.reason-list small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reason-list span,
+.reason-list small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.reason-list strong {
+  color: var(--ink);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.adapter-target-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.adapter-target-grid section {
+  display: grid;
+  gap: 8px;
+  min-height: 132px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: var(--shadow-border);
+}
+
+.adapter-target-grid section.good {
+  background: var(--mint-soft);
+}
+
+.adapter-target-grid section.warning {
+  background: var(--amber-soft);
+}
+
+.adapter-target-grid div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.adapter-target-grid span,
+.adapter-target-grid strong,
+.adapter-target-grid small,
+.adapter-target-grid b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adapter-target-grid span,
+.adapter-target-grid small,
+.adapter-target-grid b {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.adapter-target-grid strong {
+  color: var(--ink);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.adapter-target-grid p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+}
+
+.adapter-target-grid b {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: var(--shadow-border);
 }
 
 .reality-panel {
@@ -2393,6 +2649,10 @@ code {
     grid-column: span 2;
   }
 
+  .feed-health-panel {
+    grid-column: span 2;
+  }
+
   .confidence-strip {
     grid-column: span 2;
   }
@@ -2401,8 +2661,21 @@ code {
     grid-column: span 2;
   }
 
+  .hot-reasons-panel {
+    grid-column: span 2;
+  }
+
+  .adapter-targets-panel {
+    grid-column: span 2;
+  }
+
   .confidence-rail {
     grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .feed-health-grid,
+  .adapter-target-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .workbench-panel {
@@ -2517,8 +2790,11 @@ code {
   .capture-panel,
   .reality-panel,
   .data-source-panel,
+  .feed-health-panel,
   .confidence-strip,
   .trader-radar-panel,
+  .hot-reasons-panel,
+  .adapter-targets-panel,
   .workbench-panel,
   .history-panel,
   .deployment-panel,
@@ -2548,7 +2824,10 @@ code {
   .workbench-summary,
   .reality-lanes,
   .radar-summary,
+  .feed-health-grid,
   .confidence-rail,
+  .reason-list,
+  .adapter-target-grid,
   .workbench-editors,
   .capture-editor,
   .watchtower-grid,

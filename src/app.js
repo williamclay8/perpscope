@@ -31,6 +31,40 @@ export const RADAR_FILTERS = [
   { id: "normalized", label: "Normalized" },
   { id: "fresh", label: "Fresh" }
 ];
+export const TERMINAL_ADAPTER_TARGETS = [
+  {
+    id: "generic-terminal",
+    label: "Generic terminal",
+    status: "ready",
+    tone: "good",
+    fields: ["symbol", "mark", "heat", "source"],
+    note: "drop-in market rail DTO"
+  },
+  {
+    id: "risk-overlay",
+    label: "Risk overlay",
+    status: "mapped",
+    tone: "good",
+    fields: ["runway", "stress", "flags", "reasons"],
+    note: "overlay for existing order tickets"
+  },
+  {
+    id: "execution-lane",
+    label: "Execution lane",
+    status: "partial",
+    tone: "warning",
+    fields: ["spread", "impact", "receipts"],
+    note: "waits on richer fill receipts"
+  },
+  {
+    id: "feed-monitor",
+    label: "Feed monitor",
+    status: "ready",
+    tone: "good",
+    fields: ["slot", "age", "markets", "unit checks"],
+    note: "health widget for builders"
+  }
+];
 export const ACTUAL_PRICE_ENDPOINT = "https://api.coingecko.com/api/v3/simple/price?ids=solana,bitcoin,dogwifcoin&vs_currencies=usd&include_24hr_change=true&include_last_updated_at=true";
 export const ACTUAL_PRICE_MARKETS = {
   SOL: "solana",
@@ -272,10 +306,11 @@ const realitySnapshot = buildReadOnlyRpcSnapshot(REALITY_CHECK_CAPTURE);
 const realityCompatibilityReport = buildPercolatorCompatibilityReport(REALITY_CHECK_CAPTURE, realitySnapshot);
 const workbenchPreviousText = JSON.stringify(WORKBENCH_PREVIOUS_CAPTURE, null, 2);
 const workbenchCurrentText = JSON.stringify(WORKBENCH_CURRENT_CAPTURE, null, 2);
+const initialUrlState = readUrlState();
 
 const state = {
   snapshot: fixtureSnapshot,
-  selectedMarketId: "sol-perp",
+  selectedMarketId: resolveSelectedMarketId(fixtureSnapshot, initialUrlState.market || "sol-perp"),
   shockPct: -3,
   compatibilityReport: fixtureCompatibilityReport,
   compatibilityDiff: compareCompatibilityReports(fixtureCompatibilityReport, fixtureCompatibilityReport),
@@ -287,7 +322,7 @@ const state = {
     currentText: workbenchCurrentText
   }),
   captureOpen: false,
-  radarFilter: "all",
+  radarFilter: initialUrlState.filter || "all",
   liveLoad: { status: "idle", sourceUrl: DEFAULT_LIVE_DECODED_SOURCE_URL },
   importStatus: {
     tone: "neutral",
@@ -307,6 +342,8 @@ function render() {
   const market = selectedMarket();
   const stress = simulatePriceShock(market, state.shockPct);
   const radar = buildTraderRadar(state.snapshot.markets, state.radarFilter);
+  const hotReasons = buildMarketHotReasons(market, radar.allRows.find((row) => row.id === market.id));
+  const feedHealth = buildFeedHealth(state.snapshot, state.dataSource, state.liveLoad, state.compatibilityReport);
   const activeColor = market.status === "stable" ? "var(--mint)" : market.status === "watch" ? "var(--amber)" : "var(--red)";
   app.innerHTML = `
     <main class="shell ${market.status}-mode" style="--active-color:${activeColor}" aria-label="PerpScope read-only risk cockpit">
@@ -336,6 +373,7 @@ function render() {
           <div class="topbar-actions" aria-label="Read-only status">
             <span class="status-chip ${toneClass(market.status)}">${esc(market.status)}</span>
             <span class="status-chip neutral">adapter dto</span>
+            <button class="status-chip action" id="copy-market-link" type="button">copy link</button>
           </div>
         </header>
 
@@ -385,9 +423,13 @@ function render() {
 
           ${dataSourcePanel(state.dataSource)}
 
+          ${feedHealthPanel(feedHealth)}
+
           ${dataConfidenceStrip(state)}
 
           ${traderRadarPanel(radar, market.id)}
+
+          ${hotReasonsPanel(hotReasons)}
 
           ${workbenchPanel(state.workbench)}
 
@@ -485,6 +527,8 @@ function render() {
 
           ${deploymentPanel()}
 
+          ${adapterTargetsPanel(buildAdapterTargets(state.snapshot, state.compatibilityReport))}
+
           ${recipePanel()}
         </section>
       </section>
@@ -495,6 +539,7 @@ function render() {
     button.addEventListener("click", () => {
       state.selectedMarketId = button.dataset.marketId;
       state.shockPct = state.selectedMarketId === "wif-perp" ? -5 : -3;
+      updateUrlState();
       render();
     });
   });
@@ -503,6 +548,7 @@ function render() {
     button.addEventListener("click", () => {
       state.selectedMarketId = button.dataset.radarMarketId;
       state.shockPct = state.selectedMarketId === "wif-perp" ? -5 : -3;
+      updateUrlState();
       render();
     });
   });
@@ -510,6 +556,7 @@ function render() {
   app.querySelectorAll("[data-radar-filter]").forEach((button) => {
     button.addEventListener("click", () => {
       state.radarFilter = button.dataset.radarFilter;
+      updateUrlState();
       render();
     });
   });
@@ -529,6 +576,7 @@ function render() {
   app.querySelector("#load-static-real")?.addEventListener("click", loadStaticRealSnapshot);
   app.querySelector("#load-actual-prices")?.addEventListener("click", loadActualPricesSnapshot);
   app.querySelector("#load-live-decoded")?.addEventListener("click", loadLiveDecodedSource);
+  app.querySelector("#copy-market-link")?.addEventListener("click", copyMarketLink);
   app.querySelector("#try-cli").addEventListener("click", loadCliDemo);
   app.querySelectorAll("[data-capture-open]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -564,6 +612,9 @@ function render() {
       currentText: workbenchCurrentText
     });
     state.captureOpen = false;
+    state.radarFilter = "all";
+    state.liveLoad = { status: "idle", sourceUrl: DEFAULT_LIVE_DECODED_SOURCE_URL };
+    updateUrlState();
     state.importStatus = {
       tone: "neutral",
       label: "fixture loaded",
@@ -815,6 +866,28 @@ function dataSourcePanel(dataSource) {
   `;
 }
 
+function feedHealthPanel(feedHealth) {
+  return `
+    <article class="feed-health-panel panel stagger-item ${feedHealth.tone}">
+      <div class="panel-head">
+        <span class="panel-label">feed health</span>
+        <strong class="compat-status ${feedHealth.tone}">${esc(feedHealth.status)}</strong>
+      </div>
+      <div class="feed-health-grid" aria-label="Live feed health">
+        ${feedHealth.items.map((item) => `
+          <section class="${item.tone}">
+            <span>${esc(item.label)}</span>
+            <strong>${esc(item.value)}</strong>
+          </section>
+        `).join("")}
+      </div>
+      <div class="feed-health-strip">
+        ${feedHealth.chips.map((chip) => `<span>${esc(chip)}</span>`).join("")}
+      </div>
+    </article>
+  `;
+}
+
 function dataConfidenceStrip(appState) {
   const confidence = buildDataConfidence(appState.snapshot, appState.dataSource, appState.liveLoad);
   return `
@@ -824,6 +897,30 @@ function dataConfidenceStrip(appState) {
           <section class="${item.tone}">
             <span>${esc(item.label)}</span>
             <strong>${esc(item.value)}</strong>
+          </section>
+        `).join("")}
+      </div>
+    </article>
+  `;
+}
+
+function hotReasonsPanel(summary) {
+  return `
+    <article class="hot-reasons-panel panel stagger-item ${summary.tone}">
+      <div class="panel-head">
+        <span class="panel-label">why hot</span>
+        <strong>${esc(summary.status)}</strong>
+      </div>
+      <div class="reason-hero">
+        <strong>${esc(summary.market)}</strong>
+        <span>${esc(summary.lede)}</span>
+      </div>
+      <div class="reason-list" aria-label="Market heat reasons">
+        ${summary.reasons.map((reason) => `
+          <section class="${reason.tone}">
+            <span>${esc(reason.label)}</span>
+            <strong>${esc(reason.value)}</strong>
+            <small>${esc(reason.detail)}</small>
           </section>
         `).join("")}
       </div>
@@ -848,6 +945,29 @@ function traderRadarPanel(radar, selectedMarketId) {
       </div>
       <div class="radar-list" aria-label="Ranked market health list">
         ${radar.rows.length ? radar.rows.map((row) => radarRow(row, selectedMarketId)).join("") : radarEmptyRow(radar.filter)}
+      </div>
+    </article>
+  `;
+}
+
+function adapterTargetsPanel(targets) {
+  return `
+    <article class="adapter-targets-panel panel stagger-item">
+      <div class="panel-head">
+        <span class="panel-label">adapter targets</span>
+        <strong>${targets.ready}/${targets.targets.length} ready</strong>
+      </div>
+      <div class="adapter-target-grid" aria-label="Terminal adapter targets">
+        ${targets.targets.map((target) => `
+          <section class="${target.tone}">
+            <div>
+              <span>${esc(target.label)}</span>
+              <strong>${esc(target.status)}</strong>
+            </div>
+            <small>${esc(target.note)}</small>
+            <p>${target.fields.map((field) => `<b>${esc(field)}</b>`).join("")}</p>
+          </section>
+        `).join("")}
       </div>
     </article>
   `;
@@ -1027,6 +1147,29 @@ async function loadLiveDecodedSource() {
   render();
 }
 
+async function copyMarketLink() {
+  const url = buildShareUrl(globalThis.location, {
+    market: state.selectedMarketId,
+    filter: state.radarFilter
+  });
+  try {
+    await globalThis.navigator?.clipboard?.writeText?.(url);
+    state.importStatus = {
+      tone: "good",
+      label: "link copied",
+      detail: url
+    };
+  } catch {
+    state.importStatus = {
+      tone: "neutral",
+      label: "link ready",
+      detail: url
+    };
+  }
+  updateUrlState();
+  render();
+}
+
 function maybeAutoLoadLivePercolator(locationLike = globalThis.location) {
   if (!shouldAutoLoadLivePercolator(locationLike)) return;
   queueMicrotask(() => {
@@ -1041,6 +1184,42 @@ export function shouldAutoLoadLivePercolator(locationLike = globalThis.location)
   const params = new URLSearchParams(locationLike?.search || "");
   if (params.get("fixture") === "1" || params.get("live") === "0") return false;
   return origin === "https://williamclay8.github.io";
+}
+
+export function readUrlState(locationLike = globalThis.location) {
+  const params = new URLSearchParams(locationLike?.search || "");
+  const filter = params.get("filter");
+  return {
+    market: params.get("market") || "",
+    filter: RADAR_FILTERS.some((entry) => entry.id === filter) ? filter : ""
+  };
+}
+
+export function buildShareUrl(locationLike = globalThis.location, selection = {}) {
+  const base = locationLike?.href || "https://williamclay8.github.io/perpscope/";
+  const url = new URL(base);
+  if (selection.market) url.searchParams.set("market", selection.market);
+  if (selection.filter && selection.filter !== "all") {
+    url.searchParams.set("filter", selection.filter);
+  } else {
+    url.searchParams.delete("filter");
+  }
+  url.hash = "";
+  return url.toString();
+}
+
+function updateUrlState(locationLike = globalThis.location, historyLike = globalThis.history) {
+  if (!historyLike?.replaceState || !locationLike?.href) return;
+  const url = buildShareUrl(locationLike, {
+    market: state.selectedMarketId,
+    filter: state.radarFilter
+  });
+  historyLike.replaceState({}, "", url);
+}
+
+function resolveSelectedMarketId(snapshot, candidate) {
+  const markets = snapshot?.markets || [];
+  return markets.some((market) => market.id === candidate) ? candidate : markets[0]?.id || "";
 }
 
 export async function fetchStaticRealSnapshot(fetcher) {
@@ -1160,7 +1339,7 @@ export function createImportedSnapshotState(imported, options = {}) {
   const tone = compatibilityReport.tone === "danger" ? "warning" : compatibilityReport.tone;
   return {
     snapshot,
-    selectedMarketId: snapshot.markets[0].id,
+    selectedMarketId: resolveSelectedMarketId(snapshot, options.selectedMarketId || readUrlState().market || snapshot.markets[0].id),
     shockPct: -3,
     compatibilityReport,
     compatibilityDiff,
@@ -1178,7 +1357,11 @@ export function createImportedSnapshotState(imported, options = {}) {
 
 function loadImportedSnapshot(imported, options = {}) {
   try {
-    Object.assign(state, createImportedSnapshotState(imported, options));
+    Object.assign(state, createImportedSnapshotState(imported, {
+      ...options,
+      selectedMarketId: state.selectedMarketId
+    }));
+    updateUrlState();
   } catch (error) {
     if (error.compatibilityReport) state.compatibilityReport = error.compatibilityReport;
     state.compatibilityDiff = compareCompatibilityReports(fixtureCompatibilityReport, state.compatibilityReport);
@@ -1234,6 +1417,115 @@ export function buildDataConfidence(snapshot, dataSource = {}, liveLoad = {}) {
       { label: "normalized", value: String(normalized), tone: normalized ? "good" : "neutral" },
       { label: "wallet", value: "read-only", tone: "good" }
     ]
+  };
+}
+
+export function buildFeedHealth(snapshot, dataSource = {}, liveLoad = {}, report = {}) {
+  const markets = snapshot?.markets || [];
+  const source = snapshot?.source || {};
+  const live = dataSource.mode === "live-decoded";
+  const loading = liveLoad.status === "loading";
+  const errored = liveLoad.status === "error";
+  const sourceLabel = live || loading || errored ? liveLoad.sourceUrl : "";
+  const updatedAt = Number(source.lastUpdatedAt || 0) || timestampSeconds(source.generatedAt);
+  const ageSec = updatedAt ? Math.max(0, Math.round(Date.now() / 1000 - updatedAt)) : 0;
+  const unitChecked = markets.filter((market) => market.dataQuality?.status === "uncertain").length;
+  const missing = Number(report?.summary?.missingCount || 0);
+  const status = loading ? "loading" : errored ? "error" : live ? "live" : dataSource.modeLabel || "fixture";
+  const tone = errored ? "danger" : loading || unitChecked || missing ? "warning" : live ? "good" : "neutral";
+  return {
+    status,
+    tone,
+    items: [
+      { label: "markets", value: String(markets.length), tone: markets.length ? "good" : "warning" },
+      { label: "slot", value: snapshot?.currentSlot ? fmtInt(snapshot.currentSlot) : "waiting", tone: snapshot?.currentSlot ? "good" : "warning" },
+      { label: "age", value: updatedAt ? compactAge(ageSec) : "unknown", tone: !updatedAt || ageSec > 300 ? "warning" : "good" },
+      { label: "unit checks", value: String(unitChecked), tone: unitChecked ? "warning" : "good" },
+      { label: "gaps", value: String(missing), tone: missing ? "warning" : "good" }
+    ],
+    chips: [
+      sourceLabel ? decodedSourceLabel(sourceLabel) : source.provider || source.kind || "local fixture",
+      source.provider,
+      source.live ? "source.live=true" : "fixture mode",
+      errored ? liveLoad.error : ""
+    ].filter(Boolean)
+  };
+}
+
+export function buildMarketHotReasons(market, radarRow = {}) {
+  const stress = Number(market?.marketStructure?.stressUsedPct || 0);
+  const skew = Number(market?.marketStructure?.oiSkewPct || 0);
+  const funding = Number(market?.funding?.bpsPerHour || 0);
+  const oracleAge = Number(market?.price?.publishAgeSec || 0);
+  const crankSlots = Number(market?.crank?.ageSlots || 0);
+  const spread = Math.abs(Number(market?.execution?.spreadBps || 0));
+  const quality = market?.dataQuality?.status === "uncertain";
+  const flags = market?.flags || [];
+  const reasons = [
+    {
+      label: "stress",
+      value: pct(stress),
+      detail: stress >= 80 ? "near cap" : stress >= 50 ? "crowded" : "contained",
+      tone: stress >= 80 ? "danger" : stress >= 50 ? "warning" : "good"
+    },
+    {
+      label: "skew",
+      value: signedPct(skew),
+      detail: Math.abs(skew) >= 35 ? "one-sided OI" : "balanced",
+      tone: Math.abs(skew) >= 35 ? "warning" : "good"
+    },
+    {
+      label: "carry",
+      value: `${signedBps(funding)} / hr`,
+      detail: Math.abs(funding) >= 2 ? "funding pressure" : "quiet",
+      tone: Math.abs(funding) >= 2 ? "warning" : "good"
+    },
+    {
+      label: "freshness",
+      value: oracleAge ? `${oracleAge.toFixed(1)}s` : `${fmtInt(crankSlots)} slots`,
+      detail: oracleAge > 10 || crankSlots > 80 ? "watch stale reads" : "fresh",
+      tone: oracleAge > 10 || crankSlots > 80 ? "warning" : "good"
+    },
+    {
+      label: "spread",
+      value: signedBps(spread).replace("+", ""),
+      detail: spread >= 20 ? "expensive entry" : "normal",
+      tone: spread >= 20 ? "warning" : "good"
+    },
+    {
+      label: "decode",
+      value: quality ? "unit check" : "normalized",
+      detail: quality ? "raw-scale value hidden" : "display-safe",
+      tone: quality ? "warning" : "good"
+    }
+  ];
+  const danger = reasons.filter((reason) => reason.tone === "danger").length + flags.filter((flag) => flag.tone === "danger").length;
+  const warning = reasons.filter((reason) => reason.tone === "warning").length + flags.filter((flag) => flag.tone === "warning").length;
+  const tone = danger ? "danger" : warning ? "warning" : "good";
+  return {
+    market: market?.name || "market",
+    status: radarRow?.scoreLabel || `${market?.healthScore || 0} score`,
+    lede: danger ? "Risk is concentrated here." : warning ? "Worth watching before sizing." : "No major heat source.",
+    tone,
+    reasons
+  };
+}
+
+export function buildAdapterTargets(snapshot = {}, report = {}) {
+  const missing = Number(report?.summary?.missingCount || 0);
+  const marketCount = (snapshot.markets || []).length;
+  const targets = TERMINAL_ADAPTER_TARGETS.map((target) => {
+    const partial = target.id === "execution-lane" && missing > 0;
+    return {
+      ...target,
+      status: partial ? "partial" : target.status,
+      tone: partial ? "warning" : target.tone,
+      note: target.id === "generic-terminal" ? `${marketCount} markets into a terminal rail` : target.note
+    };
+  });
+  return {
+    ready: targets.filter((target) => target.tone === "good").length,
+    targets
   };
 }
 
@@ -1380,6 +1672,12 @@ function timestampSeconds(value) {
   if (!value) return 0;
   const timestamp = Date.parse(value);
   return Number.isFinite(timestamp) ? Math.floor(timestamp / 1000) : 0;
+}
+
+function compactAge(seconds) {
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+  return `${Math.round(seconds / 3600)}h`;
 }
 
 function isPrivateNetworkHost(hostname) {

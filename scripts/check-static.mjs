@@ -34,6 +34,7 @@ const releaseV13Doc = readFileSync(new URL("../docs/release-v1.3.0.md", import.m
 const releaseV14Doc = readFileSync(new URL("../docs/release-v1.4.0.md", import.meta.url), "utf8");
 const releaseV15Doc = readFileSync(new URL("../docs/release-v1.5.0.md", import.meta.url), "utf8");
 const releaseV16Doc = readFileSync(new URL("../docs/release-v1.6.0.md", import.meta.url), "utf8");
+const releaseV17Doc = readFileSync(new URL("../docs/release-v1.7.0.md", import.meta.url), "utf8");
 const decodedLiveSourceDoc = readFileSync(new URL("../docs/decoded-live-source.md", import.meta.url), "utf8");
 const decoderWorker = readFileSync(new URL("../scripts/percolator-decoder-worker.mjs", import.meta.url), "utf8");
 const decoderWorkerLib = readFileSync(new URL("../src/lib/percolator-decoder-worker.js", import.meta.url), "utf8");
@@ -147,6 +148,10 @@ if (!/trader-radar-panel/.test(js) || !/buildTraderRadar/.test(js) || !/DEFAULT_
 
 if (!/shouldAutoLoadLivePercolator/.test(js) || !/dataConfidenceStrip/.test(js) || !/buildDataConfidence/.test(js) || !/RADAR_FILTERS/.test(js) || !/data-radar-filter/.test(js) || !/loading decoded Percolator feed/.test(js)) {
   failures.push("Cockpit should auto-load live Percolator on the public site and expose confidence plus radar filters.");
+}
+
+if (!/hot-reasons-panel/.test(js) || !/buildMarketHotReasons/.test(js) || !/feed-health-panel/.test(js) || !/buildFeedHealth/.test(js) || !/buildShareUrl/.test(js) || !/copy-market-link/.test(js) || !/TERMINAL_ADAPTER_TARGETS/.test(js) || !/adapter-targets-panel/.test(js)) {
+  failures.push("Cockpit should expose v1.7 why-hot explanations, feed health, share links, and adapter targets.");
 }
 
 if (!/createDecoderHttpHandler/.test(decoderWorker) || !/perpscope\.json/.test(decoderWorkerLib) || !/getMarketsByAddress/.test(decoderWorkerLib) || !/new Worker/.test(decoderWorkerLib) || !/buildPerpScopeDecodedSnapshot/.test(decoderWorkerThread) || !/PERPSCOPE_ALLOWED_ORIGIN/.test(decoderWorker) || !/PERPSCOPE_DECODER_TIMEOUT_MS/.test(decoderWorker) || !/localhost\|127/.test(decoderWorkerLib) || !/healthz/.test(decoderWorkerLib)) {
@@ -275,6 +280,7 @@ for (const doc of [
   "docs/release-v1.4.0.md",
   "docs/release-v1.5.0.md",
   "docs/release-v1.6.0.md",
+  "docs/release-v1.7.0.md",
   "docs/decoded-live-source.md",
   "docs/v0.5-plan.md"
 ]) {
@@ -419,6 +425,12 @@ for (const required of ["Load Percolator", "Trader Radar", "dataQuality", "unit-
 for (const required of ["Auto-loads", "Data Confidence", "Trader Radar filters", "?fixture=1", "Safety"]) {
   if (!releaseV16Doc.includes(required)) {
     failures.push(`v1.6 release notes should include ${required}.`);
+  }
+}
+
+for (const required of ["Why Hot", "Feed Health", "?market=", "Adapter Targets", "Safety"]) {
+  if (!releaseV17Doc.includes(required)) {
+    failures.push(`v1.7 release notes should include ${required}.`);
   }
 }
 
