@@ -1,10 +1,17 @@
 # @perpscope/percolator-adapter
 
-Read-only adapter helpers for Solana perps terminals that want PerpScope DTOs without adopting the cockpit UI.
+Read-only CLI and adapter helpers for Solana perps terminals that want PerpScope compatibility checks and DTOs without adopting the cockpit UI.
 
 ```bash
 npm install @perpscope/percolator-adapter
+npx perpscope init perpscope.capture.json
+npx perpscope compat doctor perpscope.capture.json --strict
+npx perpscope compat badge perpscope.capture.json
 ```
+
+`perpscope init` creates a sanitized starter capture. `compat doctor` tells you whether required fields pass and what to map next. `compat badge` gives you a tiny Markdown/JSON summary for READMEs, PRs, and issue handoffs.
+
+Doctor exit codes are CI-ready: `0` means required fields pass, `1` means rejected or required fields missing, and `2` means strict mode found useful-field gaps, unknown fields, or alias suggestions.
 
 ```js
 import {

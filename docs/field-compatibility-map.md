@@ -1,6 +1,6 @@
 # PerpScope Field Compatibility Map
 
-This map is the v1.0.0 implementation contract for terminal builders sending read-only Percolator-like output into PerpScope. It is source-grounded in:
+This map is the v1.0.1 implementation contract for terminal builders sending read-only Percolator-like output into PerpScope. It is source-grounded in:
 
 - `src/lib/percolator-adapter.js`
 - `src/lib/watchtower-signals.js`

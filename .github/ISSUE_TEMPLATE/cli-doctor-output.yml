@@ -1,0 +1,69 @@
+name: CLI doctor output
+description: Share PerpScope doctor output for a sanitized capture.
+title: "[doctor] "
+labels:
+  - compatibility
+  - fixture
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Paste doctor output when you want help understanding a capture or turning it into fixture coverage.
+
+        Do not include wallet paths, private keys, mnemonics, seeds, signers, signatures, transactions, instructions, order payloads, API keys, or user-identifying account data.
+  - type: dropdown
+    id: doctor-status
+    attributes:
+      label: Doctor result
+      options:
+        - PASS
+        - CHECK
+        - rejected
+        - unknown
+    validations:
+      required: true
+  - type: input
+    id: exit-code
+    attributes:
+      label: Exit code
+      description: Use `echo $?` after running doctor.
+      placeholder: "0, 1, or 2"
+    validations:
+      required: true
+  - type: textarea
+    id: doctor-output
+    attributes:
+      label: Doctor output
+      render: text
+      placeholder: |
+        PerpScope compat doctor: CHECK
+        shape: unknown
+        status: partial (74/100)
+        required: 3/3
+        useful: 6/8
+    validations:
+      required: true
+  - type: textarea
+    id: badge-output
+    attributes:
+      label: Badge output
+      render: markdown
+      placeholder: "**PerpScope compatible:** partial, 74/100, 0 alias suggestions"
+    validations:
+      required: false
+  - type: textarea
+    id: question
+    attributes:
+      label: What do you want PerpScope to do next?
+      placeholder: "Map this field, explain a missing field, or turn this into a fixture."
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety checklist
+      options:
+        - label: This output and any attached capture are sanitized and read-only.
+          required: true
+        - label: This output has no wallet, signer, transaction, instruction, order, private key, mnemonic, seed, or API key data.
+          required: true

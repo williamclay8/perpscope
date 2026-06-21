@@ -1,0 +1,77 @@
+name: Adapter mapping request
+description: Ask PerpScope to map a sanitized read-only field, alias, or section.
+title: "[mapping] "
+labels:
+  - compatibility
+  - terminal-adapter
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when `perpscope compat doctor` shows ignored fields, missing fields, or alias suggestions that should become first-class adapter mappings.
+
+        Do not include wallet paths, private keys, mnemonics, seeds, signers, signatures, transactions, instructions, order payloads, API keys, or user-identifying account data.
+  - type: input
+    id: field
+    attributes:
+      label: Field or alias
+      placeholder: "oraclePriceUsd -> price.mark"
+    validations:
+      required: true
+  - type: dropdown
+    id: target-section
+    attributes:
+      label: Target section
+      options:
+        - market identity
+        - oracle price
+        - oracle/crank freshness
+        - funding / carry
+        - market structure / OI
+        - account runway
+        - execution quality
+        - receipts
+        - funding/skew history
+        - provenance
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: doctor-output
+    attributes:
+      label: CLI doctor output
+      render: text
+      placeholder: |
+        PerpScope compat doctor: CHECK
+        required: 2/3
+        alias suggestions: 1
+    validations:
+      required: true
+  - type: textarea
+    id: sanitized-snippet
+    attributes:
+      label: Sanitized snippet
+      description: Include the smallest read-only JSON snippet that shows the field.
+      render: json
+      placeholder: |
+        {
+          "oraclePriceUsd": 181.61
+        }
+    validations:
+      required: true
+  - type: textarea
+    id: trader-value
+    attributes:
+      label: Trader or builder value
+      placeholder: "This should populate price.mark so the cockpit can show mark price and required fields pass."
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety checklist
+      options:
+        - label: This request contains only sanitized read-only data.
+          required: true
+        - label: This request has no wallet, signer, transaction, instruction, order, private key, mnemonic, seed, or API key data.
+          required: true

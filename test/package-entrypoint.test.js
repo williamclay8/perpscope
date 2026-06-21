@@ -60,16 +60,16 @@ test("adapter package exposes read-only terminal DTO helpers", () => {
   });
 
   assert.equal(detectPercolatorInputShape(percolatorFixture), "perpscope-snapshot");
-  assert.equal(PERPSCOPE_ADAPTER_VERSION, "1.0.0");
+  assert.equal(PERPSCOPE_ADAPTER_VERSION, "1.0.1");
   assert.equal(snapshot.markets.length, 3);
   assert.equal(report.compatible, true);
   assert.equal(report.status, "compatible");
   assert.equal(exported.schema, "perpscope.compatibility-report");
-  assert.equal(exported.package.version, "1.0.0");
+  assert.equal(exported.package.version, "1.0.1");
   assert.equal(drift.schema, "perpscope.compatibility-diff");
   assert.equal(drift.scoreDelta, 0);
   assert.equal(reality.schema, "perpscope.reality-check");
-  assert.equal(reality.package.version, "1.0.0");
+  assert.equal(reality.package.version, "1.0.1");
   assert.equal(reality.mapped.requiredCount, 3);
   assert.equal(signals.find((signal) => signal.id === "carry").tone, "good");
   assert.equal(history.length, 6);
@@ -97,10 +97,10 @@ test("adapter CLI exports reports and diffs", () => {
   }));
 
   assert.equal(report.schema, "perpscope.compatibility-report");
-  assert.equal(report.package.version, "1.0.0");
+  assert.equal(report.package.version, "1.0.1");
   assert.ok(report.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd"));
   assert.equal(diff.schema, "perpscope.compatibility-diff");
-  assert.equal(diff.package.version, "1.0.0");
+  assert.equal(diff.package.version, "1.0.1");
   assert.ok(diff.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd"));
   assert.equal(doctorRun.status, 1);
   assert.match(doctorRun.stdout, /PerpScope compat doctor: CHECK/);
@@ -108,7 +108,7 @@ test("adapter CLI exports reports and diffs", () => {
   assert.match(doctorRun.stdout, /Map required fields: price\.mark/);
   assert.match(badgeMarkdown, /\*\*PerpScope compatible:\*\* partial, 0\/100, 5 alias suggestions/);
   assert.equal(badgeJson.schema, "perpscope.compatibility-badge");
-  assert.equal(badgeJson.package.version, "1.0.0");
+  assert.equal(badgeJson.package.version, "1.0.1");
 });
 
 test("adapter CLI initializes captures and exposes CI-ready doctor exit codes", () => {

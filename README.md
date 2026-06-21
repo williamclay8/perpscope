@@ -1,72 +1,58 @@
 # PerpScope
 
-PerpScope is a read-only Percolator risk cockpit plus an embeddable terminal adapter kit for Solana perps interfaces.
+PerpScope is a read-only Percolator risk cockpit plus a terminal adapter kit for Solana perps builders.
 
-It is built around a simple idea: traders should understand market health, liquidation runway, oracle/crank freshness, funding/skew pressure, and execution quality without reading a wall of raw protocol output.
+It helps two groups:
+
+- **Terminal builders** can turn sanitized Percolator-like decoded output into stable frontend DTOs, compatibility reports, CI checks, and shareable badges.
+- **Perps traders and risk dashboards** can inspect market health, liquidation runway, oracle/crank freshness, funding/skew pressure, execution quality, and receipts without a wallet or order form.
 
 Live demo: [williamclay8.github.io/perpscope](https://williamclay8.github.io/perpscope/)
 
 ![PerpScope desktop cockpit](docs/screenshots/perpscope-desktop.png)
 
-## 30-Second Value
+## 2-Minute Terminal Builder Check
 
-For traders, PerpScope turns decoded perps state into scan-friendly risk: liquidation runway, oracle/crank freshness, funding and OI skew pressure, execution quality, impact, solvency, and receipt history.
-
-For terminal builders, it provides a read-only adapter package that turns Percolator-like decoded output into a stable DTO you can render in your own frontend.
-
-```js
-import {
-  buildPercolatorCompatibilityReport,
-  buildWatchtowerSignals,
-  compareCompatibilityReports,
-  normalizeFundingSkewHistory,
-  normalizePercolatorSnapshot,
-  simulatePriceShock
-} from "@perpscope/percolator-adapter";
-
-const snapshot = normalizePercolatorSnapshot(decodedPercolatorOutput);
-const market = snapshot.markets[0];
-const stress = simulatePriceShock(market, -5);
-
-const compatibility = buildPercolatorCompatibilityReport(decodedPercolatorOutput, snapshot);
-const drift = compareCompatibilityReports(previousCompatibility, compatibility);
-const signals = buildWatchtowerSignals(market, stress);
-const carryHistory = normalizeFundingSkewHistory(market.history.fundingSkew, market);
+```bash
+npm install @perpscope/percolator-adapter
+npx perpscope init perpscope.capture.json
+npx perpscope compat doctor perpscope.capture.json --strict
+npx perpscope compat badge perpscope.capture.json
 ```
 
-No wallet adapter. No signing. No order entry. Just observability, simulation, and frontend-ready data.
+Edit `perpscope.capture.json` with sanitized read-only decoded state, rerun doctor, then share the badge or open a GitHub issue.
 
-![PerpScope healthy-to-risk demo](docs/screenshots/perpscope-demo.gif)
+Doctor exit codes are CI-ready:
 
-![PerpScope CLI adapter demo](docs/screenshots/perpscope-adapter.png)
+- `0`: required fields pass
+- `1`: rejected capture or required fields missing
+- `2`: strict mode found useful-field gaps, unknown fields, or alias suggestions
 
-![PerpScope Watchtower signals](docs/screenshots/perpscope-watchtower.png)
+## Safety Boundary
 
-![PerpScope receipt timeline](docs/screenshots/perpscope-receipts.png)
+PerpScope is observability only. It does not connect wallets, read keypairs, sign transactions, submit transactions, route orders, place trades, or give trade recommendations.
 
-![PerpScope mobile cockpit](docs/screenshots/perpscope-mobile.png)
+PerpScope rejects wallet paths, private keys, mnemonics, seeds, signers, signatures, transactions, instructions, order payloads, API keys, and user-identifying account data.
 
-## Why This Exists
-
-Solana perps terminals are getting better, but terminal teams still have to decode protocol state, reconcile risk math, and present safety-critical data clearly. PerpScope is the neutral read-only layer:
-
-- a cockpit traders can keep open while checking perps risk
-- a fixture-first adapter package terminal builders can embed or test against
-- a safety boundary that never connects wallets, signs, sends, routes, or recommends trades
-
-## Why Star This
-
-Star PerpScope if you are building a Solana perps terminal, risk dashboard, or agent-readable trading workflow and want:
+## What You Get
 
 - a clean DTO for decoded Percolator-like market, account, execution, and receipt data
-- a compatibility report for pasted or dropped decoded captures before your terminal adapter is complete
+- compatibility reports for pasted or dropped decoded captures
 - compatibility diffing and alias suggestions when decoded terminal shapes drift
-- a local compatibility workbench for comparing two captures without leaving the cockpit
-- a CLI for `perpscope compat report`, `perpscope compat diff`, `perpscope compat doctor`, and `perpscope compat badge`
-- import fixtures for CLI logs, captured stdout, read-only RPC fixtures, carry history, and terminal adapter demos
-- a visual reference for presenting risk without turning the screen into protocol JSON
-- a read-only safety boundary you can copy into your own frontend
-- a package-consumer example you can run before wiring a real terminal
+- `perpscope init`, `compat doctor`, and `compat badge` for local and CI workflows
+- fixture packs for CLI logs, captured stdout, read-only RPC fixtures, carry history, and terminal adapter demos
+- a visual cockpit reference for presenting risk without dumping protocol JSON
+- issue templates for sanitized decoded shapes, adapter mapping requests, and CLI doctor output
+
+## Submit A Shape
+
+Use one of the GitHub issue forms:
+
+- [Submit sanitized decoded shape](https://github.com/williamclay8/perpscope/issues/new?template=decoded-percolator-shape.yml) via `.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml`
+- [Request adapter mapping](https://github.com/williamclay8/perpscope/issues/new?template=adapter-mapping-request.yml) via `.github/ISSUE_TEMPLATE/adapter-mapping-request.yml`
+- [Share CLI doctor output](https://github.com/williamclay8/perpscope/issues/new?template=cli-doctor-output.yml) via `.github/ISSUE_TEMPLATE/cli-doctor-output.yml`
+
+Start with `CONTRIBUTING.md` if you are submitting public fixture data.
 
 ## External Consumer Example
 
@@ -395,6 +381,7 @@ The normalized market DTO includes:
 - `docs/release-v0.8.0.md` mirrors the public release notes for the reality check and real-backed candidate fixture.
 - `docs/release-v0.9.0.md` mirrors the public release notes for the doctor, badge, and capture-template release.
 - `docs/release-v1.0.0.md` mirrors the public release notes for init and CI-ready doctor exit codes.
+- `docs/release-v1.0.1.md` mirrors the public release notes for adoption and trust polish.
 - `docs/v0.5-plan.md` documents the shipped compatibility report export.
 - `.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml` is the structured intake form for sanitized builder samples.
 - `src/fixtures/percolator-market.js` contains sample decoded market/account state plus execution receipt history.
@@ -432,7 +419,7 @@ Current public site: [williamclay8.github.io/perpscope](https://williamclay8.git
 
 - v0.4 shipped: capture intake for pasted/dropped decoded outputs, compatibility scoring, missing-field warnings, and ignored-field mapping.
 - v0.4 follow-up: field-level compatibility map for terminal import/export adapters.
-- npm package shipped: `@perpscope/percolator-adapter@1.0.0`.
+- npm package shipped: `@perpscope/percolator-adapter@1.0.1`.
 - v0.5 shipped: downloadable compatibility report export for terminal builders.
 - v0.6 shipped: compatibility diffing and alias suggestions for drifting terminal shapes.
 - v0.7 shipped: local compatibility workbench, CLI report/diff commands, and fixture packs.
