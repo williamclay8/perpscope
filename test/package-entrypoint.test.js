@@ -10,8 +10,10 @@ import {
   buildReadOnlyRpcSnapshot,
   buildWatchtowerSignals,
   detectPercolatorInputShape,
+  exportCompatibilityReport,
   normalizeFundingSkewHistory,
   normalizePercolatorSnapshot,
+  PERPSCOPE_ADAPTER_VERSION,
   simulatePriceShock,
   summarizeFundingSkewHistory,
   validateReadOnlyRpcRequest
@@ -36,11 +38,17 @@ test("adapter package exposes read-only terminal DTO helpers", () => {
   const signals = buildWatchtowerSignals(sol, stress);
   const history = normalizeFundingSkewHistory(sol.history.fundingSkew, sol);
   const report = buildPercolatorCompatibilityReport(percolatorFixture, snapshot);
+  const exported = exportCompatibilityReport(percolatorFixture, snapshot, {
+    generatedAt: "2026-06-21T00:00:00.000Z"
+  });
 
   assert.equal(detectPercolatorInputShape(percolatorFixture), "perpscope-snapshot");
+  assert.equal(PERPSCOPE_ADAPTER_VERSION, "0.5.0");
   assert.equal(snapshot.markets.length, 3);
   assert.equal(report.compatible, true);
   assert.equal(report.status, "compatible");
+  assert.equal(exported.schema, "perpscope.compatibility-report");
+  assert.equal(exported.package.version, "0.5.0");
   assert.equal(signals.find((signal) => signal.id === "carry").tone, "good");
   assert.equal(history.length, 6);
   assert.equal(history.at(-1).fundingBpsPerHour, 0.82);
@@ -81,11 +89,14 @@ test("adapter package can be packed and imported outside the monorepo", async ()
     const snapshot = packed.normalizePercolatorSnapshot(percolatorFixture);
     const history = packed.normalizeFundingSkewHistory(historyStdout);
     const report = packed.buildPercolatorCompatibilityReport(percolatorFixture, snapshot);
+    const exported = packed.exportCompatibilityReport(percolatorFixture, snapshot);
 
     assert.equal(snapshot.markets.length, 3);
     assert.equal(history.at(-1).oiSkewPct.toFixed(1), "8.6");
     assert.equal(typeof packed.buildWatchtowerSignals, "function");
     assert.equal(typeof packed.buildPercolatorCompatibilityReport, "function");
+    assert.equal(typeof packed.exportCompatibilityReport, "function");
+    assert.equal(exported.schema, "perpscope.compatibility-report");
     assert.equal(report.status, "compatible");
   } finally {
     rmSync(tempDir, { recursive: true, force: true });

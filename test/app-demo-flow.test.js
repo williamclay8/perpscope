@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   buildDeploymentSummaries,
+  buildCompatibilityReportExport,
   buildTerminalRecipeSummaries,
   createImportedSnapshotState,
   DEMO_CLI_PATH,
@@ -50,6 +51,25 @@ test("loads Try CLI demo through the same import state path", async () => {
   assert.equal(nextState.compatibilityReport.status, "partial");
   assert.ok(nextState.compatibilityReport.recognizedSections.some((section) => section.id === "receipts"));
   assert.ok(nextState.compatibilityReport.missingFields.some((field) => field.field === "history.fundingSkew"));
+  assert.equal(nextState.lastImportedInput, imported);
+});
+
+test("exports the current cockpit compatibility report", async () => {
+  const imported = JSON.parse(cliBundleText);
+  const nextState = createImportedSnapshotState(imported);
+  const exported = buildCompatibilityReportExport(
+    nextState.lastImportedInput,
+    nextState.snapshot,
+    nextState.compatibilityReport,
+    { generatedAt: "2026-06-21T00:00:00.000Z" }
+  );
+
+  assert.equal(exported.schema, "perpscope.compatibility-report");
+  assert.equal(exported.generatedAt, "2026-06-21T00:00:00.000Z");
+  assert.equal(exported.shape, "percolator-cli-bundle");
+  assert.equal(exported.source.commandSet.length, 8);
+  assert.equal(exported.summary.missingCount, 2);
+  assert.deepEqual(exported.safety, { mode: "read-only", rejected: false });
 });
 
 test("surfaces Try CLI demo fetch failures", async () => {

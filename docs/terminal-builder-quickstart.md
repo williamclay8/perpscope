@@ -14,6 +14,7 @@ npm install @perpscope/percolator-adapter
 import {
   buildPercolatorCompatibilityReport,
   buildWatchtowerSignals,
+  exportCompatibilityReport,
   normalizeFundingSkewHistory,
   normalizePercolatorSnapshot,
   simulatePriceShock
@@ -58,6 +59,7 @@ const market = snapshot.markets[0];
 const stress = simulatePriceShock(market, -5);
 
 const compatibility = buildPercolatorCompatibilityReport(decodedCapture, snapshot);
+const exportableReport = exportCompatibilityReport(decodedCapture, snapshot);
 const watchtower = buildWatchtowerSignals(market, stress);
 const carryHistory = normalizeFundingSkewHistory(market.history.fundingSkew, market);
 ```
@@ -85,6 +87,12 @@ Use `docs/field-compatibility-map.md` for accepted aliases and required fields. 
 - `funding.bpsPerHour`
 - `marketStructure.openInterestUsd`
 - `execution.bestBid` and `execution.bestAsk`
+
+## Export A Report
+
+The cockpit Export button and `exportCompatibilityReport(input, snapshot?)` produce the same JSON contract. Attach that report to the decoded-shape issue form when you want PerpScope to support a new terminal output.
+
+Example output: `examples/compatibility-report-export.json`.
 
 ## Safety Boundary
 

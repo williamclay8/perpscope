@@ -5,8 +5,10 @@ import {
   assertReadOnlySnapshot,
   buildPercolatorCompatibilityReport,
   detectPercolatorInputShape,
+  exportCompatibilityReport,
   normalizePercolatorCliBundle,
   normalizePercolatorSnapshot,
+  PERPSCOPE_ADAPTER_VERSION,
   parsePercolatorJson,
   simulatePriceShock
 } from "../src/lib/percolator-adapter.js";
@@ -131,6 +133,33 @@ test("builds a compatibility report for Percolator CLI captures", () => {
   assert.ok(report.recognizedSections.some((section) => section.id === "receipts"));
   assert.ok(report.missingFields.some((field) => field.field === "history.fundingSkew"));
   assert.doesNotMatch(JSON.stringify(report), /connect wallet|sign transaction|send transaction|place order|submit trade|trade now/i);
+});
+
+test("exports a stable compatibility report artifact", () => {
+  const exported = exportCompatibilityReport(cliBundle, undefined, {
+    generatedAt: "2026-06-21T00:00:00.000Z"
+  });
+
+  assert.equal(exported.schema, "perpscope.compatibility-report");
+  assert.equal(exported.version, 1);
+  assert.equal(exported.package.name, "@perpscope/percolator-adapter");
+  assert.equal(exported.package.version, PERPSCOPE_ADAPTER_VERSION);
+  assert.equal(exported.generatedAt, "2026-06-21T00:00:00.000Z");
+  assert.deepEqual(exported.safety, { mode: "read-only", rejected: false });
+  assert.equal(exported.shape, "percolator-cli-bundle");
+  assert.equal(exported.status, "partial");
+  assert.equal(exported.source.commandSet.length, 8);
+  assert.equal(exported.summary.missingCount, 2);
+  assert.ok(exported.recognizedSections.some((section) => section.id === "receipts"));
+  assert.ok(exported.missingFields.some((field) => field.field === "history.fundingSkew"));
+  assert.doesNotMatch(JSON.stringify(exported), /connect wallet|sign transaction|send transaction|place order|submit trade|trade now/i);
+});
+
+test("refuses to export secret-bearing compatibility captures", () => {
+  assert.throws(
+    () => exportCompatibilityReport({ market: { slab: "SOL", privateKey: "nope" } }),
+    /Refusing secret-bearing field/
+  );
 });
 
 test("reports unknown captures as not compatible instead of successful market imports", () => {

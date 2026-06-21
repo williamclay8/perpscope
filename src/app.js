@@ -2,6 +2,8 @@ import { percolatorFixture } from "./fixtures/percolator-market.js";
 import {
   buildPercolatorCompatibilityReport,
   detectPercolatorInputShape,
+  exportCompatibilityReport,
+  exportCompatibilityReportFromReport,
   normalizePercolatorSnapshot,
   parsePercolatorJson,
   simulatePriceShock
@@ -116,6 +118,7 @@ const state = {
   selectedMarketId: "sol-perp",
   shockPct: -3,
   compatibilityReport: buildPercolatorCompatibilityReport(percolatorFixture, fixtureSnapshot),
+  lastImportedInput: percolatorFixture,
   captureOpen: false,
   importStatus: {
     tone: "neutral",
@@ -320,6 +323,7 @@ function render() {
   const fileInput = app.querySelector("#json-file");
   app.querySelector("#import-json").addEventListener("click", () => fileInput.click());
   app.querySelector("#capture-import-json")?.addEventListener("click", () => fileInput.click());
+  app.querySelector("#export-compatibility")?.addEventListener("click", exportCurrentCompatibilityReport);
   app.querySelector("#try-cli").addEventListener("click", loadCliDemo);
   app.querySelectorAll("[data-capture-open]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -346,6 +350,7 @@ function render() {
     state.selectedMarketId = "sol-perp";
     state.shockPct = -3;
     state.compatibilityReport = buildPercolatorCompatibilityReport(percolatorFixture, snapshot);
+    state.lastImportedInput = percolatorFixture;
     state.captureOpen = false;
     state.importStatus = {
       tone: "neutral",
@@ -401,6 +406,7 @@ function compatibilityPanel(report) {
           <div class="import-actions">
             <button class="utility-button" data-capture-open type="button">Paste</button>
             <button class="utility-button ghost" id="capture-import-json" type="button">Import</button>
+            <button class="utility-button ghost" id="export-compatibility" type="button">Export</button>
           </div>
         </section>
       </div>
@@ -555,6 +561,7 @@ export function createImportedSnapshotState(imported, options = {}) {
     selectedMarketId: snapshot.markets[0].id,
     shockPct: -3,
     compatibilityReport,
+    lastImportedInput: imported,
     captureOpen: false,
     importStatus: {
       tone,
@@ -571,6 +578,55 @@ function loadImportedSnapshot(imported, options = {}) {
     if (error.compatibilityReport) state.compatibilityReport = error.compatibilityReport;
     throw error;
   }
+}
+
+export function buildCompatibilityReportExport(input, snapshot, report, options = {}) {
+  if (input && report?.status !== "rejected") {
+    return exportCompatibilityReport(input, snapshot, options);
+  }
+  return exportCompatibilityReportFromReport(report, options);
+}
+
+function exportCurrentCompatibilityReport() {
+  const report = buildCompatibilityReportExport(state.lastImportedInput, state.snapshot, state.compatibilityReport);
+  const filename = compatibilityReportFilename(report);
+  downloadJson(filename, report);
+  state.importStatus = {
+    tone: "good",
+    label: "report exported",
+    detail: filename
+  };
+  render();
+}
+
+function compatibilityReportFilename(report) {
+  const source = [
+    report.shape,
+    report.source?.slab || report.source?.cluster || "capture"
+  ].filter(Boolean).join("-");
+  return `perpscope-compatibility-${slugify(source)}.json`;
+}
+
+function downloadJson(filename, value) {
+  if (typeof document === "undefined" || typeof URL === "undefined" || typeof Blob === "undefined") return;
+  const blob = new Blob([`${JSON.stringify(value, null, 2)}\n`], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.rel = "noopener";
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+function slugify(value) {
+  return String(value || "capture")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 72) || "capture";
 }
 
 function rejectedCompatibilityReport(error) {

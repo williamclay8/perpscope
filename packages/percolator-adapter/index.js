@@ -2,8 +2,11 @@ export {
   assertReadOnlySnapshot,
   buildPercolatorCompatibilityReport,
   detectPercolatorInputShape,
+  exportCompatibilityReport,
+  exportCompatibilityReportFromReport,
   normalizePercolatorCliBundle,
   normalizePercolatorSnapshot,
+  PERPSCOPE_ADAPTER_VERSION,
   parsePercolatorJson,
   simulatePriceShock,
   toTerminalMarketDto

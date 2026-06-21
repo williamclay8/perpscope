@@ -1,5 +1,7 @@
 import { normalizeFundingSkewHistory } from "./funding-history.js";
 
+export const PERPSCOPE_ADAPTER_VERSION = "0.5.0";
+
 const KEYPAIR_FIELD_PATTERN = /(^|_)(secret|private|keypair|mnemonic|seed|walletPath|wallet)(_|$)/i;
 const HISTORY_COMMAND_KEYS = new Set([
   "fundinghistory",
@@ -134,6 +136,38 @@ export function buildPercolatorCompatibilityReport(input, normalizedSnapshot) {
       marketCount: snapshot.markets.length,
       commandCount: commandSet.length
     }
+  };
+}
+
+export function exportCompatibilityReport(input, normalizedSnapshot, options = {}) {
+  const snapshot = normalizedSnapshot || normalizePercolatorSnapshot(input);
+  const report = buildPercolatorCompatibilityReport(input, snapshot);
+  return exportCompatibilityReportFromReport(report, options);
+}
+
+export function exportCompatibilityReportFromReport(report, options = {}) {
+  return {
+    schema: "perpscope.compatibility-report",
+    version: 1,
+    package: {
+      name: "@perpscope/percolator-adapter",
+      version: options.packageVersion || PERPSCOPE_ADAPTER_VERSION
+    },
+    generatedAt: options.generatedAt || new Date().toISOString(),
+    safety: {
+      mode: "read-only",
+      rejected: report.status === "rejected"
+    },
+    shape: report.shape,
+    status: report.status,
+    compatible: report.compatible,
+    tone: report.tone,
+    score: report.score,
+    recognizedSections: report.recognizedSections,
+    missingFields: report.missingFields,
+    ignoredFields: report.ignoredFields,
+    source: report.source,
+    summary: report.summary
   };
 }
 

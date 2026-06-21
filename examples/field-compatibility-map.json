@@ -1,6 +1,6 @@
 {
   "name": "PerpScope field compatibility map",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "sourceFiles": [
     "src/lib/percolator-adapter.js",
     "src/lib/watchtower-signals.js",

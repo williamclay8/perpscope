@@ -1,0 +1,115 @@
+{
+  "schema": "perpscope.compatibility-report",
+  "version": 1,
+  "package": {
+    "name": "@perpscope/percolator-adapter",
+    "version": "0.5.0"
+  },
+  "generatedAt": "2026-06-21T00:00:00.000Z",
+  "safety": {
+    "mode": "read-only",
+    "rejected": false
+  },
+  "shape": "percolator-cli-bundle",
+  "status": "partial",
+  "compatible": false,
+  "tone": "warning",
+  "score": 84,
+  "recognizedSections": [
+    {
+      "id": "safety",
+      "label": "read-only safety",
+      "tone": "good",
+      "detail": "no secret-like fields found"
+    },
+    {
+      "id": "market",
+      "label": "market identity",
+      "tone": "good",
+      "detail": "1 market mapped"
+    },
+    {
+      "id": "price",
+      "label": "oracle price",
+      "tone": "good",
+      "detail": "$181.61 mark"
+    },
+    {
+      "id": "engine",
+      "label": "crank engine",
+      "tone": "good",
+      "detail": "24 slot age"
+    },
+    {
+      "id": "structure",
+      "label": "market structure",
+      "tone": "good",
+      "detail": "8.6% OI skew"
+    },
+    {
+      "id": "account",
+      "label": "account runway",
+      "tone": "good",
+      "detail": "10.3% runway"
+    },
+    {
+      "id": "execution",
+      "label": "book quality",
+      "tone": "good",
+      "detail": "10.5 bps spread"
+    },
+    {
+      "id": "receipts",
+      "label": "fill receipts",
+      "tone": "good",
+      "detail": "3 receipts"
+    },
+    {
+      "id": "provenance",
+      "label": "provenance",
+      "tone": "good",
+      "detail": "Percolator CLI demo"
+    }
+  ],
+  "missingFields": [
+    {
+      "field": "funding.bpsPerHour",
+      "label": "funding rate",
+      "severity": "warning",
+      "detail": "Makes carry pressure readable for traders watching positions."
+    },
+    {
+      "field": "history.fundingSkew",
+      "label": "funding / skew history",
+      "severity": "warning",
+      "detail": "Adds trend context beyond a single decoded snapshot."
+    }
+  ],
+  "ignoredFields": [],
+  "source": {
+    "label": "Percolator CLI demo",
+    "mode": "read-only",
+    "commandSet": [
+      "slab:get",
+      "slab:params",
+      "slab:engine",
+      "best-price",
+      "execution:receipts",
+      "slab:account",
+      "slab:accounts",
+      "slab:bitmap"
+    ],
+    "cluster": "local fixture",
+    "currentSlot": 346892110,
+    "marketCount": 1,
+    "slab": "PERCOLAT_SOL_8k4q...Qp2",
+    "program": "Perco1ator111111111111111111111111111111111"
+  },
+  "summary": {
+    "recognizedCount": 9,
+    "missingCount": 2,
+    "ignoredCount": 0,
+    "marketCount": 1,
+    "commandCount": 8
+  }
+}
