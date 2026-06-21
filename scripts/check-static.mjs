@@ -36,7 +36,9 @@ const releaseV15Doc = readFileSync(new URL("../docs/release-v1.5.0.md", import.m
 const releaseV16Doc = readFileSync(new URL("../docs/release-v1.6.0.md", import.meta.url), "utf8");
 const releaseV17Doc = readFileSync(new URL("../docs/release-v1.7.0.md", import.meta.url), "utf8");
 const releaseV18Doc = readFileSync(new URL("../docs/release-v1.8.0.md", import.meta.url), "utf8");
+const releaseV19Doc = readFileSync(new URL("../docs/release-v1.9.0.md", import.meta.url), "utf8");
 const adapterTargetsDoc = readFileSync(new URL("../docs/adapter-targets.md", import.meta.url), "utf8");
+const embedIntegrationDoc = readFileSync(new URL("../docs/embed-integration.md", import.meta.url), "utf8");
 const decodedLiveSourceDoc = readFileSync(new URL("../docs/decoded-live-source.md", import.meta.url), "utf8");
 const decoderWorker = readFileSync(new URL("../scripts/percolator-decoder-worker.mjs", import.meta.url), "utf8");
 const decoderWorkerLib = readFileSync(new URL("../src/lib/percolator-decoder-worker.js", import.meta.url), "utf8");
@@ -65,6 +67,10 @@ const packageJson = JSON.parse(packageManifest);
 const packageCli = readFileSync(new URL("../packages/percolator-adapter/bin/perpscope.mjs", import.meta.url), "utf8");
 const consumerPackage = readFileSync(new URL("../examples/adapter-consumer/package.json", import.meta.url), "utf8");
 const consumerDemo = readFileSync(new URL("../examples/adapter-consumer/demo.mjs", import.meta.url), "utf8");
+const embedConsumerReadme = readFileSync(new URL("../examples/embed-consumer/README.md", import.meta.url), "utf8");
+const embedConsumerDemo = readFileSync(new URL("../examples/embed-consumer/demo.mjs", import.meta.url), "utf8");
+const embedConsumerHtml = readFileSync(new URL("../examples/embed-consumer/index.html", import.meta.url), "utf8");
+const perpscopeExportSample = JSON.parse(readFileSync(new URL("../examples/perpscope-export.sample.json", import.meta.url), "utf8"));
 
 const failures = [];
 
@@ -256,6 +262,10 @@ if (!readme.includes("examples/adapter-consumer/") || !readme.includes("docs/fee
   failures.push("README should link the external consumer example and feedback loop.");
 }
 
+if (!readme.includes("Embed In Your Terminal In 60 Seconds") || !readme.includes("docs/embed-integration.md") || !readme.includes("examples/embed-consumer/") || !readme.includes("examples/perpscope-export.sample.json") || !readme.includes("perpscope.export.v1")) {
+  failures.push("README should document the v1.9 embed and export integration path.");
+}
+
 if (!readme.includes("npm install @perpscope/percolator-adapter") || !readme.includes("@perpscope/percolator-adapter@1.1.0") || !readme.includes("2-Minute Terminal Builder Check") || !readme.includes("Submit A Shape")) {
   failures.push("README should document the published adapter package.");
 }
@@ -288,7 +298,9 @@ for (const doc of [
   "docs/release-v1.6.0.md",
   "docs/release-v1.7.0.md",
   "docs/release-v1.8.0.md",
+  "docs/release-v1.9.0.md",
   "docs/adapter-targets.md",
+  "docs/embed-integration.md",
   "docs/decoded-live-source.md",
   "docs/v0.5-plan.md"
 ]) {
@@ -448,9 +460,55 @@ for (const required of ["perpscope.export.v1", "?embed=feed", "Export Hub", "ada
   }
 }
 
+for (const required of ["perpscope.export.v1", "docs/embed-integration.md", "examples/perpscope-export.sample.json", "examples/embed-consumer", "?embed=market", "Safety"]) {
+  if (!releaseV19Doc.includes(required)) {
+    failures.push(`v1.9 release notes should include ${required}.`);
+  }
+}
+
 for (const required of ["Terminal Rail", "Risk Overlay", "Execution Lane", "Feed Monitor", "?embed=market"]) {
   if (!adapterTargetsDoc.includes(required)) {
     failures.push(`Adapter target docs should include ${required}.`);
+  }
+}
+
+for (const required of ["?embed=feed", "?embed=radar&filter=hot", "?embed=market&market=wif-perp", "perpscope.export.v1", "https://perpscope-decoder-worker.onrender.com/perpscope.json", "Fields To Trust", "Safety"]) {
+  if (!embedIntegrationDoc.includes(required)) {
+    failures.push(`Embed integration docs should include ${required}.`);
+  }
+}
+
+if (
+  perpscopeExportSample.schema !== "perpscope.export.v1" ||
+  perpscopeExportSample.version !== "1.9.0" ||
+  perpscopeExportSample.selection?.embed !== "market" ||
+  perpscopeExportSample.safety?.wallet !== false ||
+  perpscopeExportSample.safety?.signer !== false ||
+  perpscopeExportSample.safety?.transaction !== false ||
+  perpscopeExportSample.safety?.orderRouting !== false ||
+  !perpscopeExportSample.radar?.rows?.length ||
+  !perpscopeExportSample.market?.whyHot?.reasons?.length ||
+  !perpscopeExportSample.feedHealth?.items?.some((item) => item.label === "unit checks") ||
+  !perpscopeExportSample.adapterTargets?.targets?.length
+) {
+  failures.push("PerpScope export sample should expose schema, version, selection, feed health, radar, why-hot, adapter targets, and read-only safety.");
+}
+
+for (const required of ["perpscope-export.sample.json", "feedHealth", "radar", "whyHot", "readOnly"]) {
+  if (!embedConsumerDemo.includes(required)) {
+    failures.push(`Embed consumer demo should include ${required}.`);
+  }
+}
+
+for (const required of ["?embed=feed", "?embed=radar", "?embed=market", "perpscope.export.v1", "../perpscope-export.sample.json"]) {
+  if (!embedConsumerHtml.includes(required)) {
+    failures.push(`Embed consumer HTML should include ${required}.`);
+  }
+}
+
+for (const required of ["?embed=feed", "?embed=radar&filter=hot", "?embed=market&market=wif-perp", "perpscope.export.v1", "read-only"]) {
+  if (!embedConsumerReadme.includes(required)) {
+    failures.push(`Embed consumer README should include ${required}.`);
   }
 }
 

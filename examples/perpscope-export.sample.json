@@ -1,0 +1,261 @@
+{
+  "schema": "perpscope.export.v1",
+  "version": "1.9.0",
+  "generatedAt": "2026-06-21T00:00:00.000Z",
+  "selection": {
+    "market": "wif-perp",
+    "filter": "hot",
+    "embed": "market",
+    "shareUrl": "https://williamclay8.github.io/perpscope/?market=wif-perp&filter=hot&embed=market"
+  },
+  "source": {
+    "label": "PerpScope fixture",
+    "cluster": "mainnet-beta",
+    "currentSlot": 346892110,
+    "live": false,
+    "provider": "perpscope",
+    "mode": "fixture"
+  },
+  "feedHealth": {
+    "status": "fixture",
+    "tone": "neutral",
+    "items": [
+      {
+        "label": "markets",
+        "value": "3",
+        "tone": "good"
+      },
+      {
+        "label": "slot",
+        "value": "346,892,110",
+        "tone": "good"
+      },
+      {
+        "label": "age",
+        "value": "26h",
+        "tone": "warning"
+      },
+      {
+        "label": "unit checks",
+        "value": "0",
+        "tone": "good"
+      },
+      {
+        "label": "gaps",
+        "value": "0",
+        "tone": "good"
+      }
+    ],
+    "chips": [
+      "local fixture",
+      "fixture mode"
+    ]
+  },
+  "radar": {
+    "filter": "hot",
+    "rows": [
+      {
+        "id": "wif-perp",
+        "name": "WIF-PERP",
+        "heat": 100,
+        "tone": "danger",
+        "detail": "85.2% stress / +51.9% skew / +3.9 bps carry",
+        "scoreLabel": "100 heat",
+        "qualityLabel": "normalized",
+        "rank": "01"
+      }
+    ],
+    "allRows": [
+      {
+        "id": "wif-perp",
+        "name": "WIF-PERP",
+        "heat": 100,
+        "tone": "danger",
+        "detail": "85.2% stress / +51.9% skew / +3.9 bps carry",
+        "scoreLabel": "100 heat",
+        "qualityLabel": "normalized",
+        "rank": "01"
+      }
+    ],
+    "tiles": [
+      {
+        "label": "hottest",
+        "value": "WIF-PERP",
+        "tone": "danger"
+      },
+      {
+        "label": "unit checks",
+        "value": "0",
+        "tone": "good"
+      },
+      {
+        "label": "markets",
+        "value": "2/3",
+        "tone": "neutral"
+      }
+    ]
+  },
+  "market": {
+    "id": "wif-perp",
+    "name": "WIF-PERP",
+    "status": "risk",
+    "healthScore": 7,
+    "price": {
+      "mark": 1.79,
+      "index": 1.84,
+      "publishAgeSec": 8.8,
+      "confidenceBps": 54
+    },
+    "account": {
+      "label": "Demo trader",
+      "side": "long",
+      "positionNotionalUsd": 60860,
+      "equityUsd": 673.2,
+      "liquidationPrice": 1.765,
+      "liquidationDistancePct": 1.3966480446927447,
+      "marginBufferUsd": -4804.2
+    },
+    "marketStructure": {
+      "openInterestUsd": 690000,
+      "oiSkewPct": 51.8840579710145,
+      "stressUsedPct": 85.2,
+      "sideMode": "risk-reduction"
+    },
+    "funding": {
+      "bpsPerHour": 3.9,
+      "dailyUsd": 569.6496
+    },
+    "execution": {
+      "spreadBps": 94.73390916689831,
+      "impact10kBps": 42.6,
+      "impact50kBps": 138.9,
+      "markout1mBps": -18.5,
+      "routeLatencyMs": 481
+    },
+    "flags": [
+      {
+        "tone": "danger",
+        "label": "liq band tight"
+      },
+      {
+        "tone": "danger",
+        "label": "below maintenance"
+      },
+      {
+        "tone": "danger",
+        "label": "oracle stale"
+      },
+      {
+        "tone": "danger",
+        "label": "crank lag"
+      }
+    ],
+    "whyHot": {
+      "market": "WIF-PERP",
+      "status": "100 heat",
+      "lede": "Risk is concentrated here.",
+      "tone": "danger",
+      "reasons": [
+        {
+          "label": "stress",
+          "value": "85.2%",
+          "detail": "near cap",
+          "tone": "danger"
+        },
+        {
+          "label": "skew",
+          "value": "+51.9%",
+          "detail": "one-sided OI",
+          "tone": "warning"
+        },
+        {
+          "label": "carry",
+          "value": "+3.9 bps / hr",
+          "detail": "funding pressure",
+          "tone": "warning"
+        },
+        {
+          "label": "freshness",
+          "value": "8.8s",
+          "detail": "watch stale reads",
+          "tone": "warning"
+        },
+        {
+          "label": "spread",
+          "value": "94.7 bps",
+          "detail": "expensive entry",
+          "tone": "warning"
+        },
+        {
+          "label": "decode",
+          "value": "normalized",
+          "detail": "display-safe",
+          "tone": "good"
+        }
+      ]
+    }
+  },
+  "adapterTargets": {
+    "ready": 3,
+    "targets": [
+      {
+        "id": "generic-terminal",
+        "label": "Generic terminal",
+        "status": "ready",
+        "tone": "good",
+        "fields": [
+          "symbol",
+          "mark",
+          "heat",
+          "source"
+        ],
+        "note": "3 markets into a terminal rail"
+      },
+      {
+        "id": "risk-overlay",
+        "label": "Risk overlay",
+        "status": "mapped",
+        "tone": "good",
+        "fields": [
+          "runway",
+          "stress",
+          "flags",
+          "reasons"
+        ],
+        "note": "overlay for existing order tickets"
+      },
+      {
+        "id": "execution-lane",
+        "label": "Execution lane",
+        "status": "partial",
+        "tone": "warning",
+        "fields": [
+          "spread",
+          "impact",
+          "receipts"
+        ],
+        "note": "waits on richer fill receipts"
+      },
+      {
+        "id": "feed-monitor",
+        "label": "Feed monitor",
+        "status": "ready",
+        "tone": "good",
+        "fields": [
+          "slot",
+          "age",
+          "markets",
+          "unit checks"
+        ],
+        "note": "health widget for builders"
+      }
+    ]
+  },
+  "safety": {
+    "mode": "read-only",
+    "wallet": false,
+    "signer": false,
+    "transaction": false,
+    "orderRouting": false
+  }
+}

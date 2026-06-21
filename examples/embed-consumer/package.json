@@ -1,0 +1,10 @@
+{
+  "name": "perpscope-embed-consumer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tiny read-only PerpScope embed and export consumer example.",
+  "scripts": {
+    "demo": "node demo.mjs"
+  }
+}

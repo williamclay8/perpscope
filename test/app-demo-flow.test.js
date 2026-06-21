@@ -53,6 +53,10 @@ const decodedLiveSourceText = readFileSync(
   "utf8"
 );
 const decodedLiveSource = JSON.parse(decodedLiveSourceText);
+const perpscopeExportSample = JSON.parse(readFileSync(
+  new URL("../examples/perpscope-export.sample.json", import.meta.url),
+  "utf8"
+));
 
 test("loads Try CLI demo through the same import state path", async () => {
   let requestedUrl = "";
@@ -338,7 +342,7 @@ test("builds v1.7 trader explanations, feed health, adapter targets, and share l
   assert.deepEqual(urlState, { market: "devnet-small-1", filter: "hot", embed: "" });
 });
 
-test("builds v1.8 export payloads and embed URLs", () => {
+test("builds v1.9 export payloads, fixtures, and embed URLs", () => {
   const snapshot = normalizePercolatorSnapshot(decodedLiveSource);
   snapshot.markets[0].dataQuality = { status: "uncertain" };
   const report = buildPercolatorCompatibilityReport(decodedLiveSource, snapshot);
@@ -373,11 +377,25 @@ test("builds v1.8 export payloads and embed URLs", () => {
   const urlState = readUrlState({ search: "?market=devnet-small-1&filter=hot&embed=market" });
 
   assert.equal(exported.schema, "perpscope.export.v1");
-  assert.equal(exported.version, "1.8.0");
+  assert.equal(exported.version, "1.9.0");
   assert.equal(exported.selection.embed, "radar");
   assert.equal(exported.radar.filter, "unit-checked");
   assert.equal(exported.market.whyHot.reasons.length, 6);
   assert.equal(exported.safety.orderRouting, false);
+  assert.equal(perpscopeExportSample.schema, "perpscope.export.v1");
+  assert.equal(perpscopeExportSample.version, "1.9.0");
+  assert.equal(perpscopeExportSample.selection.embed, "market");
+  assert.equal(perpscopeExportSample.feedHealth.items.find((item) => item.label === "unit checks").value, "0");
+  assert.equal(perpscopeExportSample.radar.rows[0].id, "wif-perp");
+  assert.equal(perpscopeExportSample.market.whyHot.reasons.length, 6);
+  assert.equal(perpscopeExportSample.adapterTargets.ready, 3);
+  assert.deepEqual(perpscopeExportSample.safety, {
+    mode: "read-only",
+    wallet: false,
+    signer: false,
+    transaction: false,
+    orderRouting: false
+  });
   assert.equal(embedUrl, `https://williamclay8.github.io/perpscope/?fixture=1&market=${snapshot.markets[0].id}&filter=hot&embed=feed`);
   assert.deepEqual(urlState, { market: "devnet-small-1", filter: "hot", embed: "market" });
 });

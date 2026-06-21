@@ -11,6 +11,27 @@ Live demo: [williamclay8.github.io/perpscope](https://williamclay8.github.io/per
 
 ![PerpScope desktop cockpit](docs/screenshots/perpscope-desktop.png)
 
+## Embed In Your Terminal In 60 Seconds
+
+```html
+<iframe title="PerpScope feed" src="https://williamclay8.github.io/perpscope/?embed=feed"></iframe>
+<iframe title="PerpScope hot markets" src="https://williamclay8.github.io/perpscope/?embed=radar&filter=hot"></iframe>
+<iframe title="PerpScope market risk" src="https://williamclay8.github.io/perpscope/?embed=market&market=wif-perp"></iframe>
+```
+
+```js
+const response = await fetch("https://raw.githubusercontent.com/williamclay8/perpscope/main/examples/perpscope-export.sample.json");
+const payload = await response.json();
+
+if (payload.schema !== "perpscope.export.v1") throw new Error("Unexpected export schema");
+
+const market = payload.market.name;
+const heat = payload.radar.rows[0].scoreLabel;
+const reasons = payload.market.whyHot.reasons;
+```
+
+Use `docs/embed-integration.md` for the copy-paste guide and `examples/embed-consumer/` for a tiny iframe plus JSON parser example.
+
 ## 2-Minute Terminal Builder Check
 
 ```bash
@@ -161,6 +182,8 @@ examples/percolator-mainnet-sol.readonly-rpc.json
 examples/percolator-devnet-wif.readonly-rpc.json
 examples/funding-skew-history.stdout.json
 examples/adapter-consumer/
+examples/embed-consumer/
+examples/perpscope-export.sample.json
 examples/terminal-recipes.json
 examples/terminal-dto-export.json
 examples/fixture-pack-minimal-terminal.json
@@ -231,6 +254,8 @@ schemas/funding-skew-history.schema.json
 The source-backed adapter field map lives in `docs/field-compatibility-map.md`, with a JSON manifest at `examples/field-compatibility-map.json`, an export artifact at `examples/compatibility-report-export.json`, a diff artifact at `examples/compatibility-diff.json`, and fixture packs such as `examples/fixture-pack-drifted-aliases.json`, `examples/fixture-pack-real-sanitized-rpc-shape.json`, and `examples/static-real-snapshot.json`.
 
 The terminal-builder quickstart lives in `docs/terminal-builder-quickstart.md`.
+
+The embed and export integration guide lives in `docs/embed-integration.md`.
 
 ## Embeddable Adapter Package
 
@@ -397,7 +422,9 @@ The normalized market DTO includes:
 - `docs/release-v1.6.0.md` mirrors the public release notes for automatic live loading, confidence, and radar filters.
 - `docs/release-v1.7.0.md` mirrors the public release notes for why-hot explanations, feed health, share links, and adapter targets.
 - `docs/release-v1.8.0.md` mirrors the public release notes for exportable JSON and embed widgets.
+- `docs/release-v1.9.0.md` mirrors the public release notes for copy-paste embeds and export consumer examples.
 - `docs/adapter-targets.md` documents the terminal rail, risk overlay, execution lane, feed monitor, and embed contracts.
+- `docs/embed-integration.md` documents iframe widgets, the export fixture, and trusted display fields.
 - `docs/decoded-live-source.md` documents the CORS endpoint contract for decoded Percolator live feeds.
 - `docs/v0.5-plan.md` documents the shipped compatibility report export.
 - `.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml` is the structured intake form for sanitized builder samples.
