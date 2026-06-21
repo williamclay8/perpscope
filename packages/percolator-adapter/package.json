@@ -5,7 +5,7 @@
   "description": "Read-only Percolator adapter helpers for Solana perps terminals.",
   "main": "./index.js",
   "bin": {
-    "perpscope": "./bin/perpscope.mjs"
+    "perpscope": "bin/perpscope.mjs"
   },
   "exports": {
     ".": "./index.js"
