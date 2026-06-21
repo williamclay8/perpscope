@@ -102,6 +102,19 @@ Use `compareCompatibilityReports(previous, current)` when a terminal output chan
 
 Example output: `examples/compatibility-diff.json`.
 
+## Use The CLI
+
+```bash
+perpscope compat report examples/fixture-pack-drifted-aliases.json
+perpscope compat diff examples/fixture-pack-minimal-terminal.json examples/fixture-pack-drifted-aliases.json
+```
+
+Fixture packs for local testing:
+
+- `examples/fixture-pack-minimal-terminal.json`
+- `examples/fixture-pack-drifted-aliases.json`
+- `examples/fixture-pack-receipt-heavy-execution.json`
+
 ## Safety Boundary
 
 Keep captures read-only. Do not send wallet paths, private keys, mnemonics, seeds, signers, transactions, instructions, order payloads, API keys, or user-identifying account data.

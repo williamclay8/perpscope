@@ -61,6 +61,8 @@ Star PerpScope if you are building a Solana perps terminal, risk dashboard, or a
 - a clean DTO for decoded Percolator-like market, account, execution, and receipt data
 - a compatibility report for pasted or dropped decoded captures before your terminal adapter is complete
 - compatibility diffing and alias suggestions when decoded terminal shapes drift
+- a local compatibility workbench for comparing two captures without leaving the cockpit
+- a CLI for `perpscope compat report` and `perpscope compat diff`
 - import fixtures for CLI logs, captured stdout, read-only RPC fixtures, carry history, and terminal adapter demos
 - a visual reference for presenting risk without turning the screen into protocol JSON
 - a read-only safety boundary you can copy into your own frontend
@@ -169,6 +171,9 @@ examples/funding-skew-history.stdout.json
 examples/adapter-consumer/
 examples/terminal-recipes.json
 examples/terminal-dto-export.json
+examples/fixture-pack-minimal-terminal.json
+examples/fixture-pack-drifted-aliases.json
+examples/fixture-pack-receipt-heavy-execution.json
 ```
 
 The import path accepts full PerpScope snapshots shaped as:
@@ -228,7 +233,7 @@ schemas/read-only-rpc-fetch.schema.json
 schemas/funding-skew-history.schema.json
 ```
 
-The source-backed adapter field map lives in `docs/field-compatibility-map.md`, with a JSON manifest at `examples/field-compatibility-map.json`, an export artifact at `examples/compatibility-report-export.json`, and a diff artifact at `examples/compatibility-diff.json`.
+The source-backed adapter field map lives in `docs/field-compatibility-map.md`, with a JSON manifest at `examples/field-compatibility-map.json`, an export artifact at `examples/compatibility-report-export.json`, a diff artifact at `examples/compatibility-diff.json`, and fixture packs such as `examples/fixture-pack-drifted-aliases.json`.
 
 The terminal-builder quickstart lives in `docs/terminal-builder-quickstart.md`.
 
@@ -256,6 +261,13 @@ const carryHistory = normalizeFundingSkewHistory(market.history.fundingSkew, mar
 ```
 
 The package is intentionally side-effect free. It does not create wallets, sign, send, route, or submit transactions.
+
+CLI:
+
+```bash
+perpscope compat report examples/fixture-pack-drifted-aliases.json
+perpscope compat diff examples/fixture-pack-minimal-terminal.json examples/fixture-pack-drifted-aliases.json
+```
 
 ## Terminal Builder Quickstart
 
@@ -356,6 +368,7 @@ The normalized market DTO includes:
 - `docs/release-v0.4.0.md` mirrors the public release notes for the npm-live v0.4 release.
 - `docs/release-v0.5.0.md` mirrors the public release notes for the report export release.
 - `docs/release-v0.6.0.md` mirrors the public release notes for the drift and alias suggestion release.
+- `docs/release-v0.7.0.md` mirrors the public release notes for the workbench, CLI, and fixture-pack release.
 - `docs/v0.5-plan.md` documents the shipped compatibility report export.
 - `.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml` is the structured intake form for sanitized builder samples.
 - `src/fixtures/percolator-market.js` contains sample decoded market/account state plus execution receipt history.
@@ -393,7 +406,8 @@ Current public site: [williamclay8.github.io/perpscope](https://williamclay8.git
 
 - v0.4 shipped: capture intake for pasted/dropped decoded outputs, compatibility scoring, missing-field warnings, and ignored-field mapping.
 - v0.4 follow-up: field-level compatibility map for terminal import/export adapters.
-- npm package shipped: `@perpscope/percolator-adapter@0.6.0`.
+- npm package shipped: `@perpscope/percolator-adapter@0.7.0`.
 - v0.5 shipped: downloadable compatibility report export for terminal builders.
 - v0.6 shipped: compatibility diffing and alias suggestions for drifting terminal shapes.
+- v0.7 shipped: local compatibility workbench, CLI report/diff commands, and fixture packs.
 - More deployment fixtures as Percolator terminal teams share read-only shapes.

@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import {
   buildDeploymentSummaries,
   buildCompatibilityReportExport,
+  createCompatibilityWorkbenchState,
   buildTerminalRecipeSummaries,
   createImportedSnapshotState,
   DEMO_CLI_PATH,
@@ -73,6 +74,30 @@ test("exports the current cockpit compatibility report", async () => {
   assert.equal(exported.summary.missingCount, 2);
   assert.deepEqual(exported.safety, { mode: "read-only", rejected: false });
   assert.equal(exported.summary.suggestionCount, 0);
+});
+
+test("builds a local compatibility workbench diff", () => {
+  const previous = {
+    label: "workbench previous",
+    market: { symbol: "SOL-PERP", slab: "PERCOLAT_SOL", program: "Perco1ator" },
+    oracle: { priceUsd: 181.61, ageSecs: 2 },
+    engine: { fundingRateBpsPerHour: 0.82, openInterestUsd: 12500000 },
+    execution: { bestBid: 181.52, bestAsk: 181.71 }
+  };
+  const current = {
+    label: "workbench current",
+    market: { symbol: "SOL-PERP", slab: "PERCOLAT_SOL", program: "Perco1ator" },
+    oraclePriceUsd: 181.61,
+    oracleAgeSeconds: 2,
+    oiUsd: 12500000
+  };
+  const workbench = createCompatibilityWorkbenchState(previous, current);
+
+  assert.equal(workbench.diff.schema, "perpscope.compatibility-diff");
+  assert.ok(workbench.diff.summary.newMissingCount > 0);
+  assert.ok(workbench.diff.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd"));
+  assert.match(workbench.previousText, /workbench previous/);
+  assert.match(workbench.currentText, /workbench current/);
 });
 
 test("surfaces Try CLI demo fetch failures", async () => {

@@ -63,6 +63,19 @@ The full field-level contract is documented in `../../docs/field-compatibility-m
 
 `compareCompatibilityReports(previous, current)` returns `perpscope.compatibility-diff` with score delta, status change, new/resolved fields, section drift, and merged alias suggestions.
 
+## CLI
+
+```bash
+perpscope compat report capture.json
+perpscope compat diff previous.json current.json
+```
+
+Try it locally with:
+
+```bash
+perpscope compat diff ../../examples/fixture-pack-minimal-terminal.json ../../examples/fixture-pack-drifted-aliases.json
+```
+
 ## DTO Example
 
 ```js

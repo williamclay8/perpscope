@@ -31,6 +31,9 @@ const packageDir = fileURLToPath(new URL("../packages/percolator-adapter/", impo
 const consumerDemo = fileURLToPath(new URL("../examples/adapter-consumer/demo.mjs", import.meta.url));
 const cliFixture = fileURLToPath(new URL("../examples/percolator-cli.bundle.json", import.meta.url));
 const fundingFixture = fileURLToPath(new URL("../examples/funding-skew-history.stdout.json", import.meta.url));
+const minimalFixture = fileURLToPath(new URL("../examples/fixture-pack-minimal-terminal.json", import.meta.url));
+const driftedFixture = fileURLToPath(new URL("../examples/fixture-pack-drifted-aliases.json", import.meta.url));
+const packageCli = fileURLToPath(new URL("../packages/percolator-adapter/bin/perpscope.mjs", import.meta.url));
 
 test("adapter package exposes read-only terminal DTO helpers", () => {
   const snapshot = normalizePercolatorSnapshot(percolatorFixture);
@@ -47,18 +50,36 @@ test("adapter package exposes read-only terminal DTO helpers", () => {
   });
 
   assert.equal(detectPercolatorInputShape(percolatorFixture), "perpscope-snapshot");
-  assert.equal(PERPSCOPE_ADAPTER_VERSION, "0.6.0");
+  assert.equal(PERPSCOPE_ADAPTER_VERSION, "0.7.0");
   assert.equal(snapshot.markets.length, 3);
   assert.equal(report.compatible, true);
   assert.equal(report.status, "compatible");
   assert.equal(exported.schema, "perpscope.compatibility-report");
-  assert.equal(exported.package.version, "0.6.0");
+  assert.equal(exported.package.version, "0.7.0");
   assert.equal(drift.schema, "perpscope.compatibility-diff");
   assert.equal(drift.scoreDelta, 0);
   assert.equal(signals.find((signal) => signal.id === "carry").tone, "good");
   assert.equal(history.length, 6);
   assert.equal(history.at(-1).fundingBpsPerHour, 0.82);
   assert.doesNotMatch(JSON.stringify({ signals, history }), /connect wallet|sign transaction|send transaction|place order|submit trade|trade now/i);
+});
+
+test("adapter CLI exports reports and diffs", () => {
+  const reportOutput = execFileSync("node", [packageCli, "compat", "report", driftedFixture], {
+    encoding: "utf8"
+  });
+  const report = JSON.parse(reportOutput);
+  const diffOutput = execFileSync("node", [packageCli, "compat", "diff", minimalFixture, driftedFixture], {
+    encoding: "utf8"
+  });
+  const diff = JSON.parse(diffOutput);
+
+  assert.equal(report.schema, "perpscope.compatibility-report");
+  assert.equal(report.package.version, "0.7.0");
+  assert.ok(report.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd"));
+  assert.equal(diff.schema, "perpscope.compatibility-diff");
+  assert.equal(diff.package.version, "0.7.0");
+  assert.ok(diff.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd"));
 });
 
 test("adapter package normalizes captured carry history logs", () => {

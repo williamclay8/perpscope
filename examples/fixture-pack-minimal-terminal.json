@@ -1,0 +1,45 @@
+{
+  "label": "Fixture pack / minimal terminal capture",
+  "cluster": "local fixture",
+  "market": {
+    "symbol": "SOL-PERP",
+    "base": "SOL",
+    "quote": "USDC",
+    "slab": "PERCOLAT_SOL_8k4q...Qp2",
+    "program": "Perco1ator111111111111111111111111111111111"
+  },
+  "oracle": {
+    "priceUsd": 181.61,
+    "ageSecs": 2
+  },
+  "engine": {
+    "currentSlot": 346892110,
+    "lastCrankSlot": 346892086,
+    "fundingRateBpsPerHour": 0.82,
+    "openInterestUsd": 2430000,
+    "longOpenInterestUsd": 1320000,
+    "shortOpenInterestUsd": 1110000,
+    "insuranceUsd": 148000,
+    "claimUsd": 1,
+    "socialLossUsd": 0
+  },
+  "account": {
+    "label": "Fixture observer",
+    "side": "long",
+    "positionSize": 420,
+    "positionNotionalUsd": 76276.2,
+    "collateralUsd": 8400,
+    "unrealizedPnlUsd": 3067.2,
+    "fundingPnlUsd": -32.4,
+    "liquidationPrice": 162.94
+  },
+  "execution": {
+    "bestBid": 181.52,
+    "bestAsk": 181.71,
+    "impact10kBps": 8.4,
+    "impact50kBps": 31.2,
+    "routeLatencyMs": 142,
+    "priorityFeeMicrolamports": 2200,
+    "fillQualityScore": 84
+  }
+}

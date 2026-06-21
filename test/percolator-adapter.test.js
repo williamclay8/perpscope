@@ -49,6 +49,15 @@ const terminalRecipes = JSON.parse(
 const historyStdout = JSON.parse(
   readFileSync(new URL("../examples/funding-skew-history.stdout.json", import.meta.url), "utf8")
 );
+const minimalFixturePack = JSON.parse(
+  readFileSync(new URL("../examples/fixture-pack-minimal-terminal.json", import.meta.url), "utf8")
+);
+const driftedFixturePack = JSON.parse(
+  readFileSync(new URL("../examples/fixture-pack-drifted-aliases.json", import.meta.url), "utf8")
+);
+const receiptHeavyFixturePack = JSON.parse(
+  readFileSync(new URL("../examples/fixture-pack-receipt-heavy-execution.json", import.meta.url), "utf8")
+);
 
 test("normalizes Percolator-like market state into terminal DTOs", () => {
   const snapshot = normalizePercolatorSnapshot(percolatorFixture);
@@ -198,6 +207,22 @@ test("compares compatibility reports for drift and alias suggestions", () => {
   assert.equal(diff.summary.suggestionCount, 3);
   assert.ok(diff.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd"));
   assert.ok(diff.removedSections.some((section) => section.id === "history"));
+});
+
+test("normalizes synthetic fixture packs for product-led discovery", () => {
+  const minimalReport = buildPercolatorCompatibilityReport(minimalFixturePack);
+  const driftedReport = buildPercolatorCompatibilityReport(driftedFixturePack);
+  const receiptSnapshot = normalizePercolatorSnapshot(receiptHeavyFixturePack);
+  const receiptReport = buildPercolatorCompatibilityReport(receiptHeavyFixturePack, receiptSnapshot);
+  const diff = compareCompatibilityReports(minimalReport, driftedReport);
+
+  assert.equal(minimalReport.status, "partial");
+  assert.ok(minimalReport.recognizedSections.some((section) => section.id === "price"));
+  assert.ok(driftedReport.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd"));
+  assert.equal(receiptSnapshot.markets[0].execution.receipts.length, 3);
+  assert.ok(receiptReport.recognizedSections.some((section) => section.id === "receipts"));
+  assert.equal(diff.schema, "perpscope.compatibility-diff");
+  assert.ok(diff.summary.suggestionCount >= 1);
 });
 
 test("refuses to export secret-bearing compatibility captures", () => {

@@ -1,6 +1,6 @@
 {
   "name": "PerpScope field compatibility map",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "sourceFiles": [
     "src/lib/percolator-adapter.js",
     "src/lib/watchtower-signals.js",
@@ -723,7 +723,10 @@
     "examples/funding-skew-history.stdout.json",
     "examples/percolator-mainnet-sol.readonly-rpc.json",
     "examples/percolator-devnet-wif.readonly-rpc.json",
-    "examples/terminal-dto-export.json"
+    "examples/terminal-dto-export.json",
+    "examples/fixture-pack-minimal-terminal.json",
+    "examples/fixture-pack-drifted-aliases.json",
+    "examples/fixture-pack-receipt-heavy-execution.json"
   ],
   "unsafeExamples": [
     {

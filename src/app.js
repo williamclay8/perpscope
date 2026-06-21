@@ -112,8 +112,52 @@ export const TERMINAL_RECIPES = [
   }
 ];
 
+export const WORKBENCH_PREVIOUS_CAPTURE = {
+  label: "Workbench baseline",
+  cluster: "local fixture",
+  market: {
+    symbol: "SOL-PERP",
+    slab: "PERCOLAT_SOL_8k4q...Qp2",
+    program: "Perco1ator111111111111111111111111111111111"
+  },
+  oracle: {
+    priceUsd: 181.61,
+    ageSecs: 2
+  },
+  engine: {
+    currentSlot: 346892110,
+    lastCrankSlot: 346892086,
+    fundingRateBpsPerHour: 0.82,
+    openInterestUsd: 2430000,
+    longOpenInterestUsd: 1320000,
+    shortOpenInterestUsd: 1110000,
+    insuranceUsd: 148000,
+    claimUsd: 1
+  },
+  execution: {
+    bestBid: 181.52,
+    bestAsk: 181.71
+  }
+};
+
+export const WORKBENCH_CURRENT_CAPTURE = {
+  label: "Workbench drifted aliases",
+  market: {
+    symbol: "SOL-PERP",
+    slab: "PERCOLAT_SOL_8k4q...Qp2",
+    program: "Perco1ator111111111111111111111111111111111"
+  },
+  oraclePriceUsd: 181.61,
+  oracleAgeSeconds: 2,
+  oiUsd: 2430000,
+  bestBidPx: 181.52,
+  bestAskPx: 181.71
+};
+
 const fixtureSnapshot = normalizePercolatorSnapshot(percolatorFixture);
 const fixtureCompatibilityReport = buildPercolatorCompatibilityReport(percolatorFixture, fixtureSnapshot);
+const workbenchPreviousText = JSON.stringify(WORKBENCH_PREVIOUS_CAPTURE, null, 2);
+const workbenchCurrentText = JSON.stringify(WORKBENCH_CURRENT_CAPTURE, null, 2);
 
 const state = {
   snapshot: fixtureSnapshot,
@@ -122,6 +166,10 @@ const state = {
   compatibilityReport: fixtureCompatibilityReport,
   compatibilityDiff: compareCompatibilityReports(fixtureCompatibilityReport, fixtureCompatibilityReport),
   lastImportedInput: percolatorFixture,
+  workbench: createCompatibilityWorkbenchState(WORKBENCH_PREVIOUS_CAPTURE, WORKBENCH_CURRENT_CAPTURE, {
+    previousText: workbenchPreviousText,
+    currentText: workbenchCurrentText
+  }),
   captureOpen: false,
   importStatus: {
     tone: "neutral",
@@ -210,6 +258,8 @@ function render() {
           ${watchtowerPanel(market, stress)}
 
           ${compatibilityPanel(state.compatibilityReport)}
+
+          ${workbenchPanel(state.workbench)}
 
           ${fundingHistoryPanel(market)}
 
@@ -328,6 +378,9 @@ function render() {
   app.querySelector("#import-json").addEventListener("click", () => fileInput.click());
   app.querySelector("#capture-import-json")?.addEventListener("click", () => fileInput.click());
   app.querySelector("#export-compatibility")?.addEventListener("click", exportCurrentCompatibilityReport);
+  app.querySelector("#analyze-workbench")?.addEventListener("click", analyzeWorkbench);
+  app.querySelector("#sample-workbench")?.addEventListener("click", loadWorkbenchSample);
+  app.querySelector("#export-workbench-diff")?.addEventListener("click", exportWorkbenchDiff);
   app.querySelector("#try-cli").addEventListener("click", loadCliDemo);
   app.querySelectorAll("[data-capture-open]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -356,6 +409,10 @@ function render() {
     state.compatibilityReport = fixtureCompatibilityReport;
     state.compatibilityDiff = compareCompatibilityReports(fixtureCompatibilityReport, fixtureCompatibilityReport);
     state.lastImportedInput = percolatorFixture;
+    state.workbench = createCompatibilityWorkbenchState(WORKBENCH_PREVIOUS_CAPTURE, WORKBENCH_CURRENT_CAPTURE, {
+      previousText: workbenchPreviousText,
+      currentText: workbenchCurrentText
+    });
     state.captureOpen = false;
     state.importStatus = {
       tone: "neutral",
@@ -509,6 +566,45 @@ function compatSuggestion(suggestion) {
   `;
 }
 
+function workbenchPanel(workbench) {
+  const diff = workbench.diff;
+  const suggestions = diff.aliasSuggestions.slice(0, 3);
+  return `
+    <article class="workbench-panel panel stagger-item ${diff.tone}">
+      <div class="panel-head">
+        <span class="panel-label">compat workbench</span>
+        <strong class="compat-status ${diff.tone}">${diff.scoreDelta > 0 ? "+" : ""}${diff.scoreDelta}</strong>
+      </div>
+      <div class="workbench-summary">
+        ${compatTile("new gaps", String(diff.summary.newMissingCount), diff.summary.newMissingCount ? "warning" : "good")}
+        ${compatTile("fixed", String(diff.summary.resolvedMissingCount), diff.summary.resolvedMissingCount ? "good" : "neutral")}
+        ${compatTile("ignored", String(diff.summary.newIgnoredCount), diff.summary.newIgnoredCount ? "warning" : "good")}
+        ${compatTile("aliases", String(diff.summary.suggestionCount), diff.summary.suggestionCount ? "good" : "neutral")}
+      </div>
+      <div class="workbench-editors">
+        <label>
+          <span>previous</span>
+          <textarea id="workbench-previous" spellcheck="false">${esc(workbench.previousText)}</textarea>
+        </label>
+        <label>
+          <span>current</span>
+          <textarea id="workbench-current" spellcheck="false">${esc(workbench.currentText)}</textarea>
+        </label>
+      </div>
+      ${suggestions.length ? `
+        <div class="compat-suggestions" aria-label="Workbench alias suggestions">
+          ${suggestions.map(compatSuggestion).join("")}
+        </div>
+      ` : ""}
+      <div class="workbench-actions">
+        <button class="utility-button" id="analyze-workbench" type="button">Compare</button>
+        <button class="utility-button ghost" id="export-workbench-diff" type="button">Export Diff</button>
+        <button class="utility-button ghost" id="sample-workbench" type="button">Sample</button>
+      </div>
+    </article>
+  `;
+}
+
 function captureEditor() {
   return `
     <div class="capture-editor">
@@ -645,6 +741,68 @@ function exportCurrentCompatibilityReport() {
     detail: filename
   };
   render();
+}
+
+function analyzeWorkbench() {
+  try {
+    state.workbench = createCompatibilityWorkbenchState(
+      parsePercolatorJson(app.querySelector("#workbench-previous")?.value || ""),
+      parsePercolatorJson(app.querySelector("#workbench-current")?.value || ""),
+      {
+        previousText: app.querySelector("#workbench-previous")?.value || "",
+        currentText: app.querySelector("#workbench-current")?.value || ""
+      }
+    );
+    state.importStatus = {
+      tone: state.workbench.diff.tone === "danger" ? "warning" : state.workbench.diff.tone,
+      label: "diff compared",
+      detail: `${state.workbench.diff.summary.newMissingCount} new gaps, ${state.workbench.diff.summary.suggestionCount} suggestions`
+    };
+  } catch (error) {
+    state.importStatus = {
+      tone: "danger",
+      label: error.message.slice(0, 44),
+      detail: error.message
+    };
+  }
+  render();
+}
+
+function loadWorkbenchSample() {
+  state.workbench = createCompatibilityWorkbenchState(WORKBENCH_PREVIOUS_CAPTURE, WORKBENCH_CURRENT_CAPTURE, {
+    previousText: workbenchPreviousText,
+    currentText: workbenchCurrentText
+  });
+  state.importStatus = {
+    tone: "good",
+    label: "sample diff loaded",
+    detail: "Workbench sample pair loaded"
+  };
+  render();
+}
+
+function exportWorkbenchDiff() {
+  const filename = "perpscope-compatibility-diff.json";
+  downloadJson(filename, state.workbench.diff);
+  state.importStatus = {
+    tone: "good",
+    label: "diff exported",
+    detail: filename
+  };
+  render();
+}
+
+export function createCompatibilityWorkbenchState(previousInput, currentInput, options = {}) {
+  const previousReport = buildPercolatorCompatibilityReport(previousInput);
+  const currentReport = buildPercolatorCompatibilityReport(currentInput);
+  const diff = compareCompatibilityReports(previousReport, currentReport);
+  return {
+    previousText: options.previousText || JSON.stringify(previousInput, null, 2),
+    currentText: options.currentText || JSON.stringify(currentInput, null, 2),
+    previousReport,
+    currentReport,
+    diff
+  };
 }
 
 function compatibilityReportFilename(report) {

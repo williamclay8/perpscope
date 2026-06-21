@@ -433,6 +433,7 @@ h1 {
 .execution-panel,
 .watchtower-panel,
 .capture-panel,
+.workbench-panel,
 .history-panel,
 .deployment-panel,
 .recipe-panel,
@@ -990,6 +991,63 @@ h1 {
   color: var(--ink);
   font-size: 12px;
   text-transform: uppercase;
+}
+
+.workbench-panel {
+  grid-column: span 2;
+}
+
+.workbench-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.workbench-editors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.workbench-editors label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.workbench-editors label > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.workbench-editors textarea {
+  width: 100%;
+  min-height: 126px;
+  resize: vertical;
+  border: 0;
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(7, 8, 9, 0.72);
+  color: var(--ink);
+  font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  box-shadow: var(--shadow-border);
+}
+
+.workbench-editors textarea:focus-visible {
+  outline: 2px solid rgba(123, 211, 255, 0.76);
+  outline-offset: 2px;
+}
+
+.workbench-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .capture-editor {
@@ -1916,6 +1974,10 @@ code {
     grid-column: span 2;
   }
 
+  .workbench-panel {
+    grid-column: span 2;
+  }
+
   .history-panel {
     grid-column: span 2;
   }
@@ -2022,6 +2084,7 @@ code {
   .hero-panel,
   .watchtower-panel,
   .capture-panel,
+  .workbench-panel,
   .history-panel,
   .deployment-panel,
   .recipe-panel,
@@ -2047,6 +2110,8 @@ code {
   .compat-map,
   .compat-gap-list,
   .compat-suggestions,
+  .workbench-summary,
+  .workbench-editors,
   .capture-editor,
   .watchtower-grid,
   .history-summary,

@@ -1,0 +1,16 @@
+{
+  "label": "Fixture pack / drifted terminal aliases",
+  "market": {
+    "symbol": "SOL-PERP",
+    "slab": "PERCOLAT_SOL_8k4q...Qp2",
+    "program": "Perco1ator111111111111111111111111111111111"
+  },
+  "oraclePriceUsd": 181.61,
+  "oracleAgeSeconds": 2,
+  "oiUsd": 2430000,
+  "bestBidPx": 181.52,
+  "bestAskPx": 181.71,
+  "mysteryEnvelope": {
+    "source": "synthetic terminal adapter drift"
+  }
+}

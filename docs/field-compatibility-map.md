@@ -1,6 +1,6 @@
 # PerpScope Field Compatibility Map
 
-This map is the v0.6.0 implementation contract for terminal builders sending read-only Percolator-like output into PerpScope. It is source-grounded in:
+This map is the v0.7.0 implementation contract for terminal builders sending read-only Percolator-like output into PerpScope. It is source-grounded in:
 
 - `src/lib/percolator-adapter.js`
 - `src/lib/watchtower-signals.js`
@@ -228,6 +228,9 @@ Safe public fixture examples:
 - `examples/percolator-mainnet-sol.readonly-rpc.json`
 - `examples/percolator-devnet-wif.readonly-rpc.json`
 - `examples/terminal-dto-export.json`
+- `examples/fixture-pack-minimal-terminal.json`
+- `examples/fixture-pack-drifted-aliases.json`
+- `examples/fixture-pack-receipt-heavy-execution.json`
 
 ## Builder Checklist
 
