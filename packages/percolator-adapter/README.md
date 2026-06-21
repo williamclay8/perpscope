@@ -65,11 +65,17 @@ The full field-level contract is documented in `../../docs/field-compatibility-m
 
 `buildCompatibilityRealityCheck(report, { input })` returns `perpscope.reality-check` with provenance, required/useful mapped counts, unknown fields, and alias counts. Use it when a terminal needs to show whether a capture is synthetic, real-backed candidate, or externally submitted.
 
+`buildCompatibilityDoctor(report, { input })` returns `perpscope.compatibility-doctor` with pass/check status, shape, safety, required/useful mapped fields, unknown fields, alias suggestions, and next actions.
+
+`buildCompatibilityBadge(reportOrDoctor)` returns `perpscope.compatibility-badge` with Markdown and JSON-friendly fields for READMEs, PRs, and capture handoffs.
+
 ## CLI
 
 ```bash
 perpscope compat report capture.json
 perpscope compat diff previous.json current.json
+perpscope compat doctor capture.json
+perpscope compat badge capture.json --json
 ```
 
 Try it locally with:
@@ -79,6 +85,8 @@ perpscope compat diff ../../examples/fixture-pack-minimal-terminal.json ../../ex
 ```
 
 For the real-backed candidate path, try `../../examples/fixture-pack-real-sanitized-rpc-shape.json`.
+
+For a copy-paste starter shape, use `../../examples/capture-template.json`.
 
 ## DTO Example
 

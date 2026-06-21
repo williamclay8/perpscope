@@ -1,5 +1,7 @@
 export {
   assertReadOnlySnapshot,
+  buildCompatibilityBadge,
+  buildCompatibilityDoctor,
   buildCompatibilityRealityCheck,
   buildPercolatorCompatibilityReport,
   compareCompatibilityReports,

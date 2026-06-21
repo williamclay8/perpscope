@@ -62,7 +62,7 @@ Star PerpScope if you are building a Solana perps terminal, risk dashboard, or a
 - a compatibility report for pasted or dropped decoded captures before your terminal adapter is complete
 - compatibility diffing and alias suggestions when decoded terminal shapes drift
 - a local compatibility workbench for comparing two captures without leaving the cockpit
-- a CLI for `perpscope compat report` and `perpscope compat diff`
+- a CLI for `perpscope compat report`, `perpscope compat diff`, `perpscope compat doctor`, and `perpscope compat badge`
 - import fixtures for CLI logs, captured stdout, read-only RPC fixtures, carry history, and terminal adapter demos
 - a visual reference for presenting risk without turning the screen into protocol JSON
 - a read-only safety boundary you can copy into your own frontend
@@ -175,6 +175,7 @@ examples/fixture-pack-minimal-terminal.json
 examples/fixture-pack-drifted-aliases.json
 examples/fixture-pack-receipt-heavy-execution.json
 examples/fixture-pack-real-sanitized-rpc-shape.json
+examples/capture-template.json
 ```
 
 The import path accepts full PerpScope snapshots shaped as:
@@ -270,6 +271,8 @@ CLI:
 ```bash
 perpscope compat report examples/fixture-pack-drifted-aliases.json
 perpscope compat diff examples/fixture-pack-minimal-terminal.json examples/fixture-pack-drifted-aliases.json
+perpscope compat doctor examples/capture-template.json
+perpscope compat badge examples/capture-template.json --json
 ```
 
 ## Terminal Builder Quickstart
@@ -351,6 +354,7 @@ The normalized market DTO includes:
 - `execution.receipts` with spread, impact, 1m/5m markout, route latency, priority fee, source timestamp, and source label
 - `buildPercolatorCompatibilityReport()` with `status`, `score`, `recognizedSections`, `missingFields`, and `ignoredFields`
 - `buildCompatibilityRealityCheck()` with provenance, required/useful mapped counts, unknown fields, and alias counts
+- `buildCompatibilityDoctor()` and `buildCompatibilityBadge()` for 2-minute terminal builder checks
 - `Watchtower` signals for runway, freshness, execution, impact curve, carry, and solvency
 - `history.fundingSkew` rows for funding, OI skew, stress usage, oracle age, source timestamp, and slot
 - `flags` for stale oracle, crank lag, thin insurance, stress caps, and liquidation tightness
@@ -360,6 +364,8 @@ The normalized market DTO includes:
 - `src/lib/percolator-adapter.js` normalizes Percolator-like slab, oracle, crank, funding, insurance, account, and execution data into terminal-ready DTOs.
 - `buildPercolatorCompatibilityReport()` maps partial decoded captures into visible terminal-readiness warnings.
 - `buildCompatibilityRealityCheck()` turns compatibility output into a compact trust summary for real-backed vs synthetic captures.
+- `buildCompatibilityDoctor()` prints the practical pass/check summary builders need before opening an issue.
+- `buildCompatibilityBadge()` produces a small Markdown/JSON compatibility badge for READMEs, PRs, and fixture handoffs.
 - `exportCompatibilityReport()` turns the current capture into an attachable JSON report for terminal teams.
 - `compareCompatibilityReports()` shows adapter drift and alias suggestions between two reports.
 - `src/lib/read-only-rpc-fetcher.js` validates read-only RPC slab fixtures and injected account fetches.
@@ -375,6 +381,7 @@ The normalized market DTO includes:
 - `docs/release-v0.6.0.md` mirrors the public release notes for the drift and alias suggestion release.
 - `docs/release-v0.7.0.md` mirrors the public release notes for the workbench, CLI, and fixture-pack release.
 - `docs/release-v0.8.0.md` mirrors the public release notes for the reality check and real-backed candidate fixture.
+- `docs/release-v0.9.0.md` mirrors the public release notes for the doctor, badge, and capture-template release.
 - `docs/v0.5-plan.md` documents the shipped compatibility report export.
 - `.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml` is the structured intake form for sanitized builder samples.
 - `src/fixtures/percolator-market.js` contains sample decoded market/account state plus execution receipt history.
@@ -412,9 +419,10 @@ Current public site: [williamclay8.github.io/perpscope](https://williamclay8.git
 
 - v0.4 shipped: capture intake for pasted/dropped decoded outputs, compatibility scoring, missing-field warnings, and ignored-field mapping.
 - v0.4 follow-up: field-level compatibility map for terminal import/export adapters.
-- npm package shipped: `@perpscope/percolator-adapter@0.8.0`.
+- npm package shipped: `@perpscope/percolator-adapter@0.9.0`.
 - v0.5 shipped: downloadable compatibility report export for terminal builders.
 - v0.6 shipped: compatibility diffing and alias suggestions for drifting terminal shapes.
 - v0.7 shipped: local compatibility workbench, CLI report/diff commands, and fixture packs.
 - v0.8 shipped: reality check panel, `buildCompatibilityRealityCheck()`, and `examples/fixture-pack-real-sanitized-rpc-shape.json`.
+- v0.9 shipped: `compat doctor`, `compat badge`, and `examples/capture-template.json`.
 - More deployment fixtures as Percolator terminal teams share read-only shapes.

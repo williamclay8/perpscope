@@ -1,6 +1,6 @@
 import { normalizeFundingSkewHistory } from "./funding-history.js";
 
-export const PERPSCOPE_ADAPTER_VERSION = "0.8.0";
+export const PERPSCOPE_ADAPTER_VERSION = "0.9.0";
 
 const KEYPAIR_FIELD_PATTERN = /(^|_)(secret|private|keypair|mnemonic|seed|walletPath|wallet)(_|$)/i;
 const HISTORY_COMMAND_KEYS = new Set([
@@ -282,6 +282,75 @@ export function buildCompatibilityRealityCheck(inputOrReport, options = {}) {
       realityLane("unknown", String(unknownCount), unknownCount ? "warning" : "good"),
       realityLane("aliases", String(aliasCount), aliasCount ? "good" : "neutral")
     ]
+  };
+}
+
+export function buildCompatibilityDoctor(inputOrReport, options = {}) {
+  const hasReportShape = inputOrReport && typeof inputOrReport === "object" && Array.isArray(inputOrReport.recognizedSections);
+  const report = hasReportShape ? normalizeCompatibilityReport(inputOrReport) : buildPercolatorCompatibilityReport(inputOrReport);
+  const reality = buildCompatibilityRealityCheck(report, {
+    input: hasReportShape ? options.input : inputOrReport,
+    generatedAt: options.generatedAt,
+    packageVersion: options.packageVersion
+  });
+  const requiredLane = reality.lanes.find((lane) => lane.label === "required") || {};
+  const usefulLane = reality.lanes.find((lane) => lane.label === "useful") || {};
+  const pass = report.status === "compatible" || (reality.gaps.dangerMissing === 0 && report.status === "partial");
+  const safety = report.status === "rejected" ? "rejected" : "read-only";
+
+  return {
+    schema: "perpscope.compatibility-doctor",
+    version: 1,
+    package: {
+      name: "@perpscope/percolator-adapter",
+      version: options.packageVersion || PERPSCOPE_ADAPTER_VERSION
+    },
+    generatedAt: options.generatedAt || new Date().toISOString(),
+    pass,
+    tone: report.status === "rejected" || reality.gaps.dangerMissing ? "danger" : report.summary.ignoredCount || report.summary.suggestionCount ? "warning" : "good",
+    status: report.status,
+    shape: report.shape,
+    score: report.score,
+    safety,
+    source: report.source,
+    required: {
+      mapped: reality.mapped.requiredCount,
+      total: reality.mapped.requiredTotal,
+      label: requiredLane.value || `${reality.mapped.requiredCount}/${reality.mapped.requiredTotal}`
+    },
+    useful: {
+      mapped: reality.mapped.optionalCount,
+      total: reality.mapped.optionalTotal,
+      label: usefulLane.value || `${reality.mapped.optionalCount}/${reality.mapped.optionalTotal}`
+    },
+    unknownFields: report.ignoredFields || [],
+    aliasSuggestions: report.aliasSuggestions || [],
+    missingFields: report.missingFields || [],
+    nextActions: compatibilityDoctorActions(report, reality)
+  };
+}
+
+export function buildCompatibilityBadge(inputOrReport, options = {}) {
+  const doctor = inputOrReport?.schema === "perpscope.compatibility-doctor"
+    ? inputOrReport
+    : buildCompatibilityDoctor(inputOrReport, options);
+  const label = options.label || "PerpScope compatible";
+  const summary = `${doctor.status}, ${doctor.score}/100, ${doctor.aliasSuggestions.length} alias suggestions`;
+  return {
+    schema: "perpscope.compatibility-badge",
+    version: 1,
+    package: doctor.package,
+    generatedAt: options.generatedAt || doctor.generatedAt || new Date().toISOString(),
+    label,
+    status: doctor.status,
+    score: doctor.score,
+    tone: doctor.tone,
+    aliasSuggestionCount: doctor.aliasSuggestions.length,
+    unknownFieldCount: doctor.unknownFields.length,
+    required: doctor.required,
+    useful: doctor.useful,
+    markdown: `**${label}:** ${summary}`,
+    text: `${label}: ${summary}`
   };
 }
 
@@ -735,6 +804,32 @@ function realityProvenance(input, report) {
     submittedBy: inputSource.submittedBy || "",
     note: inputSource.note || (status === "candidate" ? "real-backed candidate; still waiting on third-party decoded shape" : "")
   };
+}
+
+function compatibilityDoctorActions(report, reality) {
+  const actions = [];
+  if (report.status === "rejected") {
+    actions.push("Remove wallet, signer, transaction, instruction, order, secret, private key, seed, mnemonic, or API key fields.");
+    return actions;
+  }
+  const dangerMissing = (report.missingFields || []).filter((field) => field.severity === "danger");
+  if (dangerMissing.length) {
+    actions.push(`Map required fields: ${dangerMissing.map((field) => field.field).join(", ")}.`);
+  }
+  const warningMissing = (report.missingFields || []).filter((field) => field.severity !== "danger").slice(0, 3);
+  if (warningMissing.length) {
+    actions.push(`Add useful trader fields: ${warningMissing.map((field) => field.field).join(", ")}.`);
+  }
+  if ((report.aliasSuggestions || []).length) {
+    actions.push(`Apply alias suggestions: ${(report.aliasSuggestions || []).slice(0, 3).map((suggestion) => `${suggestion.candidatePath || suggestion.action} -> ${suggestion.field}`).join(", ")}.`);
+  }
+  if ((report.ignoredFields || []).length) {
+    actions.push(`${report.ignoredFields.length} unknown field${report.ignoredFields.length === 1 ? "" : "s"} can be mapped or intentionally ignored.`);
+  }
+  if (!actions.length && reality.gaps.dangerMissing === 0) {
+    actions.push("Ready for read-only terminal display.");
+  }
+  return actions;
 }
 
 function differenceByField(left = [], right = []) {

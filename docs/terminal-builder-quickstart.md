@@ -109,6 +109,8 @@ Use `buildCompatibilityRealityCheck(report, { input })` when you need a compact 
 ```bash
 perpscope compat report examples/fixture-pack-drifted-aliases.json
 perpscope compat diff examples/fixture-pack-minimal-terminal.json examples/fixture-pack-drifted-aliases.json
+perpscope compat doctor examples/capture-template.json
+perpscope compat badge examples/capture-template.json --json
 ```
 
 Fixture packs for local testing:
@@ -117,6 +119,9 @@ Fixture packs for local testing:
 - `examples/fixture-pack-drifted-aliases.json`
 - `examples/fixture-pack-receipt-heavy-execution.json`
 - `examples/fixture-pack-real-sanitized-rpc-shape.json`
+- `examples/capture-template.json`
+
+Use `examples/capture-template.json` when you want the fastest path from terminal output to a useful PerpScope issue. Fill market identity and price first, then engine/OI, execution, account runway, and funding/skew history.
 
 ## Safety Boundary
 

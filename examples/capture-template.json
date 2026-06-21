@@ -1,0 +1,64 @@
+{
+  "label": "My terminal read-only capture",
+  "cluster": "mainnet-beta",
+  "market": {
+    "symbol": "SOL-PERP",
+    "base": "SOL",
+    "quote": "USDC",
+    "slab": "PERCOLAT_SOL_...",
+    "program": "Perco1ator111111111111111111111111111111111"
+  },
+  "oracle": {
+    "priceUsd": 181.61,
+    "ageSecs": 2
+  },
+  "engine": {
+    "currentSlot": 346892118,
+    "lastMarketSlot": 346892090,
+    "fundingRateBpsPerHour": 0.82,
+    "openInterestUsd": 2430000,
+    "longOpenInterestUsd": 1320000,
+    "shortOpenInterestUsd": 1110000,
+    "insuranceUsd": 148000,
+    "stressConsumedBps": 118,
+    "stressLimitBps": 500
+  },
+  "execution": {
+    "bestBid": 181.52,
+    "bestAsk": 181.71,
+    "receipts": [
+      {
+        "label": "latest fill",
+        "sourceTimestamp": "2026-06-20T13:24:12Z",
+        "spreadBps": 10.5,
+        "impactBps": 8.4,
+        "markout1mBps": 4.2,
+        "markout5mBps": -1.7,
+        "routeLatencyMs": 132,
+        "priorityFeeMicrolamports": 2200
+      }
+    ]
+  },
+  "account": {
+    "side": "long",
+    "positionSize": 420,
+    "positionNotionalUsd": 76276.2,
+    "collateralUsd": 8400,
+    "unrealizedPnlUsd": 3067.2,
+    "liquidationPrice": 162.94
+  },
+  "history": {
+    "fundingSkew": [
+      {
+        "sourceTimestamp": "2026-06-20T13:24:00Z",
+        "slot": 346892086,
+        "fundingBpsPerHour": 0.82,
+        "longOpenInterestUsd": 1320000,
+        "shortOpenInterestUsd": 1110000,
+        "stressConsumedBps": 118,
+        "stressLimitBps": 500,
+        "oracleAgeSec": 2.1
+      }
+    ]
+  }
+}

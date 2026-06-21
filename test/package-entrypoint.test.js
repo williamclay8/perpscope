@@ -6,6 +6,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
+  buildCompatibilityBadge,
+  buildCompatibilityDoctor,
   buildCompatibilityRealityCheck,
   buildPercolatorCompatibilityReport,
   buildReadOnlyRpcSnapshot,
@@ -58,16 +60,16 @@ test("adapter package exposes read-only terminal DTO helpers", () => {
   });
 
   assert.equal(detectPercolatorInputShape(percolatorFixture), "perpscope-snapshot");
-  assert.equal(PERPSCOPE_ADAPTER_VERSION, "0.8.0");
+  assert.equal(PERPSCOPE_ADAPTER_VERSION, "0.9.0");
   assert.equal(snapshot.markets.length, 3);
   assert.equal(report.compatible, true);
   assert.equal(report.status, "compatible");
   assert.equal(exported.schema, "perpscope.compatibility-report");
-  assert.equal(exported.package.version, "0.8.0");
+  assert.equal(exported.package.version, "0.9.0");
   assert.equal(drift.schema, "perpscope.compatibility-diff");
   assert.equal(drift.scoreDelta, 0);
   assert.equal(reality.schema, "perpscope.reality-check");
-  assert.equal(reality.package.version, "0.8.0");
+  assert.equal(reality.package.version, "0.9.0");
   assert.equal(reality.mapped.requiredCount, 3);
   assert.equal(signals.find((signal) => signal.id === "carry").tone, "good");
   assert.equal(history.length, 6);
@@ -84,13 +86,28 @@ test("adapter CLI exports reports and diffs", () => {
     encoding: "utf8"
   });
   const diff = JSON.parse(diffOutput);
+  const doctorOutput = execFileSync("node", [packageCli, "compat", "doctor", driftedFixture], {
+    encoding: "utf8"
+  });
+  const badgeMarkdown = execFileSync("node", [packageCli, "compat", "badge", driftedFixture], {
+    encoding: "utf8"
+  });
+  const badgeJson = JSON.parse(execFileSync("node", [packageCli, "compat", "badge", driftedFixture, "--json"], {
+    encoding: "utf8"
+  }));
 
   assert.equal(report.schema, "perpscope.compatibility-report");
-  assert.equal(report.package.version, "0.8.0");
+  assert.equal(report.package.version, "0.9.0");
   assert.ok(report.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd"));
   assert.equal(diff.schema, "perpscope.compatibility-diff");
-  assert.equal(diff.package.version, "0.8.0");
+  assert.equal(diff.package.version, "0.9.0");
   assert.ok(diff.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd"));
+  assert.match(doctorOutput, /PerpScope compat doctor: CHECK/);
+  assert.match(doctorOutput, /required: 2\/3/);
+  assert.match(doctorOutput, /Map required fields: price\.mark/);
+  assert.match(badgeMarkdown, /\*\*PerpScope compatible:\*\* partial, 0\/100, 5 alias suggestions/);
+  assert.equal(badgeJson.schema, "perpscope.compatibility-badge");
+  assert.equal(badgeJson.package.version, "0.9.0");
 });
 
 test("adapter package exposes reality checks for real-backed candidates", () => {
@@ -108,6 +125,22 @@ test("adapter package exposes reality checks for real-backed candidates", () => 
   assert.ok(reality.mapped.optionalCount >= 6);
   assert.equal(snapshot.markets[0].execution.receipts.length, 1);
   assert.equal(snapshot.markets[0].history.fundingSkew.length, 1);
+});
+
+test("adapter package exposes doctor and badge summaries", () => {
+  const report = buildPercolatorCompatibilityReport(realSanitizedFixture, buildReadOnlyRpcSnapshot(realSanitizedFixture));
+  const doctor = buildCompatibilityDoctor(report, {
+    input: realSanitizedFixture,
+    generatedAt: "2026-06-21T00:00:00.000Z"
+  });
+  const badge = buildCompatibilityBadge(doctor);
+
+  assert.equal(doctor.schema, "perpscope.compatibility-doctor");
+  assert.equal(doctor.pass, true);
+  assert.equal(doctor.required.label, "3/3");
+  assert.equal(doctor.useful.label, "8/8");
+  assert.equal(badge.schema, "perpscope.compatibility-badge");
+  assert.match(badge.markdown, /PerpScope compatible/);
 });
 
 test("adapter package normalizes captured carry history logs", () => {
@@ -151,6 +184,8 @@ test("adapter package can be packed and imported outside the monorepo", async ()
     assert.equal(history.at(-1).oiSkewPct.toFixed(1), "8.6");
     assert.equal(typeof packed.buildWatchtowerSignals, "function");
     assert.equal(typeof packed.buildPercolatorCompatibilityReport, "function");
+    assert.equal(typeof packed.buildCompatibilityDoctor, "function");
+    assert.equal(typeof packed.buildCompatibilityBadge, "function");
     assert.equal(typeof packed.exportCompatibilityReport, "function");
     assert.equal(typeof packed.compareCompatibilityReports, "function");
     assert.equal(exported.schema, "perpscope.compatibility-report");
