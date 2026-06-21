@@ -110,6 +110,10 @@ test("marks raw-scale decoded values as uncertain instead of displaying them as 
     config: {
       ...fakeMarket.config,
       authorityPriceE6: 999999999999999999999999n
+    },
+    params: {
+      ...fakeMarket.params,
+      riskReductionThreshold: 999999999999n
     }
   };
 
@@ -119,6 +123,9 @@ test("marks raw-scale decoded values as uncertain instead of displaying them as 
   assert.equal(mapped.dataQuality.status, "uncertain");
   assert.equal(mapped.engine.openInterestUsd, 0);
   assert.equal(mapped.engine.vaultUsd, 0);
+  assert.deepEqual(mapped.account.pnlPath, [0, 0]);
+  assert.equal(mapped.history.fundingSkew[0].longOpenInterestUsd, 0);
+  assert.equal(mapped.history.fundingSkew[0].stressLimitBps, 0);
   assert.ok(mapped.dataQuality.issues.some((issue) => /raw scale/.test(issue)));
 });
 

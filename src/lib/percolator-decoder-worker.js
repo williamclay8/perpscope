@@ -380,7 +380,17 @@ function applyDecodedSanity(market) {
       positionNotionalUsd: saneUsd(market.account.positionNotionalUsd, "aggregate notional", issues),
       unrealizedPnlUsd: saneUsd(market.account.unrealizedPnlUsd, "aggregate uPnL", issues),
       maintenanceMarginUsd: saneUsd(market.account.maintenanceMarginUsd, "maintenance margin", issues),
-      initialMarginUsd: saneUsd(market.account.initialMarginUsd, "initial margin", issues)
+      initialMarginUsd: saneUsd(market.account.initialMarginUsd, "initial margin", issues),
+      pnlPath: (market.account.pnlPath || []).map((value) => saneUsd(value, "PnL path", issues))
+    },
+    history: {
+      ...market.history,
+      fundingSkew: (market.history?.fundingSkew || []).map((row) => ({
+        ...row,
+        longOpenInterestUsd: saneUsd(row.longOpenInterestUsd, "history long OI", issues),
+        shortOpenInterestUsd: saneUsd(row.shortOpenInterestUsd, "history short OI", issues),
+        stressLimitBps: saneBps(row.stressLimitBps, "history stress limit", issues)
+      }))
     }
   };
 
