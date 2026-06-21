@@ -384,11 +384,12 @@ The normalized market DTO includes:
 - `docs/release-v1.0.0.md` mirrors the public release notes for init and CI-ready doctor exit codes.
 - `docs/release-v1.0.1.md` mirrors the public release notes for adoption and trust polish.
 - `docs/release-v1.1.0.md` mirrors the public release notes for the Data Source cockpit and static real-backed snapshot.
+- `docs/release-v1.2.0.md` mirrors the public release notes for actual public price loading.
 - `docs/v0.5-plan.md` documents the shipped compatibility report export.
 - `.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml` is the structured intake form for sanitized builder samples.
 - `src/fixtures/percolator-market.js` contains sample decoded market/account state plus execution receipt history.
 - `src/app.js` renders the read-only cockpit.
-- The website starts in fixture mode. The Data Source panel can load `examples/static-real-snapshot.json`, which is a sanitized real-backed static snapshot, not a live stream.
+- The website starts in fixture mode. The Data Source panel can load `examples/static-real-snapshot.json`, which is a sanitized real-backed static snapshot, or `Load Live`, which pulls actual public prices from CoinGecko while keeping Percolator risk context simulated.
 - `schemas/` contains the public input contracts.
 - `test/percolator-adapter.test.js` covers adapter safety and risk math.
 
@@ -430,4 +431,5 @@ Current public site: [williamclay8.github.io/perpscope](https://williamclay8.git
 - v0.9 shipped: `compat doctor`, `compat badge`, and `examples/capture-template.json`.
 - v1.0 shipped: `perpscope init`, CI-ready `compat doctor` exit codes, and the 2-minute terminal-builder check.
 - v1.1 shipped: Data Source disclosure, `Load Snapshot`, and `examples/static-real-snapshot.json` so the website clearly separates fixture, static real-backed, and unwired live data.
+- v1.2 shipped: `Load Live` for actual public SOL/BTC/WIF prices with explicit simulated Percolator risk context.
 - More deployment fixtures as Percolator terminal teams share read-only shapes.

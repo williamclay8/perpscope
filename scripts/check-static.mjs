@@ -29,6 +29,7 @@ const releaseV09Doc = readFileSync(new URL("../docs/release-v0.9.0.md", import.m
 const releaseV10Doc = readFileSync(new URL("../docs/release-v1.0.0.md", import.meta.url), "utf8");
 const releaseV101Doc = readFileSync(new URL("../docs/release-v1.0.1.md", import.meta.url), "utf8");
 const releaseV11Doc = readFileSync(new URL("../docs/release-v1.1.0.md", import.meta.url), "utf8");
+const releaseV12Doc = readFileSync(new URL("../docs/release-v1.2.0.md", import.meta.url), "utf8");
 const contributingDoc = readFileSync(new URL("../CONTRIBUTING.md", import.meta.url), "utf8");
 const terminalQuickstartDoc = readFileSync(new URL("../docs/terminal-builder-quickstart.md", import.meta.url), "utf8");
 const v05PlanDoc = readFileSync(new URL("../docs/v0.5-plan.md", import.meta.url), "utf8");
@@ -126,8 +127,8 @@ if (!/reality-panel/.test(js) || !/buildCompatibilityRealityCheck/.test(js) || !
   failures.push("Cockpit should expose the reality check panel and real-backed candidate capture.");
 }
 
-if (!/data-source-panel/.test(js) || !/STATIC_REAL_SNAPSHOT_PATH/.test(js) || !/fetchStaticRealSnapshot/.test(js) || !/createDataSourceState/.test(js)) {
-  failures.push("Cockpit should expose fixture/static-real/live data source disclosure.");
+if (!/data-source-panel/.test(js) || !/STATIC_REAL_SNAPSHOT_PATH/.test(js) || !/fetchStaticRealSnapshot/.test(js) || !/createDataSourceState/.test(js) || !/ACTUAL_PRICE_ENDPOINT/.test(js) || !/fetchActualMarketSnapshot/.test(js) || !/load-actual-prices/.test(js)) {
+  failures.push("Cockpit should expose fixture/static-real/live data source disclosure and actual public price loading.");
 }
 
 const dto = normalizePercolatorSnapshot(percolatorFixture);
@@ -239,6 +240,7 @@ for (const doc of [
   "docs/release-v1.0.0.md",
   "docs/release-v1.0.1.md",
   "docs/release-v1.1.0.md",
+  "docs/release-v1.2.0.md",
   "docs/v0.5-plan.md"
 ]) {
   if (!readme.includes(doc)) {
@@ -346,6 +348,12 @@ for (const required of ["@perpscope/percolator-adapter@1.0.1", "README first-scr
 for (const required of ["@perpscope/percolator-adapter@1.1.0", "Data Source", "examples/static-real-snapshot.json", "Load Snapshot", "not a live stream", "Safety Boundary"]) {
   if (!releaseV11Doc.includes(required)) {
     failures.push(`v1.1 release notes should include ${required}.`);
+  }
+}
+
+for (const required of ["Load Live", "CoinGecko simple price", "actual public prices", "simulated risk context", "not live decoded protocol state", "Safety Boundary"]) {
+  if (!releaseV12Doc.includes(required)) {
+    failures.push(`v1.2 release notes should include ${required}.`);
   }
 }
 

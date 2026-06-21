@@ -19,6 +19,12 @@ import { buildWatchtowerSignals } from "./lib/watchtower-signals.js";
 
 export const DEMO_CLI_PATH = "./examples/percolator-cli.bundle.json";
 export const STATIC_REAL_SNAPSHOT_PATH = "./examples/static-real-snapshot.json";
+export const ACTUAL_PRICE_ENDPOINT = "https://api.coingecko.com/api/v3/simple/price?ids=solana,bitcoin,dogwifcoin&vs_currencies=usd&include_24hr_change=true&include_last_updated_at=true";
+export const ACTUAL_PRICE_MARKETS = {
+  SOL: "solana",
+  BTC: "bitcoin",
+  WIF: "dogwifcoin"
+};
 export const DATA_SOURCE_MODES = [
   {
     id: "fixture",
@@ -37,9 +43,9 @@ export const DATA_SOURCE_MODES = [
   {
     id: "live-read",
     label: "live",
-    tone: "danger",
-    detail: "read-only stream not connected",
-    status: "not wired"
+    tone: "good",
+    detail: "public market prices",
+    status: "available"
   }
 ];
 export const READ_ONLY_DEPLOYMENTS = [
@@ -477,6 +483,7 @@ function render() {
   app.querySelector("#sample-workbench")?.addEventListener("click", loadWorkbenchSample);
   app.querySelector("#export-workbench-diff")?.addEventListener("click", exportWorkbenchDiff);
   app.querySelector("#load-static-real")?.addEventListener("click", loadStaticRealSnapshot);
+  app.querySelector("#load-actual-prices")?.addEventListener("click", loadActualPricesSnapshot);
   app.querySelector("#try-cli").addEventListener("click", loadCliDemo);
   app.querySelectorAll("[data-capture-open]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -753,6 +760,7 @@ function dataSourcePanel(dataSource) {
       </div>
       <div class="data-source-actions">
         <button class="utility-button" id="load-static-real" type="button">Load Snapshot</button>
+        <button class="utility-button" id="load-actual-prices" type="button">Load Live</button>
         <span>${esc(dataSource.note)}</span>
       </div>
     </article>
@@ -850,10 +858,66 @@ async function loadStaticRealSnapshot() {
   render();
 }
 
+async function loadActualPricesSnapshot() {
+  try {
+    const imported = await fetchActualMarketSnapshot(fetch);
+    loadImportedSnapshot(imported, {
+      label: "live prices loaded",
+      detailPrefix: "CoinGecko public price feed",
+      dataSourceMode: "live-read"
+    });
+  } catch (error) {
+    state.importStatus = {
+      tone: "danger",
+      label: error.message.slice(0, 44),
+      detail: error.message
+    };
+    state.dataSource = {
+      ...state.dataSource,
+      note: "live unavailable; keeping current source"
+    };
+  }
+  render();
+}
+
 export async function fetchStaticRealSnapshot(fetcher) {
   const response = await fetcher(STATIC_REAL_SNAPSHOT_PATH);
   if (!response.ok) throw new Error("Static real snapshot unavailable.");
   return parsePercolatorJson(await response.text());
+}
+
+export async function fetchActualMarketSnapshot(fetcher, options = {}) {
+  const response = await fetcher(ACTUAL_PRICE_ENDPOINT);
+  if (!response.ok) throw new Error("Live public prices unavailable.");
+  return createActualMarketSnapshot(JSON.parse(await response.text()), options);
+}
+
+export function createActualMarketSnapshot(priceFeed, options = {}) {
+  const nowMs = options.nowMs || Date.now();
+  const generatedAt = new Date(nowMs).toISOString();
+  const markets = fixtureSnapshot.markets.map((market) => actualMarketFromDto(market, priceFeed, nowMs));
+  const updatedAtValues = markets
+    .map((market) => Number(market.oracle?.lastUpdatedAt || 0))
+    .filter((value) => value > 0);
+  const latestUpdatedAt = updatedAtValues.length ? Math.max(...updatedAtValues) : Math.floor(nowMs / 1000);
+  return {
+    label: "Live public prices / simulated Percolator risk",
+    cluster: "public market feed",
+    fixtureKind: "live-public-market-prices",
+    currentSlot: fixtureSnapshot.currentSlot,
+    source: {
+      kind: "public-market-price-feed",
+      provider: "CoinGecko simple price",
+      endpoint: ACTUAL_PRICE_ENDPOINT,
+      generatedAt,
+      lastUpdatedAt: latestUpdatedAt,
+      realBacked: true,
+      live: true,
+      scope: "live public prices",
+      note: "Actual public prices with simulated Percolator risk context; not live decoded protocol state."
+    },
+    markets
+  };
 }
 
 export async function fetchCliDemoSnapshot(fetcher) {
@@ -914,6 +978,7 @@ export function createDataSourceState(modeId, input, snapshot, report) {
   const source = snapshot?.source || {};
   const inputSource = input && typeof input === "object" && !Array.isArray(input) ? input.source || {} : {};
   const live = inputSource.live === true;
+  const updatedAt = Number(inputSource.lastUpdatedAt || 0);
   const modes = DATA_SOURCE_MODES.map((entry) => ({
     ...entry,
     active: entry.id === mode.id
@@ -927,12 +992,13 @@ export function createDataSourceState(modeId, input, snapshot, report) {
       source.label || input?.label || "decoded fixture",
       snapshot?.cluster || input?.cluster || "unknown",
       report?.shape || detectPercolatorInputShape(input),
-      live ? "live stream" : "not live"
+      live ? (inputSource.scope || "live public prices") : "not live",
+      updatedAt ? `updated ${new Date(updatedAt * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""
     ].filter(Boolean),
     note: mode.id === "static-real"
       ? "static sanitized snapshot; not a stream"
       : mode.id === "live-read"
-        ? "no hosted live data pipeline is connected"
+        ? "actual public prices; simulated risk context"
         : "default cockpit data is a local fixture"
   };
 }
@@ -942,6 +1008,144 @@ function dataSourceModeForInput(input) {
   if (source.live === true) return "live-read";
   if (source.realBacked || /real|static/i.test(input?.fixtureKind || "")) return "static-real";
   return "fixture";
+}
+
+function actualMarketFromDto(market, priceFeed, nowMs) {
+  const feedId = ACTUAL_PRICE_MARKETS[market.base];
+  const feed = feedId ? priceFeed?.[feedId] || {} : {};
+  const markPrice = positiveNumber(feed.usd) || market.price.mark;
+  const change24hPct = finiteNumber(feed.usd_24h_change, 0);
+  const lastUpdatedAt = finiteNumber(feed.last_updated_at, Math.floor(nowMs / 1000));
+  const publishAgeSec = Math.max(0, Math.round(nowMs / 1000 - lastUpdatedAt));
+  const indexPrice = change24hPct
+    ? markPrice / (1 + change24hPct / 100)
+    : markPrice;
+  const spreadBps = Math.max(Math.abs(market.execution.spreadBps || 8), 4);
+  const halfSpread = markPrice * (spreadBps / 20000);
+  const oldNotional = Math.max(Math.abs(market.account.positionSize) * Math.max(market.price.mark, 1), 1);
+  const positionSize = market.account.positionSize || market.account.positionNotionalUsd / Math.max(market.price.mark, 1);
+  const positionNotionalUsd = Math.abs(positionSize) * markPrice;
+  const unrealizedPnlUsd = market.account.unrealizedPnlUsd + positionSize * (markPrice - market.price.mark);
+  const pricePath = [...(market.price.path || []).slice(-8), markPrice];
+  const sourceTimestamp = new Date(lastUpdatedAt * 1000).toISOString();
+
+  return {
+    id: market.id,
+    name: market.name,
+    base: market.base,
+    quote: market.quote,
+    status: market.status,
+    slab: market.slab,
+    program: market.program,
+    header: market.header,
+    config: {
+      ...market.config,
+      maxStalenessSecs: Math.max(Number(market.config?.maxStalenessSecs || 0), 300)
+    },
+    oracle: {
+      markPrice,
+      indexPrice,
+      effectivePrice: markPrice,
+      confidenceBps: market.price.confidenceBps,
+      publishAgeSec,
+      pricePath,
+      lastUpdatedAt,
+      legs: [
+        {
+          name: "CoinGecko simple price",
+          weight: 1,
+          ageSec: publishAgeSec,
+          confidenceBps: market.price.confidenceBps
+        }
+      ]
+    },
+    engine: {
+      currentSlot: market.currentSlot,
+      lastMarketSlot: market.currentSlot - market.crank.ageSlots,
+      fundingRateBpsPerHour: market.funding.bpsPerHour,
+      openInterestUsd: market.marketStructure.openInterestUsd,
+      longOpenInterestUsd: market.marketStructure.longOpenInterestUsd,
+      shortOpenInterestUsd: market.marketStructure.shortOpenInterestUsd,
+      insuranceUsd: market.solvency.insuranceUsd,
+      vaultUsd: market.solvency.vaultUsd,
+      claimUsd: market.solvency.claimUsd,
+      stressConsumedBps: market.marketStructure.stressUsedPct * 5,
+      stressLimitBps: 500
+    },
+    account: {
+      label: "Simulated risk context",
+      side: market.account.side,
+      positionSize,
+      positionNotionalUsd,
+      collateralUsd: market.account.collateralUsd,
+      unrealizedPnlUsd,
+      realizedPnlUsd: market.account.realizedPnlUsd,
+      fundingPnlUsd: market.account.fundingPnlUsd,
+      liquidationPrice: market.account.liquidationPrice
+    },
+    execution: {
+      bestBid: markPrice - halfSpread,
+      bestAsk: markPrice + halfSpread,
+      spreadBps,
+      impact10kBps: market.execution.impact10kBps,
+      impact50kBps: market.execution.impact50kBps,
+      markout1mBps: change24hPct / 24,
+      markout5mBps: change24hPct / 4.8,
+      fillQualityScore: market.execution.fillQualityScore,
+      routeLatencyMs: market.execution.routeLatencyMs,
+      priorityFeeMicrolamports: market.execution.priorityFeeMicrolamports,
+      receipts: [{
+        id: `${market.base}-${lastUpdatedAt}-public-price`,
+        label: "public price tick",
+        source: "CoinGecko simple price",
+        sourceTimestamp,
+        slot: market.currentSlot,
+        side: market.account.side === "short" ? "sell" : "buy",
+        notionalUsd: Math.min(10000, oldNotional),
+        quotePrice: markPrice,
+        fillPrice: markPrice,
+        markPrice,
+        bestBid: markPrice - halfSpread,
+        bestAsk: markPrice + halfSpread,
+        spreadBps,
+        impactBps: market.execution.impact10kBps,
+        markout1mBps: change24hPct / 24,
+        markout5mBps: change24hPct / 4.8,
+        routeLatencyMs: market.execution.routeLatencyMs,
+        priorityFeeMicrolamports: market.execution.priorityFeeMicrolamports,
+        oracleAgeSec: publishAgeSec,
+        crankAgeSlots: market.crank.ageSlots,
+        fundingBpsPerHour: market.funding.bpsPerHour,
+        fillQualityScore: market.execution.fillQualityScore
+      }]
+    },
+    history: {
+      fundingSkew: [
+        ...(market.history?.fundingSkew || []).slice(-5),
+        {
+          source: "public price tick / simulated risk context",
+          sourceTimestamp,
+          slot: market.currentSlot,
+          fundingBpsPerHour: market.funding.bpsPerHour,
+          longOpenInterestUsd: market.marketStructure.longOpenInterestUsd,
+          shortOpenInterestUsd: market.marketStructure.shortOpenInterestUsd,
+          stressConsumedBps: market.marketStructure.stressUsedPct * 5,
+          stressLimitBps: 500,
+          oracleAgeSec: publishAgeSec
+        }
+      ]
+    }
+  };
+}
+
+function positiveNumber(value) {
+  const next = Number(value);
+  return Number.isFinite(next) && next > 0 ? next : 0;
+}
+
+function finiteNumber(value, fallback = 0) {
+  const next = Number(value);
+  return Number.isFinite(next) ? next : fallback;
 }
 
 export function buildCompatibilityReportExport(input, snapshot, report, options = {}) {

@@ -4,10 +4,13 @@ import { readFileSync } from "node:fs";
 import {
   buildDeploymentSummaries,
   buildCompatibilityReportExport,
+  createActualMarketSnapshot,
   createCompatibilityWorkbenchState,
   createDataSourceState,
   buildTerminalRecipeSummaries,
   createImportedSnapshotState,
+  fetchActualMarketSnapshot,
+  ACTUAL_PRICE_ENDPOINT,
   DEMO_CLI_PATH,
   fetchCliDemoSnapshot,
   fetchStaticRealSnapshot,
@@ -135,14 +138,57 @@ test("loads the static real-backed snapshot through the import path", async () =
   assert.equal(nextState.snapshot.markets[0].execution.receipts.length, 1);
 });
 
+test("loads actual public prices without claiming live protocol state", async () => {
+  let requestedUrl = "";
+  const imported = await fetchActualMarketSnapshot(async (url) => {
+    requestedUrl = url;
+    return {
+      ok: true,
+      text: async () => JSON.stringify({
+        solana: { usd: 73.36, usd_24h_change: 2.67, last_updated_at: 1782040863 },
+        bitcoin: { usd: 64129, usd_24h_change: 0.73, last_updated_at: 1782040864 },
+        dogwifcoin: { usd: 0.162, usd_24h_change: 0.2, last_updated_at: 1782040862 }
+      })
+    };
+  }, { nowMs: 1782040875000 });
+  const nextState = createImportedSnapshotState(imported, {
+    label: "live prices loaded",
+    detailPrefix: "CoinGecko public price feed",
+    dataSourceMode: "live-read"
+  });
+
+  assert.equal(requestedUrl, ACTUAL_PRICE_ENDPOINT);
+  assert.equal(nextState.dataSource.mode, "live-read");
+  assert.equal(nextState.dataSource.tone, "good");
+  assert.ok(nextState.dataSource.chips.includes("live public prices"));
+  assert.match(nextState.dataSource.note, /simulated risk context/);
+  assert.equal(nextState.snapshot.markets.find((market) => market.id === "sol-perp").price.mark, 73.36);
+  assert.equal(nextState.lastImportedInput.source.live, true);
+  assert.match(nextState.lastImportedInput.source.note, /not live decoded protocol state/i);
+});
+
+test("builds actual market snapshots from public price feeds", () => {
+  const snapshot = createActualMarketSnapshot({
+    solana: { usd: 80, usd_24h_change: 4, last_updated_at: 1782040800 }
+  }, { nowMs: 1782040860000 });
+  const sol = snapshot.markets.find((market) => market.id === "sol-perp");
+
+  assert.equal(snapshot.source.kind, "public-market-price-feed");
+  assert.equal(snapshot.source.live, true);
+  assert.equal(snapshot.source.realBacked, true);
+  assert.equal(sol.oracle.markPrice, 80);
+  assert.equal(sol.account.label, "Simulated risk context");
+  assert.equal(sol.execution.receipts[0].source, "CoinGecko simple price");
+});
+
 test("builds explicit data source states for cockpit disclosure", () => {
   const fixtureState = createDataSourceState("fixture", percolatorFixture, normalizePercolatorSnapshot(percolatorFixture), { shape: "perpscope-snapshot" });
   const liveState = createDataSourceState("live-read", { source: { live: true } }, { source: {}, cluster: "mainnet-beta", markets: [] }, { shape: "read-only-rpc-fetch" });
 
   assert.equal(fixtureState.note, "default cockpit data is a local fixture");
   assert.equal(fixtureState.modes.find((mode) => mode.id === "fixture").active, true);
-  assert.equal(liveState.note, "no hosted live data pipeline is connected");
-  assert.ok(liveState.chips.includes("live stream"));
+  assert.equal(liveState.note, "actual public prices; simulated risk context");
+  assert.ok(liveState.chips.includes("live public prices"));
 });
 
 test("builds read-only Watchtower signals from normalized market data", () => {
