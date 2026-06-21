@@ -47,6 +47,7 @@ const schemaDir = new URL("../schemas/", import.meta.url);
 const exampleDir = new URL("../examples/", import.meta.url);
 const packageEntry = readFileSync(new URL("../packages/percolator-adapter/index.js", import.meta.url), "utf8");
 const packageManifest = readFileSync(new URL("../packages/percolator-adapter/package.json", import.meta.url), "utf8");
+const packageJson = JSON.parse(packageManifest);
 const packageCli = readFileSync(new URL("../packages/percolator-adapter/bin/perpscope.mjs", import.meta.url), "utf8");
 const consumerPackage = readFileSync(new URL("../examples/adapter-consumer/package.json", import.meta.url), "utf8");
 const consumerDemo = readFileSync(new URL("../examples/adapter-consumer/demo.mjs", import.meta.url), "utf8");
@@ -195,6 +196,10 @@ if (!/normalizePercolatorSnapshot/.test(packageEntry) || !/buildWatchtowerSignal
 
 if (!/"bin"\s*:/.test(packageManifest) || !/"perpscope"\s*:/.test(packageManifest) || !/perpscope init/.test(packageCli) || !/compat report/.test(packageCli) || !/compat diff/.test(packageCli) || !/compat doctor/.test(packageCli) || !/compat badge/.test(packageCli)) {
   failures.push("Adapter package should expose the perpscope init, report, diff, doctor, and badge commands.");
+}
+
+if (packageJson.repository?.url !== "https://github.com/williamclay8/perpscope") {
+  failures.push("Adapter package should expose repository metadata for npm provenance.");
 }
 
 if (!/"@perpscope\/percolator-adapter": "file:\.\.\/\.\.\/packages\/percolator-adapter"/.test(consumerPackage)) {

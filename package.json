@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "description": "Read-only Percolator risk cockpit and terminal adapter kit.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/williamclay8/perpscope"
+  },
   "workspaces": [
     "packages/percolator-adapter"
   ],
