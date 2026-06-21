@@ -28,6 +28,7 @@ const releaseV08Doc = readFileSync(new URL("../docs/release-v0.8.0.md", import.m
 const releaseV09Doc = readFileSync(new URL("../docs/release-v0.9.0.md", import.meta.url), "utf8");
 const releaseV10Doc = readFileSync(new URL("../docs/release-v1.0.0.md", import.meta.url), "utf8");
 const releaseV101Doc = readFileSync(new URL("../docs/release-v1.0.1.md", import.meta.url), "utf8");
+const releaseV11Doc = readFileSync(new URL("../docs/release-v1.1.0.md", import.meta.url), "utf8");
 const contributingDoc = readFileSync(new URL("../CONTRIBUTING.md", import.meta.url), "utf8");
 const terminalQuickstartDoc = readFileSync(new URL("../docs/terminal-builder-quickstart.md", import.meta.url), "utf8");
 const v05PlanDoc = readFileSync(new URL("../docs/v0.5-plan.md", import.meta.url), "utf8");
@@ -124,6 +125,10 @@ if (!/reality-panel/.test(js) || !/buildCompatibilityRealityCheck/.test(js) || !
   failures.push("Cockpit should expose the reality check panel and real-backed candidate capture.");
 }
 
+if (!/data-source-panel/.test(js) || !/STATIC_REAL_SNAPSHOT_PATH/.test(js) || !/fetchStaticRealSnapshot/.test(js) || !/createDataSourceState/.test(js)) {
+  failures.push("Cockpit should expose fixture/static-real/live data source disclosure.");
+}
+
 const dto = normalizePercolatorSnapshot(percolatorFixture);
 if (dto.markets.length < 3) {
   failures.push("Fixture should expose at least three markets for the cockpit.");
@@ -145,7 +150,7 @@ if (compatibilityReport.status !== "compatible") {
 const exportedCompatibility = exportCompatibilityReport(percolatorFixture, dto, {
   generatedAt: "2026-06-21T00:00:00.000Z"
 });
-if (exportedCompatibility.schema !== "perpscope.compatibility-report" || exportedCompatibility.package.version !== "1.0.1") {
+if (exportedCompatibility.schema !== "perpscope.compatibility-report" || exportedCompatibility.package.version !== "1.1.0") {
   failures.push("Exported compatibility report should include the stable schema and package version.");
 }
 
@@ -159,7 +164,7 @@ const driftReport = buildPercolatorCompatibilityReport({
 const drift = compareCompatibilityReports(compatibilityReport, driftReport, {
   generatedAt: "2026-06-21T00:00:00.000Z"
 });
-if (drift.schema !== "perpscope.compatibility-diff" || drift.package.version !== "1.0.1" || !drift.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd")) {
+if (drift.schema !== "perpscope.compatibility-diff" || drift.package.version !== "1.1.0" || !drift.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd")) {
   failures.push("Compatibility diff should include schema, version, and alias suggestions.");
 }
 
@@ -167,7 +172,7 @@ const realityCheck = buildCompatibilityRealityCheck(
   buildPercolatorCompatibilityReport(realSanitizedFixturePack, buildReadOnlyRpcSnapshot(realSanitizedFixturePack)),
   { input: realSanitizedFixturePack, generatedAt: "2026-06-21T00:00:00.000Z" }
 );
-if (realityCheck.schema !== "perpscope.reality-check" || realityCheck.package.version !== "1.0.1" || realityCheck.status !== "candidate" || realityCheck.mapped.requiredCount !== 3) {
+if (realityCheck.schema !== "perpscope.reality-check" || realityCheck.package.version !== "1.1.0" || realityCheck.status !== "candidate" || realityCheck.mapped.requiredCount !== 3) {
   failures.push("Reality check should classify the real-backed sanitized fixture candidate.");
 }
 
@@ -177,7 +182,7 @@ const templateDoctor = buildCompatibilityDoctor(captureTemplate, {
 const templateBadge = buildCompatibilityBadge(templateDoctor, {
   generatedAt: "2026-06-21T00:00:00.000Z"
 });
-if (templateDoctor.schema !== "perpscope.compatibility-doctor" || templateDoctor.package.version !== "1.0.1" || templateDoctor.required.mapped !== 3 || !templateDoctor.nextActions.length) {
+if (templateDoctor.schema !== "perpscope.compatibility-doctor" || templateDoctor.package.version !== "1.1.0" || templateDoctor.required.mapped !== 3 || !templateDoctor.nextActions.length) {
   failures.push("Capture template should produce a useful compatibility doctor summary.");
 }
 if (templateBadge.schema !== "perpscope.compatibility-badge" || !templateBadge.markdown.includes("PerpScope compatible")) {
@@ -204,7 +209,7 @@ if (!readme.includes("examples/adapter-consumer/") || !readme.includes("docs/fee
   failures.push("README should link the external consumer example and feedback loop.");
 }
 
-if (!readme.includes("npm install @perpscope/percolator-adapter") || !readme.includes("@perpscope/percolator-adapter@1.0.1") || !readme.includes("2-Minute Terminal Builder Check") || !readme.includes("Submit A Shape")) {
+if (!readme.includes("npm install @perpscope/percolator-adapter") || !readme.includes("@perpscope/percolator-adapter@1.1.0") || !readme.includes("2-Minute Terminal Builder Check") || !readme.includes("Submit A Shape")) {
   failures.push("README should document the published adapter package.");
 }
 
@@ -212,7 +217,7 @@ for (const required of ["CONTRIBUTING.md", "adapter-mapping-request.yml", "cli-d
   if (!readme.includes(required)) failures.push(`README should link ${required}.`);
 }
 
-if (!readme.includes("docs/field-compatibility-map.md") || !readme.includes("examples/field-compatibility-map.json") || !readme.includes("examples/compatibility-report-export.json") || !readme.includes("examples/compatibility-diff.json") || !readme.includes("examples/fixture-pack-drifted-aliases.json") || !readme.includes("examples/fixture-pack-real-sanitized-rpc-shape.json") || !readme.includes("examples/capture-template.json")) {
+if (!readme.includes("docs/field-compatibility-map.md") || !readme.includes("examples/field-compatibility-map.json") || !readme.includes("examples/compatibility-report-export.json") || !readme.includes("examples/compatibility-diff.json") || !readme.includes("examples/fixture-pack-drifted-aliases.json") || !readme.includes("examples/fixture-pack-real-sanitized-rpc-shape.json") || !readme.includes("examples/static-real-snapshot.json") || !readme.includes("examples/capture-template.json")) {
   failures.push("README should link the field compatibility map, JSON manifest, report export, diff, and fixture pack examples.");
 }
 
@@ -228,6 +233,7 @@ for (const doc of [
   "docs/release-v0.9.0.md",
   "docs/release-v1.0.0.md",
   "docs/release-v1.0.1.md",
+  "docs/release-v1.1.0.md",
   "docs/v0.5-plan.md"
 ]) {
   if (!readme.includes(doc)) {
@@ -332,6 +338,12 @@ for (const required of ["@perpscope/percolator-adapter@1.0.1", "README first-scr
   }
 }
 
+for (const required of ["@perpscope/percolator-adapter@1.1.0", "Data Source", "examples/static-real-snapshot.json", "Load Snapshot", "not a live stream", "Safety Boundary"]) {
+  if (!releaseV11Doc.includes(required)) {
+    failures.push(`v1.1 release notes should include ${required}.`);
+  }
+}
+
 for (const required of ["compatibility report", "Export", "wallet", "transaction", "npm run check", "0.5.0"]) {
   if (!v05PlanDoc.toLowerCase().includes(required.toLowerCase())) {
     failures.push(`v0.5 plan should mention ${required}.`);
@@ -353,13 +365,13 @@ for (const required of [
   }
 }
 
-if (fieldMapJson.version !== "1.0.1") {
-  failures.push("Field compatibility JSON should match package version 1.0.1.");
+if (fieldMapJson.version !== "1.1.0") {
+  failures.push("Field compatibility JSON should match package version 1.1.0.");
 }
 
 if (
   compatibilityReportExport.schema !== "perpscope.compatibility-report" ||
-  compatibilityReportExport.package?.version !== "1.0.1" ||
+  compatibilityReportExport.package?.version !== "1.1.0" ||
   compatibilityReportExport.safety?.mode !== "read-only" ||
   !compatibilityReportExport.source?.commandSet?.length ||
   !compatibilityReportExport.missingFields?.some((field) => field.field === "history.fundingSkew") ||
@@ -370,7 +382,7 @@ if (
 
 if (
   compatibilityDiff.schema !== "perpscope.compatibility-diff" ||
-  compatibilityDiff.package?.version !== "1.0.1" ||
+  compatibilityDiff.package?.version !== "1.1.0" ||
   !compatibilityDiff.aliasSuggestions?.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd") ||
   compatibilityDiff.summary?.suggestionCount < 1
 ) {

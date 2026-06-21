@@ -18,6 +18,30 @@ import {
 import { buildWatchtowerSignals } from "./lib/watchtower-signals.js";
 
 export const DEMO_CLI_PATH = "./examples/percolator-cli.bundle.json";
+export const STATIC_REAL_SNAPSHOT_PATH = "./examples/static-real-snapshot.json";
+export const DATA_SOURCE_MODES = [
+  {
+    id: "fixture",
+    label: "fixture",
+    tone: "neutral",
+    detail: "local demo data",
+    status: "loaded"
+  },
+  {
+    id: "static-real",
+    label: "real-backed",
+    tone: "warning",
+    detail: "static sanitized snapshot",
+    status: "available"
+  },
+  {
+    id: "live-read",
+    label: "live",
+    tone: "danger",
+    detail: "read-only stream not connected",
+    status: "not wired"
+  }
+];
 export const READ_ONLY_DEPLOYMENTS = [
   {
     id: "mainnet-sol",
@@ -231,6 +255,7 @@ const state = {
   compatibilityReport: fixtureCompatibilityReport,
   compatibilityDiff: compareCompatibilityReports(fixtureCompatibilityReport, fixtureCompatibilityReport),
   realityCheck: buildCompatibilityRealityCheck(realityCompatibilityReport, { input: REALITY_CHECK_CAPTURE }),
+  dataSource: createDataSourceState("fixture", percolatorFixture, fixtureSnapshot, fixtureCompatibilityReport),
   lastImportedInput: percolatorFixture,
   workbench: createCompatibilityWorkbenchState(WORKBENCH_PREVIOUS_CAPTURE, WORKBENCH_CURRENT_CAPTURE, {
     previousText: workbenchPreviousText,
@@ -326,6 +351,8 @@ function render() {
           ${compatibilityPanel(state.compatibilityReport)}
 
           ${realityCheckPanel(state.realityCheck)}
+
+          ${dataSourcePanel(state.dataSource)}
 
           ${workbenchPanel(state.workbench)}
 
@@ -449,6 +476,7 @@ function render() {
   app.querySelector("#analyze-workbench")?.addEventListener("click", analyzeWorkbench);
   app.querySelector("#sample-workbench")?.addEventListener("click", loadWorkbenchSample);
   app.querySelector("#export-workbench-diff")?.addEventListener("click", exportWorkbenchDiff);
+  app.querySelector("#load-static-real")?.addEventListener("click", loadStaticRealSnapshot);
   app.querySelector("#try-cli").addEventListener("click", loadCliDemo);
   app.querySelectorAll("[data-capture-open]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -477,6 +505,7 @@ function render() {
     state.compatibilityReport = fixtureCompatibilityReport;
     state.compatibilityDiff = compareCompatibilityReports(fixtureCompatibilityReport, fixtureCompatibilityReport);
     state.realityCheck = buildCompatibilityRealityCheck(realityCompatibilityReport, { input: REALITY_CHECK_CAPTURE });
+    state.dataSource = createDataSourceState("fixture", percolatorFixture, snapshot, fixtureCompatibilityReport);
     state.lastImportedInput = percolatorFixture;
     state.workbench = createCompatibilityWorkbenchState(WORKBENCH_PREVIOUS_CAPTURE, WORKBENCH_CURRENT_CAPTURE, {
       previousText: workbenchPreviousText,
@@ -703,6 +732,33 @@ function realityCheckPanel(check) {
   `;
 }
 
+function dataSourcePanel(dataSource) {
+  return `
+    <article class="data-source-panel panel stagger-item ${dataSource.tone}">
+      <div class="panel-head">
+        <span class="panel-label">data source</span>
+        <strong class="compat-status ${dataSource.tone}">${esc(dataSource.modeLabel)}</strong>
+      </div>
+      <div class="data-source-grid" aria-label="Data source modes">
+        ${dataSource.modes.map((mode) => `
+          <section class="data-source-card ${mode.tone} ${mode.active ? "active" : ""}">
+            <span>${esc(mode.label)}</span>
+            <strong>${esc(mode.status)}</strong>
+            <small>${esc(mode.detail)}</small>
+          </section>
+        `).join("")}
+      </div>
+      <div class="data-source-strip">
+        ${dataSource.chips.map((chip) => `<span>${esc(chip)}</span>`).join("")}
+      </div>
+      <div class="data-source-actions">
+        <button class="utility-button" id="load-static-real" type="button">Load Snapshot</button>
+        <span>${esc(dataSource.note)}</span>
+      </div>
+    </article>
+  `;
+}
+
 function captureEditor() {
   return `
     <div class="capture-editor">
@@ -776,6 +832,30 @@ async function loadCliDemo() {
   render();
 }
 
+async function loadStaticRealSnapshot() {
+  try {
+    const imported = await fetchStaticRealSnapshot(fetch);
+    loadImportedSnapshot(imported, {
+      label: "static real loaded",
+      detailPrefix: STATIC_REAL_SNAPSHOT_PATH.replace(/^\.\//, ""),
+      dataSourceMode: "static-real"
+    });
+  } catch (error) {
+    state.importStatus = {
+      tone: "danger",
+      label: error.message.slice(0, 44),
+      detail: error.message
+    };
+  }
+  render();
+}
+
+export async function fetchStaticRealSnapshot(fetcher) {
+  const response = await fetcher(STATIC_REAL_SNAPSHOT_PATH);
+  if (!response.ok) throw new Error("Static real snapshot unavailable.");
+  return parsePercolatorJson(await response.text());
+}
+
 export async function fetchCliDemoSnapshot(fetcher) {
   const response = await fetcher(DEMO_CLI_PATH);
   if (!response.ok) throw new Error("CLI demo fixture unavailable.");
@@ -807,6 +887,7 @@ export function createImportedSnapshotState(imported, options = {}) {
     compatibilityReport,
     compatibilityDiff,
     realityCheck,
+    dataSource: createDataSourceState(options.dataSourceMode || dataSourceModeForInput(imported), imported, snapshot, compatibilityReport),
     lastImportedInput: imported,
     captureOpen: false,
     importStatus: {
@@ -826,6 +907,41 @@ function loadImportedSnapshot(imported, options = {}) {
     state.realityCheck = buildCompatibilityRealityCheck(state.compatibilityReport, { input: state.lastImportedInput });
     throw error;
   }
+}
+
+export function createDataSourceState(modeId, input, snapshot, report) {
+  const mode = DATA_SOURCE_MODES.find((entry) => entry.id === modeId) || DATA_SOURCE_MODES[0];
+  const source = snapshot?.source || {};
+  const inputSource = input && typeof input === "object" && !Array.isArray(input) ? input.source || {} : {};
+  const live = inputSource.live === true;
+  const modes = DATA_SOURCE_MODES.map((entry) => ({
+    ...entry,
+    active: entry.id === mode.id
+  }));
+  return {
+    mode: mode.id,
+    modeLabel: mode.label,
+    tone: mode.tone,
+    modes,
+    chips: [
+      source.label || input?.label || "decoded fixture",
+      snapshot?.cluster || input?.cluster || "unknown",
+      report?.shape || detectPercolatorInputShape(input),
+      live ? "live stream" : "not live"
+    ].filter(Boolean),
+    note: mode.id === "static-real"
+      ? "static sanitized snapshot; not a stream"
+      : mode.id === "live-read"
+        ? "no hosted live data pipeline is connected"
+        : "default cockpit data is a local fixture"
+  };
+}
+
+function dataSourceModeForInput(input) {
+  const source = input && typeof input === "object" && !Array.isArray(input) ? input.source || {} : {};
+  if (source.live === true) return "live-read";
+  if (source.realBacked || /real|static/i.test(input?.fixtureKind || "")) return "static-real";
+  return "fixture";
 }
 
 export function buildCompatibilityReportExport(input, snapshot, report, options = {}) {

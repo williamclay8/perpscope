@@ -434,6 +434,7 @@ h1 {
 .watchtower-panel,
 .capture-panel,
 .reality-panel,
+.data-source-panel,
 .workbench-panel,
 .history-panel,
 .deployment-panel,
@@ -996,6 +997,96 @@ h1 {
 
 .workbench-panel {
   grid-column: span 2;
+}
+
+.data-source-panel {
+  grid-column: span 1;
+}
+
+.data-source-grid {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.data-source-card {
+  display: grid;
+  grid-template-columns: minmax(0, 0.78fr) auto;
+  gap: 4px 10px;
+  min-height: 56px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: var(--shadow-border);
+}
+
+.data-source-card.active {
+  box-shadow: 0 0 0 1px rgba(115, 216, 255, 0.34);
+}
+
+.data-source-card.good {
+  background: var(--mint-soft);
+}
+
+.data-source-card.warning {
+  background: var(--amber-soft);
+}
+
+.data-source-card.danger {
+  background: var(--red-soft);
+}
+
+.data-source-card span,
+.data-source-card small,
+.data-source-strip span,
+.data-source-actions span {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.data-source-card strong {
+  color: var(--ink);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.data-source-card small {
+  grid-column: 1 / -1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-source-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.data-source-strip span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  max-width: 100%;
+  padding: 0 9px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.045);
+  font-weight: 800;
+  box-shadow: var(--shadow-border);
+}
+
+.data-source-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.data-source-actions span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .reality-panel {
@@ -2053,6 +2144,10 @@ code {
     grid-column: span 2;
   }
 
+  .data-source-panel {
+    grid-column: span 2;
+  }
+
   .workbench-panel {
     grid-column: span 2;
   }
@@ -2164,6 +2259,7 @@ code {
   .watchtower-panel,
   .capture-panel,
   .reality-panel,
+  .data-source-panel,
   .workbench-panel,
   .history-panel,
   .deployment-panel,

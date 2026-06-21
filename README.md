@@ -161,6 +161,7 @@ examples/fixture-pack-minimal-terminal.json
 examples/fixture-pack-drifted-aliases.json
 examples/fixture-pack-receipt-heavy-execution.json
 examples/fixture-pack-real-sanitized-rpc-shape.json
+examples/static-real-snapshot.json
 examples/capture-template.json
 ```
 
@@ -221,7 +222,7 @@ schemas/read-only-rpc-fetch.schema.json
 schemas/funding-skew-history.schema.json
 ```
 
-The source-backed adapter field map lives in `docs/field-compatibility-map.md`, with a JSON manifest at `examples/field-compatibility-map.json`, an export artifact at `examples/compatibility-report-export.json`, a diff artifact at `examples/compatibility-diff.json`, and fixture packs such as `examples/fixture-pack-drifted-aliases.json` and `examples/fixture-pack-real-sanitized-rpc-shape.json`.
+The source-backed adapter field map lives in `docs/field-compatibility-map.md`, with a JSON manifest at `examples/field-compatibility-map.json`, an export artifact at `examples/compatibility-report-export.json`, a diff artifact at `examples/compatibility-diff.json`, and fixture packs such as `examples/fixture-pack-drifted-aliases.json`, `examples/fixture-pack-real-sanitized-rpc-shape.json`, and `examples/static-real-snapshot.json`.
 
 The terminal-builder quickstart lives in `docs/terminal-builder-quickstart.md`.
 
@@ -382,10 +383,12 @@ The normalized market DTO includes:
 - `docs/release-v0.9.0.md` mirrors the public release notes for the doctor, badge, and capture-template release.
 - `docs/release-v1.0.0.md` mirrors the public release notes for init and CI-ready doctor exit codes.
 - `docs/release-v1.0.1.md` mirrors the public release notes for adoption and trust polish.
+- `docs/release-v1.1.0.md` mirrors the public release notes for the Data Source cockpit and static real-backed snapshot.
 - `docs/v0.5-plan.md` documents the shipped compatibility report export.
 - `.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml` is the structured intake form for sanitized builder samples.
 - `src/fixtures/percolator-market.js` contains sample decoded market/account state plus execution receipt history.
 - `src/app.js` renders the read-only cockpit.
+- The website starts in fixture mode. The Data Source panel can load `examples/static-real-snapshot.json`, which is a sanitized real-backed static snapshot, not a live stream.
 - `schemas/` contains the public input contracts.
 - `test/percolator-adapter.test.js` covers adapter safety and risk math.
 
@@ -419,11 +422,12 @@ Current public site: [williamclay8.github.io/perpscope](https://williamclay8.git
 
 - v0.4 shipped: capture intake for pasted/dropped decoded outputs, compatibility scoring, missing-field warnings, and ignored-field mapping.
 - v0.4 follow-up: field-level compatibility map for terminal import/export adapters.
-- npm package shipped: `@perpscope/percolator-adapter@1.0.1`.
+- npm package shipped: `@perpscope/percolator-adapter@1.1.0`.
 - v0.5 shipped: downloadable compatibility report export for terminal builders.
 - v0.6 shipped: compatibility diffing and alias suggestions for drifting terminal shapes.
 - v0.7 shipped: local compatibility workbench, CLI report/diff commands, and fixture packs.
 - v0.8 shipped: reality check panel, `buildCompatibilityRealityCheck()`, and `examples/fixture-pack-real-sanitized-rpc-shape.json`.
 - v0.9 shipped: `compat doctor`, `compat badge`, and `examples/capture-template.json`.
 - v1.0 shipped: `perpscope init`, CI-ready `compat doctor` exit codes, and the 2-minute terminal-builder check.
+- v1.1 shipped: Data Source disclosure, `Load Snapshot`, and `examples/static-real-snapshot.json` so the website clearly separates fixture, static real-backed, and unwired live data.
 - More deployment fixtures as Percolator terminal teams share read-only shapes.

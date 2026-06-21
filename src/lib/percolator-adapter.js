@@ -1,6 +1,6 @@
 import { normalizeFundingSkewHistory } from "./funding-history.js";
 
-export const PERPSCOPE_ADAPTER_VERSION = "1.0.1";
+export const PERPSCOPE_ADAPTER_VERSION = "1.1.0";
 
 const KEYPAIR_FIELD_PATTERN = /(^|_)(secret|private|keypair|mnemonic|seed|walletPath|wallet)(_|$)/i;
 const HISTORY_COMMAND_KEYS = new Set([

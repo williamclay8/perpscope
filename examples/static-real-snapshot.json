@@ -1,0 +1,130 @@
+{
+  "label": "Static real-backed Percolator snapshot / SOL",
+  "cluster": "mainnet-beta",
+  "fixtureKind": "static-real-backed-snapshot",
+  "fixture": "examples/static-real-snapshot.json",
+  "source": {
+    "kind": "read-only-rpc-decoded-account",
+    "basis": "Static sanitized snapshot derived from examples/percolator-mainnet-sol.readonly-rpc.json",
+    "capture": "decoded account fixture",
+    "generatedAt": "2026-06-21T06:10:00Z",
+    "sanitized": true,
+    "realBacked": true,
+    "live": false,
+    "note": "Static real-backed sample. Not a live stream."
+  },
+  "slab": "PERCOLAT_SOL_8k4q...Qp2",
+  "programId": "Perco1ator111111111111111111111111111111111",
+  "currentSlot": 346892118,
+  "market": {
+    "id": "sol-perp",
+    "symbol": "SOL-PERP",
+    "base": "SOL",
+    "quote": "USDC",
+    "status": "stable"
+  },
+  "account": {
+    "owner": "Perco1ator111111111111111111111111111111111",
+    "dataLength": 524800,
+    "magic": "50455243",
+    "decoded": {
+      "header": {
+        "magic": "50455243",
+        "version": 16,
+        "nonce": "1181049"
+      },
+      "config": {
+        "maxStalenessSecs": 8,
+        "confFilterBps": 45,
+        "unitScale": 6
+      },
+      "params": {
+        "maintenanceMarginBps": 500,
+        "initialMarginBps": 820,
+        "maxAccounts": 4096,
+        "liquidationFeeBps": 35
+      },
+      "engine": {
+        "currentSlot": 346892118,
+        "lastMarketSlot": 346892090,
+        "fundingRateBpsPerHour": 0.82,
+        "openInterestUsd": 2430000,
+        "longOpenInterestUsd": 1320000,
+        "shortOpenInterestUsd": 1110000,
+        "insuranceUsd": 148000,
+        "vaultUsd": 910000,
+        "claimUsd": 821000,
+        "stressConsumedBps": 118,
+        "stressLimitBps": 500
+      },
+      "bestPrice": {
+        "oracle": {
+          "price": "181610000",
+          "decimals": 6,
+          "ageSecs": 2
+        },
+        "bestBuy": {
+          "price": "181710000",
+          "decimals": 6
+        },
+        "bestSell": {
+          "price": "181520000",
+          "decimals": 6
+        },
+        "effectiveSpreadBps": 10
+      },
+      "accountUsd": {
+        "label": "static observer",
+        "side": "long",
+        "positionSize": 420,
+        "positionNotionalUsd": 76276.2,
+        "collateralUsd": 8400,
+        "unrealizedPnlUsd": 3067.2,
+        "realizedPnlUsd": 540.8,
+        "fundingPnlUsd": -32.4,
+        "liquidationPrice": 162.94
+      },
+      "receipts": [
+        {
+          "label": "static fill",
+          "source": "read-only receipt observation",
+          "sourceTimestamp": "2026-06-20T13:24:12Z",
+          "markPriceUsd": 181.61,
+          "bestBid": 181.52,
+          "bestAsk": 181.71,
+          "spreadBps": 10.5,
+          "impactBps": 8.4,
+          "markout1mBps": 4.2,
+          "markout5mBps": -1.7,
+          "routeLatencyMs": 132,
+          "priorityFeeMicrolamports": 2200,
+          "fillQualityScore": 84
+        }
+      ],
+      "fundingSkew": [
+        {
+          "source": "read-only funding observation",
+          "sourceTimestamp": "2026-06-20T13:24:00Z",
+          "slot": 346892086,
+          "fundingBpsPerHour": 0.82,
+          "longOpenInterestUsd": 1320000,
+          "shortOpenInterestUsd": 1110000,
+          "stressConsumedBps": 118,
+          "stressLimitBps": 500,
+          "oracleAgeSec": 2.1
+        }
+      ],
+      "accounts": {
+        "rows": [
+          { "idx": 7, "kind": "User", "stale": false },
+          { "idx": 39, "kind": "User", "stale": true }
+        ]
+      },
+      "bitmap": {
+        "numUsed": 72,
+        "maxAccounts": 4096,
+        "usedIndices": [1, 4, 7, 12, 18]
+      }
+    }
+  }
+}

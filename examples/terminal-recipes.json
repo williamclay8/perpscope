@@ -1,6 +1,6 @@
 {
   "label": "PerpScope terminal adapter recipes",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "recipes": [
     {
       "id": "file-import",

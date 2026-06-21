@@ -5,11 +5,14 @@ import {
   buildDeploymentSummaries,
   buildCompatibilityReportExport,
   createCompatibilityWorkbenchState,
+  createDataSourceState,
   buildTerminalRecipeSummaries,
   createImportedSnapshotState,
   DEMO_CLI_PATH,
   fetchCliDemoSnapshot,
+  fetchStaticRealSnapshot,
   READ_ONLY_DEPLOYMENTS,
+  STATIC_REAL_SNAPSHOT_PATH,
   TERMINAL_RECIPES
 } from "../src/app.js";
 import { buildWatchtowerSignals } from "../src/lib/watchtower-signals.js";
@@ -107,6 +110,39 @@ test("surfaces Try CLI demo fetch failures", async () => {
     () => fetchCliDemoSnapshot(async () => ({ ok: false, text: async () => "" })),
     /CLI demo fixture unavailable/
   );
+});
+
+test("loads the static real-backed snapshot through the import path", async () => {
+  let requestedUrl = "";
+  const imported = await fetchStaticRealSnapshot(async (url) => {
+    requestedUrl = url;
+    return {
+      ok: true,
+      text: async () => readFileSync(new URL("../examples/static-real-snapshot.json", import.meta.url), "utf8")
+    };
+  });
+  const nextState = createImportedSnapshotState(imported, {
+    label: "static real loaded",
+    detailPrefix: STATIC_REAL_SNAPSHOT_PATH.replace(/^\.\//, ""),
+    dataSourceMode: "static-real"
+  });
+
+  assert.equal(requestedUrl, STATIC_REAL_SNAPSHOT_PATH);
+  assert.equal(nextState.dataSource.mode, "static-real");
+  assert.equal(nextState.dataSource.tone, "warning");
+  assert.ok(nextState.dataSource.chips.includes("not live"));
+  assert.equal(nextState.snapshot.markets[0].name, "SOL-PERP");
+  assert.equal(nextState.snapshot.markets[0].execution.receipts.length, 1);
+});
+
+test("builds explicit data source states for cockpit disclosure", () => {
+  const fixtureState = createDataSourceState("fixture", percolatorFixture, normalizePercolatorSnapshot(percolatorFixture), { shape: "perpscope-snapshot" });
+  const liveState = createDataSourceState("live-read", { source: { live: true } }, { source: {}, cluster: "mainnet-beta", markets: [] }, { shape: "read-only-rpc-fetch" });
+
+  assert.equal(fixtureState.note, "default cockpit data is a local fixture");
+  assert.equal(fixtureState.modes.find((mode) => mode.id === "fixture").active, true);
+  assert.equal(liveState.note, "no hosted live data pipeline is connected");
+  assert.ok(liveState.chips.includes("live stream"));
 });
 
 test("builds read-only Watchtower signals from normalized market data", () => {
