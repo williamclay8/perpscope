@@ -16,7 +16,9 @@ Doctor exit codes are CI-ready: `0` means required fields pass, `1` means reject
 ```js
 import {
   buildPercolatorCompatibilityReport,
+  parsePerpScopeExport,
   buildReadOnlyRpcSnapshot,
+  summarizePerpScopeExport,
   buildWatchtowerSignals,
   compareCompatibilityReports,
   normalizeFundingSkewHistory,
@@ -31,6 +33,7 @@ const compatibility = buildPercolatorCompatibilityReport(decodedPercolatorJson, 
 const drift = compareCompatibilityReports(previousCompatibility, compatibility);
 const watchtower = buildWatchtowerSignals(market, stress);
 const carryHistory = normalizeFundingSkewHistory(market.history.fundingSkew, market);
+const embedSummary = summarizePerpScopeExport(parsePerpScopeExport(perpscopeExportJson));
 ```
 
 ## Boundary
@@ -52,8 +55,32 @@ The package exposes pure read-only helpers:
 - `buildWatchtowerSignals()`
 - `normalizeFundingSkewHistory()`
 - `summarizeFundingSkewHistory()`
+- `parsePerpScopeExport()`
+- `summarizePerpScopeExport()`
+- `summarizeFeedHealth()`
+- `rankRadarRows()`
 
 It does not connect wallets, sign, send, route, place orders, or submit transactions.
+
+## PerpScope Export Helpers
+
+`perpscope.export.v1` is the embeddable cockpit contract for terminals that want PerpScope's feed health, market radar, why-hot reasons, adapter targets, and read-only safety boundary without adopting the full UI.
+
+```js
+import {
+  parsePerpScopeExport,
+  rankRadarRows,
+  summarizeFeedHealth,
+  summarizePerpScopeExport
+} from "@perpscope/percolator-adapter";
+
+const exportPayload = parsePerpScopeExport(perpscopeExportJson);
+const summary = summarizePerpScopeExport(exportPayload);
+const feed = summarizeFeedHealth(exportPayload);
+const hottest = rankRadarRows(exportPayload)[0];
+```
+
+The JSON Schema lives at `../../schemas/perpscope-export.schema.json`, and the sample fixture lives at `../../examples/perpscope-export.sample.json`.
 
 ## Compatibility Report
 

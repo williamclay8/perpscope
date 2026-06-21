@@ -1,0 +1,261 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://williamclay8.github.io/perpscope/schemas/perpscope-export.schema.json",
+  "title": "PerpScope export",
+  "type": "object",
+  "required": [
+    "schema",
+    "version",
+    "generatedAt",
+    "selection",
+    "source",
+    "feedHealth",
+    "radar",
+    "market",
+    "adapterTargets",
+    "safety"
+  ],
+  "properties": {
+    "schema": {
+      "const": "perpscope.export.v1"
+    },
+    "version": {
+      "type": "string"
+    },
+    "generatedAt": {
+      "type": "string"
+    },
+    "selection": {
+      "type": "object",
+      "required": [
+        "market",
+        "filter",
+        "embed",
+        "shareUrl"
+      ],
+      "properties": {
+        "market": { "type": "string" },
+        "filter": { "type": "string" },
+        "embed": { "type": "string" },
+        "shareUrl": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "label",
+        "cluster",
+        "currentSlot",
+        "live",
+        "provider",
+        "mode"
+      ],
+      "properties": {
+        "label": { "type": "string" },
+        "cluster": { "type": "string" },
+        "currentSlot": { "type": "number" },
+        "live": { "type": "boolean" },
+        "provider": { "type": "string" },
+        "mode": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "feedHealth": {
+      "type": "object",
+      "required": [
+        "status",
+        "tone",
+        "items",
+        "chips"
+      ],
+      "properties": {
+        "status": { "type": "string" },
+        "tone": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/labeledValue" }
+        },
+        "chips": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": true
+    },
+    "radar": {
+      "type": "object",
+      "required": [
+        "filter",
+        "rows",
+        "allRows",
+        "tiles"
+      ],
+      "properties": {
+        "filter": { "type": "string" },
+        "rows": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/radarRow" }
+        },
+        "allRows": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/radarRow" }
+        },
+        "tiles": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/labeledValue" }
+        }
+      },
+      "additionalProperties": true
+    },
+    "market": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "status",
+        "healthScore",
+        "price",
+        "account",
+        "marketStructure",
+        "funding",
+        "execution",
+        "flags",
+        "whyHot"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "status": { "type": "string" },
+        "healthScore": { "type": "number" },
+        "price": { "type": "object" },
+        "account": { "type": "object" },
+        "marketStructure": { "type": "object" },
+        "funding": { "type": "object" },
+        "execution": { "type": "object" },
+        "flags": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/labeledValue" }
+        },
+        "whyHot": {
+          "type": "object",
+          "required": [
+            "market",
+            "status",
+            "lede",
+            "tone",
+            "reasons"
+          ],
+          "properties": {
+            "market": { "type": "string" },
+            "status": { "type": "string" },
+            "lede": { "type": "string" },
+            "tone": { "type": "string" },
+            "reasons": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/labeledValue" }
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "adapterTargets": {
+      "type": "object",
+      "required": [
+        "ready",
+        "targets"
+      ],
+      "properties": {
+        "ready": { "type": "number" },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "label",
+              "status",
+              "tone",
+              "fields",
+              "note"
+            ],
+            "properties": {
+              "id": { "type": "string" },
+              "label": { "type": "string" },
+              "status": { "type": "string" },
+              "tone": { "type": "string" },
+              "fields": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "note": { "type": "string" }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "safety": {
+      "type": "object",
+      "required": [
+        "mode",
+        "wallet",
+        "signer",
+        "transaction",
+        "orderRouting"
+      ],
+      "properties": {
+        "mode": { "const": "read-only" },
+        "wallet": { "const": false },
+        "signer": { "const": false },
+        "transaction": { "const": false },
+        "orderRouting": { "const": false }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "labeledValue": {
+      "type": "object",
+      "required": [
+        "label",
+        "value"
+      ],
+      "properties": {
+        "label": { "type": "string" },
+        "value": { "type": "string" },
+        "detail": { "type": "string" },
+        "tone": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "radarRow": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "heat",
+        "tone",
+        "detail",
+        "scoreLabel",
+        "qualityLabel",
+        "rank"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "heat": { "type": "number" },
+        "tone": { "type": "string" },
+        "detail": { "type": "string" },
+        "scoreLabel": { "type": "string" },
+        "qualityLabel": { "type": "string" },
+        "rank": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

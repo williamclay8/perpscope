@@ -20,17 +20,17 @@ Live demo: [williamclay8.github.io/perpscope](https://williamclay8.github.io/per
 ```
 
 ```js
+import { summarizePerpScopeExport } from "@perpscope/percolator-adapter";
+
 const response = await fetch("https://raw.githubusercontent.com/williamclay8/perpscope/main/examples/perpscope-export.sample.json");
 const payload = await response.json();
 
 if (payload.schema !== "perpscope.export.v1") throw new Error("Unexpected export schema");
 
-const market = payload.market.name;
-const heat = payload.radar.rows[0].scoreLabel;
-const reasons = payload.market.whyHot.reasons;
+const summary = summarizePerpScopeExport(payload);
 ```
 
-Use `docs/embed-integration.md` for the copy-paste guide and `examples/embed-consumer/` for a tiny iframe plus JSON parser example.
+Use `docs/embed-integration.md` for the copy-paste guide, `examples/copy-integration/` for a live copy page, and `examples/embed-consumer/` for the terminal side-rail mock.
 
 ## 2-Minute Terminal Builder Check
 
@@ -182,6 +182,7 @@ examples/percolator-mainnet-sol.readonly-rpc.json
 examples/percolator-devnet-wif.readonly-rpc.json
 examples/funding-skew-history.stdout.json
 examples/adapter-consumer/
+examples/copy-integration/
 examples/embed-consumer/
 examples/perpscope-export.sample.json
 examples/terminal-recipes.json
@@ -249,6 +250,7 @@ schemas/perpscope-snapshot.schema.json
 schemas/percolator-cli-bundle.schema.json
 schemas/read-only-rpc-fetch.schema.json
 schemas/funding-skew-history.schema.json
+schemas/perpscope-export.schema.json
 ```
 
 The source-backed adapter field map lives in `docs/field-compatibility-map.md`, with a JSON manifest at `examples/field-compatibility-map.json`, an export artifact at `examples/compatibility-report-export.json`, a diff artifact at `examples/compatibility-diff.json`, and fixture packs such as `examples/fixture-pack-drifted-aliases.json`, `examples/fixture-pack-real-sanitized-rpc-shape.json`, and `examples/static-real-snapshot.json`.
@@ -269,6 +271,8 @@ import {
   compareCompatibilityReports,
   normalizeFundingSkewHistory,
   normalizePercolatorSnapshot,
+  parsePerpScopeExport,
+  summarizePerpScopeExport,
   simulatePriceShock
 } from "./packages/percolator-adapter/index.js";
 
@@ -280,6 +284,7 @@ const reality = buildCompatibilityRealityCheck(compatibility, { input: decodedJs
 const drift = compareCompatibilityReports(previousCompatibility, compatibility);
 const watchtower = buildWatchtowerSignals(market, stress);
 const carryHistory = normalizeFundingSkewHistory(market.history.fundingSkew, market);
+const embedSummary = summarizePerpScopeExport(parsePerpScopeExport(perpscopeExportJson));
 ```
 
 The package is intentionally side-effect free. It does not create wallets, sign, send, route, or submit transactions.
@@ -423,6 +428,7 @@ The normalized market DTO includes:
 - `docs/release-v1.7.0.md` mirrors the public release notes for why-hot explanations, feed health, share links, and adapter targets.
 - `docs/release-v1.8.0.md` mirrors the public release notes for exportable JSON and embed widgets.
 - `docs/release-v1.9.0.md` mirrors the public release notes for copy-paste embeds and export consumer examples.
+- `docs/release-v2.0.0.md` mirrors the public release notes for the schema-locked terminal integration kit.
 - `docs/adapter-targets.md` documents the terminal rail, risk overlay, execution lane, feed monitor, and embed contracts.
 - `docs/embed-integration.md` documents iframe widgets, the export fixture, and trusted display fields.
 - `docs/decoded-live-source.md` documents the CORS endpoint contract for decoded Percolator live feeds.
@@ -466,7 +472,7 @@ Current public site: [williamclay8.github.io/perpscope](https://williamclay8.git
 
 - v0.4 shipped: capture intake for pasted/dropped decoded outputs, compatibility scoring, missing-field warnings, and ignored-field mapping.
 - v0.4 follow-up: field-level compatibility map for terminal import/export adapters.
-- npm package shipped: `@perpscope/percolator-adapter@1.1.0`.
+- npm package shipped: `@perpscope/percolator-adapter@2.0.0`.
 - v0.5 shipped: downloadable compatibility report export for terminal builders.
 - v0.6 shipped: compatibility diffing and alias suggestions for drifting terminal shapes.
 - v0.7 shipped: local compatibility workbench, CLI report/diff commands, and fixture packs.

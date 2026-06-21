@@ -29,3 +29,12 @@ export {
 } from "./src/lib/funding-history.js";
 
 export { buildWatchtowerSignals } from "./src/lib/watchtower-signals.js";
+
+export {
+  feedHealthMap,
+  parsePerpScopeExport,
+  PERPSCOPE_EXPORT_SCHEMA,
+  rankRadarRows,
+  summarizeFeedHealth,
+  summarizePerpScopeExport
+} from "./src/lib/perpscope-export.js";

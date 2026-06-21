@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PerpScope Copy Integration</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #0d1112;
+        color: #edf5ee;
+        --panel: rgba(20, 27, 27, 0.86);
+        --line: rgba(199, 218, 207, 0.15);
+        --muted: #a2b2ab;
+        --good: #8ce0b2;
+        --warn: #ffd27a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 80% 12%, rgba(140, 224, 178, 0.12), transparent 28rem),
+          linear-gradient(180deg, #172021, #0d1112);
+      }
+
+      main {
+        width: min(1180px, calc(100vw - 28px));
+        margin: 0 auto;
+        padding: 24px 0 34px;
+      }
+
+      header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 18px;
+        align-items: end;
+        padding-bottom: 18px;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 28px;
+      }
+
+      p {
+        color: var(--muted);
+        max-width: 640px;
+        line-height: 1.5;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .panel,
+      .map {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .panel {
+        min-height: 240px;
+        padding: 14px;
+        display: grid;
+        align-content: space-between;
+        gap: 14px;
+      }
+
+      .panel h2 {
+        font-size: 14px;
+      }
+
+      code,
+      pre {
+        font-family: "SFMono-Regular", Consolas, monospace;
+      }
+
+      pre {
+        margin: 0;
+        min-height: 104px;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        color: #dbe8df;
+        line-height: 1.45;
+        font-size: 12px;
+      }
+
+      button,
+      a {
+        min-height: 44px;
+        border-radius: 8px;
+      }
+
+      button {
+        border: 1px solid rgba(140, 224, 178, 0.38);
+        background: rgba(140, 224, 178, 0.1);
+        color: var(--good);
+        font: inherit;
+        cursor: pointer;
+      }
+
+      a {
+        display: inline-flex;
+        align-items: center;
+        color: var(--good);
+        text-decoration: none;
+      }
+
+      .map {
+        margin-top: 12px;
+        padding: 14px;
+      }
+
+      .lanes {
+        display: grid;
+        grid-template-columns: 1.2fr 0.9fr 0.9fr;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .lane {
+        min-height: 118px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.035);
+      }
+
+      .lane strong,
+      .lane span {
+        display: block;
+      }
+
+      .lane span {
+        margin-top: 8px;
+        color: var(--muted);
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 5px 10px;
+        color: var(--warn);
+      }
+
+      @media (max-width: 860px) {
+        header,
+        .grid,
+        .lanes {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <h1>Copy PerpScope Into A Terminal</h1>
+          <p>Embeds, schema, and parser helpers for adding a read-only perps risk rail without touching wallets or order flow.</p>
+        </div>
+        <span class="badge">perpscope.export.v1 / v2.0.0</span>
+      </header>
+
+      <section class="grid">
+        <article class="panel">
+          <div>
+            <h2>Iframe rail</h2>
+            <pre id="snippet-embed">&lt;iframe title="PerpScope radar" src="https://williamclay8.github.io/perpscope/?embed=radar&amp;filter=hot"&gt;&lt;/iframe&gt;</pre>
+          </div>
+          <button data-copy="snippet-embed">Copy embed</button>
+        </article>
+
+        <article class="panel">
+          <div>
+            <h2>Npm parser</h2>
+            <pre id="snippet-package">import { summarizePerpScopeExport } from "@perpscope/percolator-adapter";
+
+const summary = summarizePerpScopeExport(payload);</pre>
+          </div>
+          <button data-copy="snippet-package">Copy parser</button>
+        </article>
+
+        <article class="panel">
+          <div>
+            <h2>Schema fixture</h2>
+            <pre id="snippet-schema">https://williamclay8.github.io/perpscope/schemas/perpscope-export.schema.json
+
+https://williamclay8.github.io/perpscope/examples/perpscope-export.sample.json</pre>
+          </div>
+          <button data-copy="snippet-schema">Copy links</button>
+        </article>
+      </section>
+
+      <section class="map">
+        <h2>Terminal placement</h2>
+        <div class="lanes">
+          <div class="lane">
+            <strong>Right rail</strong>
+            <span>Trader Radar, Feed Health, and Why Hot sit beside chart and depth.</span>
+          </div>
+          <div class="lane">
+            <strong>Market drawer</strong>
+            <span>Selected market risk, stress, skew, carry, and freshness.</span>
+          </div>
+          <div class="lane">
+            <strong>Status footer</strong>
+            <span>Slot, source mode, unit checks, gaps, and read-only safety.</span>
+          </div>
+        </div>
+        <a href="../embed-consumer/">Open terminal mock</a>
+      </section>
+    </main>
+
+    <script type="module">
+      for (const button of document.querySelectorAll("[data-copy]")) {
+        button.addEventListener("click", async () => {
+          const target = document.getElementById(button.dataset.copy);
+          await navigator.clipboard.writeText(target.textContent.trim());
+          button.textContent = "Copied";
+          setTimeout(() => {
+            button.textContent = button.dataset.copy === "snippet-embed" ? "Copy embed" :
+              button.dataset.copy === "snippet-package" ? "Copy parser" : "Copy links";
+          }, 1000);
+        });
+      }
+    </script>
+  </body>
+</html>

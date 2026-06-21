@@ -377,13 +377,13 @@ test("builds v1.9 export payloads, fixtures, and embed URLs", () => {
   const urlState = readUrlState({ search: "?market=devnet-small-1&filter=hot&embed=market" });
 
   assert.equal(exported.schema, "perpscope.export.v1");
-  assert.equal(exported.version, "1.9.0");
+  assert.equal(exported.version, "2.0.0");
   assert.equal(exported.selection.embed, "radar");
   assert.equal(exported.radar.filter, "unit-checked");
   assert.equal(exported.market.whyHot.reasons.length, 6);
   assert.equal(exported.safety.orderRouting, false);
   assert.equal(perpscopeExportSample.schema, "perpscope.export.v1");
-  assert.equal(perpscopeExportSample.version, "1.9.0");
+  assert.equal(perpscopeExportSample.version, "2.0.0");
   assert.equal(perpscopeExportSample.selection.embed, "market");
   assert.equal(perpscopeExportSample.feedHealth.items.find((item) => item.label === "unit checks").value, "0");
   assert.equal(perpscopeExportSample.radar.rows[0].id, "wif-perp");

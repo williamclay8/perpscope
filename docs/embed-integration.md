@@ -33,6 +33,8 @@ PerpScope gives terminal builders two read-only integration paths:
 `examples/perpscope-export.sample.json` is a stable fixture for wiring parsers and visual mocks before a terminal has live decoded output.
 
 ```js
+import { summarizePerpScopeExport } from "@perpscope/percolator-adapter";
+
 const response = await fetch(
   "https://raw.githubusercontent.com/williamclay8/perpscope/main/examples/perpscope-export.sample.json"
 );
@@ -42,26 +44,7 @@ if (payload.schema !== "perpscope.export.v1") {
   throw new Error("Unexpected PerpScope export schema.");
 }
 
-const feedItems = new Map(payload.feedHealth.items.map((item) => [item.label, item.value]));
-const topMarket = payload.radar.rows[0];
-const reasons = payload.market.whyHot.reasons.map((reason) => ({
-  label: reason.label,
-  value: reason.value,
-  tone: reason.tone
-}));
-
-console.log({
-  market: payload.market.name,
-  heat: topMarket.scoreLabel,
-  feed: {
-    markets: feedItems.get("markets"),
-    slot: feedItems.get("slot"),
-    unitChecks: feedItems.get("unit checks"),
-    gaps: feedItems.get("gaps")
-  },
-  reasons,
-  readOnly: payload.safety
-});
+console.log(summarizePerpScopeExport(payload));
 ```
 
 Live decoded protocol snapshots are available from the hosted decoder worker:
@@ -75,6 +58,28 @@ const decodedSnapshot = await response.json();
 ```
 
 Use the PerpScope app or `@perpscope/percolator-adapter` to normalize decoded snapshots into the cockpit DTOs.
+
+## Terminal Integration Kit
+
+```bash
+npm install @perpscope/percolator-adapter
+```
+
+```js
+import {
+  parsePerpScopeExport,
+  rankRadarRows,
+  summarizeFeedHealth,
+  summarizePerpScopeExport
+} from "@perpscope/percolator-adapter";
+
+const exportPayload = parsePerpScopeExport(payload);
+const summary = summarizePerpScopeExport(exportPayload);
+const feed = summarizeFeedHealth(exportPayload);
+const hottest = rankRadarRows(exportPayload)[0];
+```
+
+The schema is published at `schemas/perpscope-export.schema.json`.
 
 ## Fields To Trust
 

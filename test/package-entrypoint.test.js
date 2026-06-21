@@ -17,8 +17,12 @@ import {
   exportCompatibilityReport,
   normalizeFundingSkewHistory,
   normalizePercolatorSnapshot,
+  parsePerpScopeExport,
   PERPSCOPE_ADAPTER_VERSION,
+  rankRadarRows,
   simulatePriceShock,
+  summarizeFeedHealth,
+  summarizePerpScopeExport,
   summarizeFundingSkewHistory,
   validateReadOnlyRpcRequest
 } from "../packages/percolator-adapter/index.js";
@@ -29,6 +33,9 @@ const historyStdout = JSON.parse(
 );
 const rpcFixture = JSON.parse(
   readFileSync(new URL("../examples/percolator-mainnet-sol.readonly-rpc.json", import.meta.url), "utf8")
+);
+const perpscopeExportSample = JSON.parse(
+  readFileSync(new URL("../examples/perpscope-export.sample.json", import.meta.url), "utf8")
 );
 const packageDir = fileURLToPath(new URL("../packages/percolator-adapter/", import.meta.url));
 const consumerDemo = fileURLToPath(new URL("../examples/adapter-consumer/demo.mjs", import.meta.url));
@@ -60,16 +67,16 @@ test("adapter package exposes read-only terminal DTO helpers", () => {
   });
 
   assert.equal(detectPercolatorInputShape(percolatorFixture), "perpscope-snapshot");
-  assert.equal(PERPSCOPE_ADAPTER_VERSION, "1.1.0");
+  assert.equal(PERPSCOPE_ADAPTER_VERSION, "2.0.0");
   assert.equal(snapshot.markets.length, 3);
   assert.equal(report.compatible, true);
   assert.equal(report.status, "compatible");
   assert.equal(exported.schema, "perpscope.compatibility-report");
-  assert.equal(exported.package.version, "1.1.0");
+  assert.equal(exported.package.version, "2.0.0");
   assert.equal(drift.schema, "perpscope.compatibility-diff");
   assert.equal(drift.scoreDelta, 0);
   assert.equal(reality.schema, "perpscope.reality-check");
-  assert.equal(reality.package.version, "1.1.0");
+  assert.equal(reality.package.version, "2.0.0");
   assert.equal(reality.mapped.requiredCount, 3);
   assert.equal(signals.find((signal) => signal.id === "carry").tone, "good");
   assert.equal(history.length, 6);
@@ -97,10 +104,10 @@ test("adapter CLI exports reports and diffs", () => {
   }));
 
   assert.equal(report.schema, "perpscope.compatibility-report");
-  assert.equal(report.package.version, "1.1.0");
+  assert.equal(report.package.version, "2.0.0");
   assert.ok(report.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd"));
   assert.equal(diff.schema, "perpscope.compatibility-diff");
-  assert.equal(diff.package.version, "1.1.0");
+  assert.equal(diff.package.version, "2.0.0");
   assert.ok(diff.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd"));
   assert.equal(doctorRun.status, 1);
   assert.match(doctorRun.stdout, /PerpScope compat doctor: CHECK/);
@@ -108,7 +115,28 @@ test("adapter CLI exports reports and diffs", () => {
   assert.match(doctorRun.stdout, /Map required fields: price\.mark/);
   assert.match(badgeMarkdown, /\*\*PerpScope compatible:\*\* partial, 0\/100, 5 alias suggestions/);
   assert.equal(badgeJson.schema, "perpscope.compatibility-badge");
-  assert.equal(badgeJson.package.version, "1.1.0");
+  assert.equal(badgeJson.package.version, "2.0.0");
+});
+
+test("adapter package parses PerpScope export fixtures for embeds", () => {
+  const parsed = parsePerpScopeExport(perpscopeExportSample);
+  const feed = summarizeFeedHealth(parsed);
+  const ranked = rankRadarRows(parsed);
+  const summary = summarizePerpScopeExport(parsed);
+
+  assert.equal(parsed.schema, "perpscope.export.v1");
+  assert.equal(summary.version, "2.0.0");
+  assert.equal(summary.market, "WIF-PERP");
+  assert.equal(summary.heat, "100 heat");
+  assert.equal(summary.readOnly, true);
+  assert.equal(feed.unitChecks, "0");
+  assert.equal(feed.gaps, "0");
+  assert.equal(ranked[0].id, "wif-perp");
+  assert.equal(summary.whyHot.length, 6);
+  assert.throws(
+    () => parsePerpScopeExport({ ...perpscopeExportSample, safety: { ...perpscopeExportSample.safety, wallet: true } }),
+    /read-only/
+  );
 });
 
 test("adapter CLI initializes captures and exposes CI-ready doctor exit codes", () => {
@@ -219,6 +247,8 @@ test("adapter package can be packed and imported outside the monorepo", async ()
     assert.equal(typeof packed.buildCompatibilityBadge, "function");
     assert.equal(typeof packed.exportCompatibilityReport, "function");
     assert.equal(typeof packed.compareCompatibilityReports, "function");
+    assert.equal(typeof packed.parsePerpScopeExport, "function");
+    assert.equal(packed.summarizePerpScopeExport(perpscopeExportSample).market, "WIF-PERP");
     assert.equal(exported.schema, "perpscope.compatibility-report");
     assert.equal(drift.schema, "perpscope.compatibility-diff");
     assert.equal(report.status, "compatible");

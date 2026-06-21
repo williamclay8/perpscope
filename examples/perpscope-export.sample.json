@@ -1,6 +1,6 @@
 {
   "schema": "perpscope.export.v1",
-  "version": "1.9.0",
+  "version": "2.0.0",
   "generatedAt": "2026-06-21T00:00:00.000Z",
   "selection": {
     "market": "wif-perp",

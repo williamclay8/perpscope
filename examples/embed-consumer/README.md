@@ -8,7 +8,7 @@ It shows three read-only iframe surfaces:
 - hot market radar: `?embed=radar&filter=hot`
 - selected market risk: `?embed=market&market=wif-perp`
 
-It also parses `../perpscope-export.sample.json` into the fields a terminal side rail usually needs first: market, heat, feed health, why-hot reasons, and the read-only safety boundary.
+It also parses `../perpscope-export.sample.json` through `summarizePerpScopeExport()` into the fields a terminal side rail usually needs first: market, heat, feed health, why-hot reasons, and the read-only safety boundary.
 
 ```bash
 cd examples/embed-consumer

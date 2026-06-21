@@ -25,7 +25,7 @@ npm install @perpscope/percolator-adapter
 or use a version range:
 
 ```json
-"@perpscope/percolator-adapter": "^1.1.0"
+"@perpscope/percolator-adapter": "^2.0.0"
 ```
 
 The example stays read-only. It does not connect wallets, sign, send, route, place orders, or submit transactions.
