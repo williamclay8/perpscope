@@ -14,6 +14,7 @@ npm install @perpscope/percolator-adapter
 import {
   buildPercolatorCompatibilityReport,
   buildWatchtowerSignals,
+  compareCompatibilityReports,
   exportCompatibilityReport,
   normalizeFundingSkewHistory,
   normalizePercolatorSnapshot,
@@ -60,6 +61,7 @@ const stress = simulatePriceShock(market, -5);
 
 const compatibility = buildPercolatorCompatibilityReport(decodedCapture, snapshot);
 const exportableReport = exportCompatibilityReport(decodedCapture, snapshot);
+const drift = compareCompatibilityReports(previousCompatibility, compatibility);
 const watchtower = buildWatchtowerSignals(market, stress);
 const carryHistory = normalizeFundingSkewHistory(market.history.fundingSkew, market);
 ```
@@ -68,7 +70,7 @@ const carryHistory = normalizeFundingSkewHistory(market.history.fundingSkew, mar
 
 Render these fields before raw protocol JSON:
 
-- `compatibility.status`, `compatibility.score`, `compatibility.missingFields`, and `compatibility.ignoredFields`
+- `compatibility.status`, `compatibility.score`, `compatibility.missingFields`, `compatibility.ignoredFields`, and `compatibility.aliasSuggestions`
 - `market.healthScore`, `market.status`, and `market.flags`
 - `market.price.mark`, `market.price.publishAgeSec`, and `market.crank.ageSlots`
 - `market.account.liquidationDistancePct`, `market.account.marginBufferUsd`, and `market.account.positionNotionalUsd`
@@ -93,6 +95,12 @@ Use `docs/field-compatibility-map.md` for accepted aliases and required fields. 
 The cockpit Export button and `exportCompatibilityReport(input, snapshot?)` produce the same JSON contract. Attach that report to the decoded-shape issue form when you want PerpScope to support a new terminal output.
 
 Example output: `examples/compatibility-report-export.json`.
+
+## Compare Reports
+
+Use `compareCompatibilityReports(previous, current)` when a terminal output changes between releases or when a builder sends a partial capture. The diff reports score movement, new/resolved missing fields, new/resolved ignored fields, section drift, and alias suggestions.
+
+Example output: `examples/compatibility-diff.json`.
 
 ## Safety Boundary
 

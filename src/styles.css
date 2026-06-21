@@ -779,6 +779,10 @@ h1 {
 .compat-section small,
 .compat-gap span,
 .compat-gap small,
+.compat-diff-strip span,
+.compat-diff-strip small,
+.compat-suggestion span,
+.compat-suggestion small,
 .compat-source-strip span,
 .compat-ignored span {
   color: var(--muted);
@@ -800,6 +804,44 @@ h1 {
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 12px;
+}
+
+.compat-diff-strip {
+  display: grid;
+  grid-template-columns: auto minmax(48px, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  margin-bottom: 12px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: var(--shadow-border);
+}
+
+.compat-diff-strip.good {
+  background: var(--mint-soft);
+}
+
+.compat-diff-strip.warning {
+  background: var(--amber-soft);
+}
+
+.compat-diff-strip.danger {
+  background: var(--red-soft);
+}
+
+.compat-diff-strip strong {
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.compat-diff-strip small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .compat-source-strip span,
@@ -908,6 +950,46 @@ h1 {
 .compat-gap small {
   line-height: 1.25;
   text-transform: none;
+}
+
+.compat-suggestions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.compat-suggestion {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  min-height: 68px;
+  padding: 10px;
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(123, 211, 255, 0.1), transparent 62%),
+    rgba(255, 255, 255, 0.04);
+  box-shadow: var(--shadow-border);
+}
+
+.compat-suggestion.needs-input {
+  background:
+    linear-gradient(135deg, rgba(255, 104, 99, 0.1), transparent 62%),
+    rgba(255, 255, 255, 0.04);
+}
+
+.compat-suggestion strong,
+.compat-suggestion small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compat-suggestion strong {
+  color: var(--ink);
+  font-size: 12px;
+  text-transform: uppercase;
 }
 
 .capture-editor {
@@ -1855,6 +1937,10 @@ code {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .compat-suggestions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .history-lanes {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1960,6 +2046,7 @@ code {
   .compat-tiles,
   .compat-map,
   .compat-gap-list,
+  .compat-suggestions,
   .capture-editor,
   .watchtower-grid,
   .history-summary,

@@ -33,7 +33,12 @@ export function buildTerminalSummary(input = loadFixture(), historyInput = loadF
     compatibility: {
       status: compatibility.status,
       score: compatibility.score,
-      missing: compatibility.missingFields.map((field) => field.field)
+      missing: compatibility.missingFields.map((field) => field.field),
+      suggestions: compatibility.aliasSuggestions.map((suggestion) => ({
+        field: suggestion.field,
+        candidatePath: suggestion.candidatePath,
+        confidence: suggestion.confidence
+      }))
     },
     watchtower: watchtower.map((signal) => ({
       id: signal.id,

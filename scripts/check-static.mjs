@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import {
   buildPercolatorCompatibilityReport,
+  compareCompatibilityReports,
   exportCompatibilityReport,
   normalizePercolatorSnapshot
 } from "../src/lib/percolator-adapter.js";
@@ -18,10 +19,12 @@ const launchPostDoc = readFileSync(new URL("../docs/launch-post.md", import.meta
 const outreachLoopDoc = readFileSync(new URL("../docs/outreach-loop.md", import.meta.url), "utf8");
 const releaseV04Doc = readFileSync(new URL("../docs/release-v0.4.0.md", import.meta.url), "utf8");
 const releaseV05Doc = readFileSync(new URL("../docs/release-v0.5.0.md", import.meta.url), "utf8");
+const releaseV06Doc = readFileSync(new URL("../docs/release-v0.6.0.md", import.meta.url), "utf8");
 const terminalQuickstartDoc = readFileSync(new URL("../docs/terminal-builder-quickstart.md", import.meta.url), "utf8");
 const v05PlanDoc = readFileSync(new URL("../docs/v0.5-plan.md", import.meta.url), "utf8");
 const fieldMapJson = JSON.parse(readFileSync(new URL("../examples/field-compatibility-map.json", import.meta.url), "utf8"));
 const compatibilityReportExport = JSON.parse(readFileSync(new URL("../examples/compatibility-report-export.json", import.meta.url), "utf8"));
+const compatibilityDiff = JSON.parse(readFileSync(new URL("../examples/compatibility-diff.json", import.meta.url), "utf8"));
 const decodedShapeIssueTemplate = readFileSync(new URL("../.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml", import.meta.url), "utf8");
 const schemaDir = new URL("../schemas/", import.meta.url);
 const exampleDir = new URL("../examples/", import.meta.url);
@@ -91,6 +94,10 @@ if (!/id="export-compatibility"/.test(js) || !/buildCompatibilityReportExport/.t
   failures.push("Cockpit should expose a compatibility report export action.");
 }
 
+if (!/compat-diff-strip/.test(js) || !/compat-suggestions/.test(js) || !/compareCompatibilityReports/.test(js)) {
+  failures.push("Cockpit should expose compatibility drift and alias suggestions.");
+}
+
 const dto = normalizePercolatorSnapshot(percolatorFixture);
 if (dto.markets.length < 3) {
   failures.push("Fixture should expose at least three markets for the cockpit.");
@@ -112,12 +119,26 @@ if (compatibilityReport.status !== "compatible") {
 const exportedCompatibility = exportCompatibilityReport(percolatorFixture, dto, {
   generatedAt: "2026-06-21T00:00:00.000Z"
 });
-if (exportedCompatibility.schema !== "perpscope.compatibility-report" || exportedCompatibility.package.version !== "0.5.0") {
+if (exportedCompatibility.schema !== "perpscope.compatibility-report" || exportedCompatibility.package.version !== "0.6.0") {
   failures.push("Exported compatibility report should include the stable schema and package version.");
 }
 
-if (!/normalizePercolatorSnapshot/.test(packageEntry) || !/buildWatchtowerSignals/.test(packageEntry) || !/normalizeFundingSkewHistory/.test(packageEntry) || !/buildPercolatorCompatibilityReport/.test(packageEntry) || !/exportCompatibilityReport/.test(packageEntry)) {
-  failures.push("Adapter package should expose snapshot, compatibility export, Watchtower, and funding history helpers.");
+const driftReport = buildPercolatorCompatibilityReport({
+  label: "terminal drift sample",
+  market: { symbol: "SOL-PERP", slab: "PERCOLAT_SOL", program: "Perco1ator" },
+  oraclePriceUsd: 181.61,
+  oracleAgeSeconds: 2,
+  oiUsd: 12500000
+});
+const drift = compareCompatibilityReports(compatibilityReport, driftReport, {
+  generatedAt: "2026-06-21T00:00:00.000Z"
+});
+if (drift.schema !== "perpscope.compatibility-diff" || drift.package.version !== "0.6.0" || !drift.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd")) {
+  failures.push("Compatibility diff should include schema, version, and alias suggestions.");
+}
+
+if (!/normalizePercolatorSnapshot/.test(packageEntry) || !/buildWatchtowerSignals/.test(packageEntry) || !/normalizeFundingSkewHistory/.test(packageEntry) || !/buildPercolatorCompatibilityReport/.test(packageEntry) || !/exportCompatibilityReport/.test(packageEntry) || !/compareCompatibilityReports/.test(packageEntry)) {
+  failures.push("Adapter package should expose snapshot, compatibility export/diff, Watchtower, and funding history helpers.");
 }
 
 if (!/"@perpscope\/percolator-adapter": "file:\.\.\/\.\.\/packages\/percolator-adapter"/.test(consumerPackage)) {
@@ -132,12 +153,12 @@ if (!readme.includes("examples/adapter-consumer/") || !readme.includes("docs/fee
   failures.push("README should link the external consumer example and feedback loop.");
 }
 
-if (!readme.includes("npm install @perpscope/percolator-adapter") || !readme.includes("@perpscope/percolator-adapter@0.5.0")) {
+if (!readme.includes("npm install @perpscope/percolator-adapter") || !readme.includes("@perpscope/percolator-adapter@0.6.0")) {
   failures.push("README should document the published adapter package.");
 }
 
-if (!readme.includes("docs/field-compatibility-map.md") || !readme.includes("examples/field-compatibility-map.json") || !readme.includes("examples/compatibility-report-export.json")) {
-  failures.push("README should link the field compatibility map, JSON manifest, and report export example.");
+if (!readme.includes("docs/field-compatibility-map.md") || !readme.includes("examples/field-compatibility-map.json") || !readme.includes("examples/compatibility-report-export.json") || !readme.includes("examples/compatibility-diff.json")) {
+  failures.push("README should link the field compatibility map, JSON manifest, report export, and diff examples.");
 }
 
 for (const doc of [
@@ -146,6 +167,7 @@ for (const doc of [
   "docs/outreach-loop.md",
   "docs/release-v0.4.0.md",
   "docs/release-v0.5.0.md",
+  "docs/release-v0.6.0.md",
   "docs/v0.5-plan.md"
 ]) {
   if (!readme.includes(doc)) {
@@ -200,6 +222,12 @@ for (const required of ["@perpscope/percolator-adapter@0.5.0", "exportCompatibil
   }
 }
 
+for (const required of ["@perpscope/percolator-adapter@0.6.0", "compareCompatibilityReports", "examples/compatibility-diff.json", "alias suggestions", "Safety Boundary"]) {
+  if (!releaseV06Doc.includes(required)) {
+    failures.push(`v0.6 release notes should include ${required}.`);
+  }
+}
+
 for (const required of ["compatibility report", "Export", "wallet", "transaction", "npm run check", "0.5.0"]) {
   if (!v05PlanDoc.toLowerCase().includes(required.toLowerCase())) {
     failures.push(`v0.5 plan should mention ${required}.`);
@@ -221,18 +249,28 @@ for (const required of [
   }
 }
 
-if (fieldMapJson.version !== "0.5.0") {
-  failures.push("Field compatibility JSON should match package version 0.5.0.");
+if (fieldMapJson.version !== "0.6.0") {
+  failures.push("Field compatibility JSON should match package version 0.6.0.");
 }
 
 if (
   compatibilityReportExport.schema !== "perpscope.compatibility-report" ||
-  compatibilityReportExport.package?.version !== "0.5.0" ||
+  compatibilityReportExport.package?.version !== "0.6.0" ||
   compatibilityReportExport.safety?.mode !== "read-only" ||
   !compatibilityReportExport.source?.commandSet?.length ||
-  !compatibilityReportExport.missingFields?.some((field) => field.field === "history.fundingSkew")
+  !compatibilityReportExport.missingFields?.some((field) => field.field === "history.fundingSkew") ||
+  !Array.isArray(compatibilityReportExport.aliasSuggestions)
 ) {
   failures.push("Compatibility report export example should include schema, version, safety, source, and missing fields.");
+}
+
+if (
+  compatibilityDiff.schema !== "perpscope.compatibility-diff" ||
+  compatibilityDiff.package?.version !== "0.6.0" ||
+  !compatibilityDiff.aliasSuggestions?.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd") ||
+  compatibilityDiff.summary?.suggestionCount < 1
+) {
+  failures.push("Compatibility diff example should include schema, version, alias suggestions, and summary counts.");
 }
 
 for (const field of ["market.slab", "market.program", "price.mark"]) {

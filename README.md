@@ -18,6 +18,7 @@ For terminal builders, it provides a read-only adapter package that turns Percol
 import {
   buildPercolatorCompatibilityReport,
   buildWatchtowerSignals,
+  compareCompatibilityReports,
   normalizeFundingSkewHistory,
   normalizePercolatorSnapshot,
   simulatePriceShock
@@ -28,6 +29,7 @@ const market = snapshot.markets[0];
 const stress = simulatePriceShock(market, -5);
 
 const compatibility = buildPercolatorCompatibilityReport(decodedPercolatorOutput, snapshot);
+const drift = compareCompatibilityReports(previousCompatibility, compatibility);
 const signals = buildWatchtowerSignals(market, stress);
 const carryHistory = normalizeFundingSkewHistory(market.history.fundingSkew, market);
 ```
@@ -58,6 +60,7 @@ Star PerpScope if you are building a Solana perps terminal, risk dashboard, or a
 
 - a clean DTO for decoded Percolator-like market, account, execution, and receipt data
 - a compatibility report for pasted or dropped decoded captures before your terminal adapter is complete
+- compatibility diffing and alias suggestions when decoded terminal shapes drift
 - import fixtures for CLI logs, captured stdout, read-only RPC fixtures, carry history, and terminal adapter demos
 - a visual reference for presenting risk without turning the screen into protocol JSON
 - a read-only safety boundary you can copy into your own frontend
@@ -117,9 +120,9 @@ PerpScope v0.4 adds a read-only capture intake panel and adapter helper for mess
 - show mapped sections, missing fields, ignored fields, source commands, slab, and program provenance
 - reject secret-bearing or mutating fields before rendering
 
-The public helpers are `buildPercolatorCompatibilityReport(input, snapshot?)` and `exportCompatibilityReport(input, snapshot?)`, exported from `@perpscope/percolator-adapter`.
+The public helpers are `buildPercolatorCompatibilityReport(input, snapshot?)`, `exportCompatibilityReport(input, snapshot?)`, and `compareCompatibilityReports(previous, current)`, exported from `@perpscope/percolator-adapter`.
 
-Terminal builders can use the field-level contract in `docs/field-compatibility-map.md`, the machine-readable `examples/field-compatibility-map.json`, and `examples/compatibility-report-export.json` to see accepted aliases, required fields, Watchtower dependencies, carry-history inputs, ignored fields, and rejected wallet/signer/transaction/order payloads.
+Terminal builders can use the field-level contract in `docs/field-compatibility-map.md`, the machine-readable `examples/field-compatibility-map.json`, `examples/compatibility-report-export.json`, and `examples/compatibility-diff.json` to see accepted aliases, required fields, Watchtower dependencies, carry-history inputs, ignored fields, alias suggestions, and rejected wallet/signer/transaction/order payloads.
 
 Real decoded shapes can be submitted through `docs/feedback-loop.md` or the GitHub issue form at `.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml`.
 
@@ -225,7 +228,7 @@ schemas/read-only-rpc-fetch.schema.json
 schemas/funding-skew-history.schema.json
 ```
 
-The source-backed adapter field map lives in `docs/field-compatibility-map.md`, with a JSON manifest at `examples/field-compatibility-map.json` and an export artifact at `examples/compatibility-report-export.json`.
+The source-backed adapter field map lives in `docs/field-compatibility-map.md`, with a JSON manifest at `examples/field-compatibility-map.json`, an export artifact at `examples/compatibility-report-export.json`, and a diff artifact at `examples/compatibility-diff.json`.
 
 The terminal-builder quickstart lives in `docs/terminal-builder-quickstart.md`.
 
@@ -237,6 +240,7 @@ The adapter boundary lives in `packages/percolator-adapter` and re-exports the p
 import {
   buildPercolatorCompatibilityReport,
   buildWatchtowerSignals,
+  compareCompatibilityReports,
   normalizeFundingSkewHistory,
   normalizePercolatorSnapshot,
   simulatePriceShock
@@ -246,6 +250,7 @@ const snapshot = normalizePercolatorSnapshot(decodedJson);
 const market = snapshot.markets[0];
 const stress = simulatePriceShock(market, -5);
 const compatibility = buildPercolatorCompatibilityReport(decodedJson, snapshot);
+const drift = compareCompatibilityReports(previousCompatibility, compatibility);
 const watchtower = buildWatchtowerSignals(market, stress);
 const carryHistory = normalizeFundingSkewHistory(market.history.fundingSkew, market);
 ```
@@ -339,6 +344,7 @@ The normalized market DTO includes:
 - `src/lib/percolator-adapter.js` normalizes Percolator-like slab, oracle, crank, funding, insurance, account, and execution data into terminal-ready DTOs.
 - `buildPercolatorCompatibilityReport()` maps partial decoded captures into visible terminal-readiness warnings.
 - `exportCompatibilityReport()` turns the current capture into an attachable JSON report for terminal teams.
+- `compareCompatibilityReports()` shows adapter drift and alias suggestions between two reports.
 - `src/lib/read-only-rpc-fetcher.js` validates read-only RPC slab fixtures and injected account fetches.
 - `src/lib/watchtower-signals.js` and `src/lib/funding-history.js` power the embeddable package and cockpit panels.
 - `packages/percolator-adapter/` is the package boundary for terminal builders.
@@ -349,6 +355,7 @@ The normalized market DTO includes:
 - `docs/launch-post.md` and `docs/outreach-loop.md` contain launch copy and the first builder outreach loop.
 - `docs/release-v0.4.0.md` mirrors the public release notes for the npm-live v0.4 release.
 - `docs/release-v0.5.0.md` mirrors the public release notes for the report export release.
+- `docs/release-v0.6.0.md` mirrors the public release notes for the drift and alias suggestion release.
 - `docs/v0.5-plan.md` documents the shipped compatibility report export.
 - `.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml` is the structured intake form for sanitized builder samples.
 - `src/fixtures/percolator-market.js` contains sample decoded market/account state plus execution receipt history.
@@ -386,6 +393,7 @@ Current public site: [williamclay8.github.io/perpscope](https://williamclay8.git
 
 - v0.4 shipped: capture intake for pasted/dropped decoded outputs, compatibility scoring, missing-field warnings, and ignored-field mapping.
 - v0.4 follow-up: field-level compatibility map for terminal import/export adapters.
-- npm package shipped: `@perpscope/percolator-adapter@0.5.0`.
+- npm package shipped: `@perpscope/percolator-adapter@0.6.0`.
 - v0.5 shipped: downloadable compatibility report export for terminal builders.
+- v0.6 shipped: compatibility diffing and alias suggestions for drifting terminal shapes.
 - More deployment fixtures as Percolator terminal teams share read-only shapes.

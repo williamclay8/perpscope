@@ -9,6 +9,7 @@ import {
   buildPercolatorCompatibilityReport,
   buildReadOnlyRpcSnapshot,
   buildWatchtowerSignals,
+  compareCompatibilityReports,
   detectPercolatorInputShape,
   exportCompatibilityReport,
   normalizeFundingSkewHistory,
@@ -41,14 +42,19 @@ test("adapter package exposes read-only terminal DTO helpers", () => {
   const exported = exportCompatibilityReport(percolatorFixture, snapshot, {
     generatedAt: "2026-06-21T00:00:00.000Z"
   });
+  const drift = compareCompatibilityReports(report, report, {
+    generatedAt: "2026-06-21T00:00:00.000Z"
+  });
 
   assert.equal(detectPercolatorInputShape(percolatorFixture), "perpscope-snapshot");
-  assert.equal(PERPSCOPE_ADAPTER_VERSION, "0.5.0");
+  assert.equal(PERPSCOPE_ADAPTER_VERSION, "0.6.0");
   assert.equal(snapshot.markets.length, 3);
   assert.equal(report.compatible, true);
   assert.equal(report.status, "compatible");
   assert.equal(exported.schema, "perpscope.compatibility-report");
-  assert.equal(exported.package.version, "0.5.0");
+  assert.equal(exported.package.version, "0.6.0");
+  assert.equal(drift.schema, "perpscope.compatibility-diff");
+  assert.equal(drift.scoreDelta, 0);
   assert.equal(signals.find((signal) => signal.id === "carry").tone, "good");
   assert.equal(history.length, 6);
   assert.equal(history.at(-1).fundingBpsPerHour, 0.82);
@@ -90,13 +96,16 @@ test("adapter package can be packed and imported outside the monorepo", async ()
     const history = packed.normalizeFundingSkewHistory(historyStdout);
     const report = packed.buildPercolatorCompatibilityReport(percolatorFixture, snapshot);
     const exported = packed.exportCompatibilityReport(percolatorFixture, snapshot);
+    const drift = packed.compareCompatibilityReports(report, report);
 
     assert.equal(snapshot.markets.length, 3);
     assert.equal(history.at(-1).oiSkewPct.toFixed(1), "8.6");
     assert.equal(typeof packed.buildWatchtowerSignals, "function");
     assert.equal(typeof packed.buildPercolatorCompatibilityReport, "function");
     assert.equal(typeof packed.exportCompatibilityReport, "function");
+    assert.equal(typeof packed.compareCompatibilityReports, "function");
     assert.equal(exported.schema, "perpscope.compatibility-report");
+    assert.equal(drift.schema, "perpscope.compatibility-diff");
     assert.equal(report.status, "compatible");
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
@@ -121,6 +130,7 @@ test("adapter consumer example imports the package by name", async () => {
     assert.equal(summary.market, "SOL-PERP");
     assert.equal(summary.compatibility.status, "partial");
     assert.ok(summary.compatibility.missing.includes("history.fundingSkew"));
+    assert.deepEqual(summary.compatibility.suggestions, []);
     assert.equal(summary.watchtower.length, 6);
     assert.equal(summary.carryLatest.fundingBpsPerHour, 0.82);
     assert.doesNotMatch(JSON.stringify(summary), /connect wallet|sign transaction|send transaction|place order|submit trade|trade now/i);

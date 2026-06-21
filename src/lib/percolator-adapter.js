@@ -1,6 +1,6 @@
 import { normalizeFundingSkewHistory } from "./funding-history.js";
 
-export const PERPSCOPE_ADAPTER_VERSION = "0.5.0";
+export const PERPSCOPE_ADAPTER_VERSION = "0.6.0";
 
 const KEYPAIR_FIELD_PATTERN = /(^|_)(secret|private|keypair|mnemonic|seed|walletPath|wallet)(_|$)/i;
 const HISTORY_COMMAND_KEYS = new Set([
@@ -98,6 +98,7 @@ export function buildPercolatorCompatibilityReport(input, normalizedSnapshot) {
       detail: field.detail
     }));
   const ignoredFields = ignoredCompatibilityFields(input);
+  const aliasSuggestions = buildCompatibilityAliasSuggestions(missingFields, ignoredFields);
   const dangerCount = missingFields.filter((field) => field.severity === "danger").length;
   const warningCount = missingFields.length - dangerCount;
   const recognizedDataCount = recognizedSections.filter((section) => section.id !== "safety").length;
@@ -119,6 +120,7 @@ export function buildPercolatorCompatibilityReport(input, normalizedSnapshot) {
     recognizedSections,
     missingFields,
     ignoredFields,
+    aliasSuggestions,
     source: {
       label: source.label || stringOf(scope, ["label", "sourceLabel"], "decoded capture"),
       mode: source.mode || "read-only",
@@ -133,8 +135,62 @@ export function buildPercolatorCompatibilityReport(input, normalizedSnapshot) {
       recognizedCount: recognizedSections.length,
       missingCount: missingFields.length,
       ignoredCount: ignoredFields.length,
+      suggestionCount: aliasSuggestions.length,
       marketCount: snapshot.markets.length,
       commandCount: commandSet.length
+    }
+  };
+}
+
+export function compareCompatibilityReports(previousReport, currentReport, options = {}) {
+  const previous = normalizeCompatibilityReport(previousReport);
+  const current = normalizeCompatibilityReport(currentReport);
+  const resolvedMissing = differenceByField(previous.missingFields, current.missingFields);
+  const newMissing = differenceByField(current.missingFields, previous.missingFields);
+  const resolvedIgnored = differenceByPath(previous.ignoredFields, current.ignoredFields);
+  const newIgnored = differenceByPath(current.ignoredFields, previous.ignoredFields);
+  const addedSections = differenceById(current.recognizedSections, previous.recognizedSections);
+  const removedSections = differenceById(previous.recognizedSections, current.recognizedSections);
+  const scoreDelta = Number(current.score || 0) - Number(previous.score || 0);
+  const statusChanged = previous.status !== current.status;
+  const suggestionSet = mergeAliasSuggestions(
+    current.aliasSuggestions || buildCompatibilityAliasSuggestions(current.missingFields, current.ignoredFields),
+    buildCompatibilityAliasSuggestions(newMissing, newIgnored)
+  );
+  const tone = current.status === "rejected" || newMissing.some((field) => field.severity === "danger")
+    ? "danger"
+    : scoreDelta < 0 || newMissing.length || newIgnored.length || removedSections.length
+      ? "warning"
+      : "good";
+
+  return {
+    schema: "perpscope.compatibility-diff",
+    version: 1,
+    package: {
+      name: "@perpscope/percolator-adapter",
+      version: options.packageVersion || PERPSCOPE_ADAPTER_VERSION
+    },
+    generatedAt: options.generatedAt || new Date().toISOString(),
+    tone,
+    scoreDelta,
+    statusChanged,
+    previous: compatibilityDiffSummary(previous),
+    current: compatibilityDiffSummary(current),
+    resolvedMissing,
+    newMissing,
+    resolvedIgnored,
+    newIgnored,
+    addedSections,
+    removedSections,
+    aliasSuggestions: suggestionSet,
+    summary: {
+      resolvedMissingCount: resolvedMissing.length,
+      newMissingCount: newMissing.length,
+      resolvedIgnoredCount: resolvedIgnored.length,
+      newIgnoredCount: newIgnored.length,
+      addedSectionCount: addedSections.length,
+      removedSectionCount: removedSections.length,
+      suggestionCount: suggestionSet.length
     }
   };
 }
@@ -166,8 +222,12 @@ export function exportCompatibilityReportFromReport(report, options = {}) {
     recognizedSections: report.recognizedSections,
     missingFields: report.missingFields,
     ignoredFields: report.ignoredFields,
+    aliasSuggestions: report.aliasSuggestions || buildCompatibilityAliasSuggestions(report.missingFields, report.ignoredFields),
     source: report.source,
-    summary: report.summary
+    summary: {
+      ...report.summary,
+      suggestionCount: report.summary?.suggestionCount ?? (report.aliasSuggestions || []).length
+    }
   };
 }
 
@@ -441,6 +501,177 @@ function ignoredCompatibilityFields(input) {
     }
   }
   return ignored.slice(0, 8);
+}
+
+const COMPATIBILITY_ALIAS_HINTS = [
+  {
+    field: "market.slab",
+    tokens: ["slab", "marketaddress", "marketpubkey", "pubkey", "address"],
+    reason: "Use this as the market slab anchor."
+  },
+  {
+    field: "market.program",
+    tokens: ["program", "programid", "owner"],
+    reason: "Use this as the decoded account owner/program id."
+  },
+  {
+    field: "price.mark",
+    tokens: ["mark", "markprice", "oracleprice", "oraclepriceusd", "priceusd", "mid", "midprice"],
+    reason: "Map this into the mark/oracle price lane."
+  },
+  {
+    field: "price.publishAgeSec",
+    tokens: ["age", "agesec", "agesecs", "publishage", "publishagesec", "oracleage", "staleness"],
+    reason: "Map this into oracle freshness."
+  },
+  {
+    field: "crank.ageSlots",
+    tokens: ["crank", "crankage", "ageslots", "lastcrank", "lastmarketslot"],
+    reason: "Map this into crank freshness."
+  },
+  {
+    field: "funding.bpsPerHour",
+    tokens: ["funding", "fundingrate", "fundingbps", "premium", "carry"],
+    reason: "Map this into the carry-rate card."
+  },
+  {
+    field: "marketStructure.openInterestUsd",
+    tokens: ["openinterest", "oi", "oiusd", "longoi", "shortoi"],
+    reason: "Map this into OI, skew, and stress pressure."
+  },
+  {
+    field: "account.positionNotionalUsd",
+    tokens: ["notional", "positionnotional", "position", "basesize", "positionbase"],
+    reason: "Map this into account runway."
+  },
+  {
+    field: "execution.bestBid/bestAsk",
+    tokens: ["bestbid", "bestask", "bid", "ask", "quote", "book", "orderbook"],
+    reason: "Map this into spread and execution quality."
+  },
+  {
+    field: "execution.receipts",
+    tokens: ["receipt", "receipts", "fills", "fill", "execution"],
+    reason: "Map this into the fill receipt timeline."
+  },
+  {
+    field: "history.fundingSkew",
+    tokens: ["history", "fundinghistory", "skewhistory", "fundingskew", "rows"],
+    reason: "Map this into the carry-history sparklines."
+  }
+];
+
+function buildCompatibilityAliasSuggestions(missingFields = [], ignoredFields = []) {
+  const suggestions = [];
+  for (const missing of missingFields || []) {
+    const candidates = (ignoredFields || [])
+      .map((ignored) => aliasSuggestionFor(missing, ignored))
+      .filter(Boolean)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 2);
+    if (candidates.length) {
+      suggestions.push(...candidates);
+    } else if (missing.severity === "danger") {
+      suggestions.push({
+        field: missing.field,
+        candidatePath: "",
+        confidence: "needs-input",
+        score: 0,
+        action: "add-field",
+        reason: `${missing.label} is still required for a trusted terminal view.`
+      });
+    }
+  }
+  return dedupeAliasSuggestions(suggestions).slice(0, 8);
+}
+
+function aliasSuggestionFor(missing, ignored) {
+  const hint = COMPATIBILITY_ALIAS_HINTS.find((entry) => entry.field === missing.field);
+  if (!hint || !ignored) return null;
+  const haystack = normalizeKey(`${ignored.path || ""} ${ignored.label || ""}`);
+  const score = hint.tokens.reduce((best, token) => {
+    const normalizedToken = normalizeKey(token);
+    if (haystack === normalizedToken) return Math.max(best, 100);
+    if (haystack.includes(normalizedToken) || normalizedToken.includes(haystack)) return Math.max(best, 86);
+    return best;
+  }, 0);
+  if (!score) return null;
+  return {
+    field: missing.field,
+    candidatePath: ignored.path,
+    confidence: score >= 90 ? "high" : "medium",
+    score,
+    action: "map-alias",
+    reason: hint.reason
+  };
+}
+
+function dedupeAliasSuggestions(suggestions) {
+  const seen = new Set();
+  return suggestions.filter((suggestion) => {
+    const key = `${suggestion.field}:${suggestion.candidatePath}:${suggestion.action}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function mergeAliasSuggestions(...groups) {
+  return dedupeAliasSuggestions(groups.flat().filter(Boolean))
+    .sort((a, b) => (b.score || 0) - (a.score || 0))
+    .slice(0, 8);
+}
+
+function normalizeCompatibilityReport(report = {}) {
+  return {
+    shape: report.shape || "unknown",
+    status: report.status || "unknown",
+    compatible: Boolean(report.compatible),
+    tone: report.tone || "neutral",
+    score: Number(report.score || 0),
+    recognizedSections: report.recognizedSections || [],
+    missingFields: report.missingFields || [],
+    ignoredFields: report.ignoredFields || [],
+    aliasSuggestions: report.aliasSuggestions || [],
+    source: report.source || {},
+    summary: report.summary || {}
+  };
+}
+
+function compatibilityDiffSummary(report) {
+  return {
+    shape: report.shape,
+    status: report.status,
+    compatible: report.compatible,
+    score: report.score,
+    source: {
+      label: report.source?.label || "decoded capture",
+      cluster: report.source?.cluster || "unknown",
+      commandCount: Array.isArray(report.source?.commandSet) ? report.source.commandSet.length : 0,
+      marketCount: report.source?.marketCount || report.summary?.marketCount || 0
+    },
+    summary: {
+      recognizedCount: report.summary?.recognizedCount || report.recognizedSections.length,
+      missingCount: report.summary?.missingCount || report.missingFields.length,
+      ignoredCount: report.summary?.ignoredCount || report.ignoredFields.length,
+      suggestionCount: report.summary?.suggestionCount || report.aliasSuggestions.length
+    }
+  };
+}
+
+function differenceByField(left = [], right = []) {
+  const rightFields = new Set((right || []).map((entry) => entry.field));
+  return (left || []).filter((entry) => !rightFields.has(entry.field));
+}
+
+function differenceByPath(left = [], right = []) {
+  const rightPaths = new Set((right || []).map((entry) => entry.path));
+  return (left || []).filter((entry) => !rightPaths.has(entry.path));
+}
+
+function differenceById(left = [], right = []) {
+  const rightIds = new Set((right || []).map((entry) => entry.id));
+  return (left || []).filter((entry) => !rightIds.has(entry.id));
 }
 
 function assertReadOnlyCompatibilityCapture(value, path = "capture") {

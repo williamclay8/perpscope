@@ -1,6 +1,7 @@
 import { percolatorFixture } from "./fixtures/percolator-market.js";
 import {
   buildPercolatorCompatibilityReport,
+  compareCompatibilityReports,
   detectPercolatorInputShape,
   exportCompatibilityReport,
   exportCompatibilityReportFromReport,
@@ -112,12 +113,14 @@ export const TERMINAL_RECIPES = [
 ];
 
 const fixtureSnapshot = normalizePercolatorSnapshot(percolatorFixture);
+const fixtureCompatibilityReport = buildPercolatorCompatibilityReport(percolatorFixture, fixtureSnapshot);
 
 const state = {
   snapshot: fixtureSnapshot,
   selectedMarketId: "sol-perp",
   shockPct: -3,
-  compatibilityReport: buildPercolatorCompatibilityReport(percolatorFixture, fixtureSnapshot),
+  compatibilityReport: fixtureCompatibilityReport,
+  compatibilityDiff: compareCompatibilityReports(fixtureCompatibilityReport, fixtureCompatibilityReport),
   lastImportedInput: percolatorFixture,
   captureOpen: false,
   importStatus: {
@@ -294,6 +297,7 @@ function render() {
             <div class="method-list">
               <code>normalizePercolatorSnapshot()</code>
               <code>buildPercolatorCompatibilityReport()</code>
+              <code>compareCompatibilityReports()</code>
               <code>toTerminalMarketDto()</code>
               <code>simulatePriceShock()</code>
             </div>
@@ -349,7 +353,8 @@ function render() {
     state.snapshot = snapshot;
     state.selectedMarketId = "sol-perp";
     state.shockPct = -3;
-    state.compatibilityReport = buildPercolatorCompatibilityReport(percolatorFixture, snapshot);
+    state.compatibilityReport = fixtureCompatibilityReport;
+    state.compatibilityDiff = compareCompatibilityReports(fixtureCompatibilityReport, fixtureCompatibilityReport);
     state.lastImportedInput = percolatorFixture;
     state.captureOpen = false;
     state.importStatus = {
@@ -386,6 +391,7 @@ function compatibilityPanel(report) {
   const sections = report.recognizedSections.slice(0, 8);
   const missing = report.missingFields.slice(0, 6);
   const ignored = report.ignoredFields.slice(0, 4);
+  const suggestions = (report.aliasSuggestions || []).slice(0, 4);
   return `
     <article class="capture-panel panel stagger-item ${report.tone}" id="capture-panel">
       <div class="panel-head">
@@ -416,6 +422,7 @@ function compatibilityPanel(report) {
         ${compatTile("missing", String(report.summary.missingCount), report.summary.missingCount ? "warning" : "good")}
         ${compatTile("ignored", String(report.summary.ignoredCount), report.summary.ignoredCount ? "warning" : "good")}
       </div>
+      ${compatDiffStrip(state.compatibilityDiff)}
       <div class="compat-source-strip">
         ${[
           report.source.cluster,
@@ -438,8 +445,33 @@ function compatibilityPanel(report) {
           ${ignored.map((item) => `<span>${esc(item.label)}</span>`).join("")}
         </div>
       ` : ""}
+      ${suggestions.length ? `
+        <div class="compat-suggestions" aria-label="Alias suggestions">
+          ${suggestions.map(compatSuggestion).join("")}
+        </div>
+      ` : ""}
       ${state.captureOpen ? captureEditor() : ""}
     </article>
+  `;
+}
+
+function compatDiffStrip(diff) {
+  if (!diff) return "";
+  const changed = diff.scoreDelta || diff.summary.newMissingCount || diff.summary.newIgnoredCount || diff.summary.resolvedMissingCount || diff.summary.addedSectionCount || diff.summary.removedSectionCount;
+  if (!changed) return `
+    <div class="compat-diff-strip good" aria-label="Compatibility drift">
+      <span>drift</span>
+      <strong>stable</strong>
+      <small>baseline matched</small>
+    </div>
+  `;
+  const delta = diff.scoreDelta > 0 ? `+${diff.scoreDelta}` : String(diff.scoreDelta);
+  return `
+    <div class="compat-diff-strip ${diff.tone}" aria-label="Compatibility drift">
+      <span>drift</span>
+      <strong>${esc(delta)}</strong>
+      <small>${diff.summary.newMissingCount} new gaps / ${diff.summary.resolvedMissingCount} fixed</small>
+    </div>
   `;
 }
 
@@ -467,6 +499,16 @@ function compatGap(field) {
   `;
 }
 
+function compatSuggestion(suggestion) {
+  return `
+    <section class="compat-suggestion ${suggestion.confidence}">
+      <span>${esc(suggestion.confidence)}</span>
+      <strong>${esc(suggestion.candidatePath || suggestion.action)}</strong>
+      <small>${esc(suggestion.candidatePath ? `${suggestion.field} <- ${suggestion.candidatePath}` : suggestion.field)}</small>
+    </section>
+  `;
+}
+
 function captureEditor() {
   return `
     <div class="capture-editor">
@@ -487,6 +529,7 @@ async function importJsonFile(file) {
     });
   } catch (error) {
     state.compatibilityReport = rejectedCompatibilityReport(error);
+    state.compatibilityDiff = compareCompatibilityReports(fixtureCompatibilityReport, state.compatibilityReport);
     state.importStatus = {
       tone: "danger",
       label: error.message.slice(0, 44),
@@ -507,6 +550,7 @@ function analyzePastedCapture(text) {
     state.captureOpen = false;
   } catch (error) {
     state.compatibilityReport = rejectedCompatibilityReport(error);
+    state.compatibilityDiff = compareCompatibilityReports(fixtureCompatibilityReport, state.compatibilityReport);
     state.importStatus = {
       tone: "danger",
       label: error.message.slice(0, 44),
@@ -525,6 +569,7 @@ async function loadCliDemo() {
     });
   } catch (error) {
     state.compatibilityReport = rejectedCompatibilityReport(error);
+    state.compatibilityDiff = compareCompatibilityReports(fixtureCompatibilityReport, state.compatibilityReport);
     state.importStatus = {
       tone: "danger",
       label: error.message.slice(0, 44),
@@ -546,6 +591,7 @@ export function createImportedSnapshotState(imported, options = {}) {
     ? buildReadOnlyRpcSnapshot(imported)
     : normalizePercolatorSnapshot(imported);
   const compatibilityReport = buildPercolatorCompatibilityReport(imported, snapshot);
+  const compatibilityDiff = compareCompatibilityReports(fixtureCompatibilityReport, compatibilityReport);
   if (!snapshot.markets.length) {
     throw new Error("No markets found.");
   }
@@ -561,6 +607,7 @@ export function createImportedSnapshotState(imported, options = {}) {
     selectedMarketId: snapshot.markets[0].id,
     shockPct: -3,
     compatibilityReport,
+    compatibilityDiff,
     lastImportedInput: imported,
     captureOpen: false,
     importStatus: {
@@ -576,6 +623,7 @@ function loadImportedSnapshot(imported, options = {}) {
     Object.assign(state, createImportedSnapshotState(imported, options));
   } catch (error) {
     if (error.compatibilityReport) state.compatibilityReport = error.compatibilityReport;
+    state.compatibilityDiff = compareCompatibilityReports(fixtureCompatibilityReport, state.compatibilityReport);
     throw error;
   }
 }
@@ -647,6 +695,7 @@ function rejectedCompatibilityReport(error) {
     ],
     missingFields: [],
     ignoredFields: [],
+    aliasSuggestions: [],
     source: {
       label: message.slice(0, 80),
       mode: "read-only",
@@ -661,6 +710,7 @@ function rejectedCompatibilityReport(error) {
       recognizedCount: 1,
       missingCount: 0,
       ignoredCount: 0,
+      suggestionCount: 0,
       marketCount: state.snapshot?.markets?.length || 0,
       commandCount: 0
     }

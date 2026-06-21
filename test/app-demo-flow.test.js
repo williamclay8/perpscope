@@ -49,6 +49,8 @@ test("loads Try CLI demo through the same import state path", async () => {
   assert.equal(nextState.snapshot.source.commandSet.length, 8);
   assert.equal(nextState.compatibilityReport.shape, "percolator-cli-bundle");
   assert.equal(nextState.compatibilityReport.status, "partial");
+  assert.equal(nextState.compatibilityDiff.schema, "perpscope.compatibility-diff");
+  assert.ok(nextState.compatibilityDiff.scoreDelta < 0);
   assert.ok(nextState.compatibilityReport.recognizedSections.some((section) => section.id === "receipts"));
   assert.ok(nextState.compatibilityReport.missingFields.some((field) => field.field === "history.fundingSkew"));
   assert.equal(nextState.lastImportedInput, imported);
@@ -70,6 +72,7 @@ test("exports the current cockpit compatibility report", async () => {
   assert.equal(exported.source.commandSet.length, 8);
   assert.equal(exported.summary.missingCount, 2);
   assert.deepEqual(exported.safety, { mode: "read-only", rejected: false });
+  assert.equal(exported.summary.suggestionCount, 0);
 });
 
 test("surfaces Try CLI demo fetch failures", async () => {
@@ -166,6 +169,7 @@ test("flags unknown imported captures without a good import status", () => {
   assert.equal(nextState.snapshot.markets[0].name, "SOL-PERP");
   assert.equal(nextState.compatibilityReport.status, "partial");
   assert.ok(nextState.compatibilityReport.summary.missingCount > 0);
+  assert.equal(nextState.compatibilityDiff.schema, "perpscope.compatibility-diff");
 });
 
 test("builds funding and skew history summaries for the cockpit", () => {

@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import {
   assertReadOnlySnapshot,
   buildPercolatorCompatibilityReport,
+  compareCompatibilityReports,
   detectPercolatorInputShape,
   exportCompatibilityReport,
   normalizePercolatorCliBundle,
@@ -150,9 +151,53 @@ test("exports a stable compatibility report artifact", () => {
   assert.equal(exported.status, "partial");
   assert.equal(exported.source.commandSet.length, 8);
   assert.equal(exported.summary.missingCount, 2);
+  assert.equal(exported.summary.suggestionCount, 0);
+  assert.deepEqual(exported.aliasSuggestions, []);
   assert.ok(exported.recognizedSections.some((section) => section.id === "receipts"));
   assert.ok(exported.missingFields.some((field) => field.field === "history.fundingSkew"));
   assert.doesNotMatch(JSON.stringify(exported), /connect wallet|sign transaction|send transaction|place order|submit trade|trade now/i);
+});
+
+test("suggests aliases for ignored fields that look like missing terminal fields", () => {
+  const report = buildPercolatorCompatibilityReport({
+    label: "terminal drift sample",
+    market: { symbol: "SOL-PERP", slab: "PERCOLAT_SOL", program: "Perco1ator" },
+    oraclePriceUsd: 181.61,
+    oracleAgeSeconds: 2,
+    oiUsd: 12500000
+  });
+
+  assert.equal(report.status, "partial");
+  assert.ok(report.ignoredFields.some((field) => field.path === "oraclePriceUsd"));
+  assert.ok(report.aliasSuggestions.some((suggestion) => suggestion.field === "price.mark" && suggestion.candidatePath === "oraclePriceUsd"));
+  assert.ok(report.aliasSuggestions.some((suggestion) => suggestion.field === "price.publishAgeSec" && suggestion.candidatePath === "oracleAgeSeconds"));
+  assert.ok(report.aliasSuggestions.some((suggestion) => suggestion.field === "marketStructure.openInterestUsd" && suggestion.candidatePath === "oiUsd"));
+});
+
+test("compares compatibility reports for drift and alias suggestions", () => {
+  const previous = buildPercolatorCompatibilityReport(percolatorFixture);
+  const current = buildPercolatorCompatibilityReport({
+    label: "terminal drift sample",
+    market: { symbol: "SOL-PERP", slab: "PERCOLAT_SOL", program: "Perco1ator" },
+    oraclePriceUsd: 181.61,
+    oracleAgeSeconds: 2,
+    oiUsd: 12500000,
+    mysteryEnvelope: { value: 1 }
+  });
+  const diff = compareCompatibilityReports(previous, current, {
+    generatedAt: "2026-06-21T00:00:00.000Z"
+  });
+
+  assert.equal(diff.schema, "perpscope.compatibility-diff");
+  assert.equal(diff.package.version, PERPSCOPE_ADAPTER_VERSION);
+  assert.equal(diff.generatedAt, "2026-06-21T00:00:00.000Z");
+  assert.equal(diff.statusChanged, true);
+  assert.ok(diff.scoreDelta < 0);
+  assert.equal(diff.summary.newMissingCount, 9);
+  assert.equal(diff.summary.newIgnoredCount, 4);
+  assert.equal(diff.summary.suggestionCount, 3);
+  assert.ok(diff.aliasSuggestions.some((suggestion) => suggestion.candidatePath === "oraclePriceUsd"));
+  assert.ok(diff.removedSections.some((section) => section.id === "history"));
 });
 
 test("refuses to export secret-bearing compatibility captures", () => {

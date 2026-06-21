@@ -1,0 +1,214 @@
+{
+  "schema": "perpscope.compatibility-diff",
+  "version": 1,
+  "package": {
+    "name": "@perpscope/percolator-adapter",
+    "version": "0.6.0"
+  },
+  "generatedAt": "2026-06-21T00:00:00.000Z",
+  "tone": "danger",
+  "scoreDelta": -100,
+  "statusChanged": true,
+  "previous": {
+    "shape": "perpscope-snapshot",
+    "status": "compatible",
+    "compatible": true,
+    "score": 100,
+    "source": {
+      "label": "Percolator decoded fixture",
+      "cluster": "local fixture",
+      "commandCount": 0,
+      "marketCount": 3
+    },
+    "summary": {
+      "recognizedCount": 11,
+      "missingCount": 0,
+      "ignoredCount": 0,
+      "suggestionCount": 0
+    }
+  },
+  "current": {
+    "shape": "unknown",
+    "status": "partial",
+    "compatible": false,
+    "score": 0,
+    "source": {
+      "label": "single market import",
+      "cluster": "unknown",
+      "commandCount": 0,
+      "marketCount": 1
+    },
+    "summary": {
+      "recognizedCount": 3,
+      "missingCount": 9,
+      "ignoredCount": 4,
+      "suggestionCount": 3
+    }
+  },
+  "resolvedMissing": [],
+  "newMissing": [
+    {
+      "field": "price.mark",
+      "label": "mark price",
+      "severity": "danger",
+      "detail": "Needed for runway, impact, and account notional math."
+    },
+    {
+      "field": "price.publishAgeSec",
+      "label": "oracle age",
+      "severity": "warning",
+      "detail": "Keeps stale price reads visible instead of hidden in raw output."
+    },
+    {
+      "field": "crank.ageSlots",
+      "label": "crank age",
+      "severity": "warning",
+      "detail": "Shows whether risk and funding state are lagging the latest slot."
+    },
+    {
+      "field": "funding.bpsPerHour",
+      "label": "funding rate",
+      "severity": "warning",
+      "detail": "Makes carry pressure readable for traders watching positions."
+    },
+    {
+      "field": "marketStructure.openInterestUsd",
+      "label": "open interest",
+      "severity": "warning",
+      "detail": "Needed for skew and stress pressure cards."
+    },
+    {
+      "field": "account.positionNotionalUsd",
+      "label": "position notional",
+      "severity": "warning",
+      "detail": "Needed for account-level buffer and liquidation runway."
+    },
+    {
+      "field": "execution.bestBid/bestAsk",
+      "label": "best bid / ask",
+      "severity": "warning",
+      "detail": "Needed to separate real spread from adapter fallbacks."
+    },
+    {
+      "field": "execution.receipts",
+      "label": "fill receipts",
+      "severity": "warning",
+      "detail": "Adds latency, markout, and priority-fee context."
+    },
+    {
+      "field": "history.fundingSkew",
+      "label": "funding / skew history",
+      "severity": "warning",
+      "detail": "Adds trend context beyond a single decoded snapshot."
+    }
+  ],
+  "resolvedIgnored": [],
+  "newIgnored": [
+    {
+      "path": "oraclePriceUsd",
+      "label": "oraclePriceUsd",
+      "reason": "top-level field is not part of the adapter map yet"
+    },
+    {
+      "path": "oracleAgeSeconds",
+      "label": "oracleAgeSeconds",
+      "reason": "top-level field is not part of the adapter map yet"
+    },
+    {
+      "path": "oiUsd",
+      "label": "oiUsd",
+      "reason": "top-level field is not part of the adapter map yet"
+    },
+    {
+      "path": "mysteryEnvelope",
+      "label": "mysteryEnvelope",
+      "reason": "top-level field is not part of the adapter map yet"
+    }
+  ],
+  "addedSections": [],
+  "removedSections": [
+    {
+      "id": "price",
+      "label": "oracle price",
+      "tone": "good",
+      "detail": "$181.61 mark"
+    },
+    {
+      "id": "engine",
+      "label": "crank engine",
+      "tone": "good",
+      "detail": "24 slot age"
+    },
+    {
+      "id": "funding",
+      "label": "carry rate",
+      "tone": "good",
+      "detail": "0.8 bps/hr"
+    },
+    {
+      "id": "structure",
+      "label": "market structure",
+      "tone": "good",
+      "detail": "8.6% OI skew"
+    },
+    {
+      "id": "account",
+      "label": "account runway",
+      "tone": "good",
+      "detail": "10.3% runway"
+    },
+    {
+      "id": "execution",
+      "label": "book quality",
+      "tone": "good",
+      "detail": "10.5 bps spread"
+    },
+    {
+      "id": "receipts",
+      "label": "fill receipts",
+      "tone": "good",
+      "detail": "3 receipts"
+    },
+    {
+      "id": "history",
+      "label": "carry history",
+      "tone": "good",
+      "detail": "6 rows"
+    }
+  ],
+  "aliasSuggestions": [
+    {
+      "field": "price.mark",
+      "candidatePath": "oraclePriceUsd",
+      "confidence": "medium",
+      "score": 86,
+      "action": "map-alias",
+      "reason": "Map this into the mark/oracle price lane."
+    },
+    {
+      "field": "price.publishAgeSec",
+      "candidatePath": "oracleAgeSeconds",
+      "confidence": "medium",
+      "score": 86,
+      "action": "map-alias",
+      "reason": "Map this into oracle freshness."
+    },
+    {
+      "field": "marketStructure.openInterestUsd",
+      "candidatePath": "oiUsd",
+      "confidence": "medium",
+      "score": 86,
+      "action": "map-alias",
+      "reason": "Map this into OI, skew, and stress pressure."
+    }
+  ],
+  "summary": {
+    "resolvedMissingCount": 0,
+    "newMissingCount": 9,
+    "resolvedIgnoredCount": 0,
+    "newIgnoredCount": 4,
+    "addedSectionCount": 0,
+    "removedSectionCount": 8,
+    "suggestionCount": 3
+  }
+}

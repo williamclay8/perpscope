@@ -11,6 +11,7 @@ import {
   buildPercolatorCompatibilityReport,
   buildReadOnlyRpcSnapshot,
   buildWatchtowerSignals,
+  compareCompatibilityReports,
   normalizeFundingSkewHistory,
   normalizePercolatorSnapshot,
   simulatePriceShock
@@ -20,6 +21,7 @@ const snapshot = normalizePercolatorSnapshot(decodedPercolatorJson);
 const market = snapshot.markets[0];
 const stress = simulatePriceShock(market, -5);
 const compatibility = buildPercolatorCompatibilityReport(decodedPercolatorJson, snapshot);
+const drift = compareCompatibilityReports(previousCompatibility, compatibility);
 const watchtower = buildWatchtowerSignals(market, stress);
 const carryHistory = normalizeFundingSkewHistory(market.history.fundingSkew, market);
 ```
@@ -30,6 +32,8 @@ The package exposes pure read-only helpers:
 
 - `normalizePercolatorSnapshot()`
 - `buildPercolatorCompatibilityReport()`
+- `exportCompatibilityReport()`
+- `compareCompatibilityReports()`
 - `detectPercolatorInputShape()`
 - `parsePercolatorJson()`
 - `simulatePriceShock()`
@@ -53,8 +57,11 @@ It does not connect wallets, sign, send, route, place orders, or submit transact
 - `recognizedSections`: mapped market, price, engine, account, execution, receipt, history, and provenance sections
 - `missingFields`: useful fields the cockpit can render better when supplied
 - `ignoredFields`: top-level fields or command names preserved as provenance but not mapped yet
+- `aliasSuggestions`: candidate mappings such as `oraclePriceUsd -> price.mark`
 
 The full field-level contract is documented in `../../docs/field-compatibility-map.md`, with a machine-readable manifest at `../../examples/field-compatibility-map.json`.
+
+`compareCompatibilityReports(previous, current)` returns `perpscope.compatibility-diff` with score delta, status change, new/resolved fields, section drift, and merged alias suggestions.
 
 ## DTO Example
 
