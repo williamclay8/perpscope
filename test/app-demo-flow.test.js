@@ -10,6 +10,9 @@ import {
   buildTerminalRecipeSummaries,
   createImportedSnapshotState,
   fetchActualMarketSnapshot,
+  fetchLiveDecodedSource,
+  getLiveDecodedSourceUrl,
+  sanitizeLiveDecodedSourceUrl,
   ACTUAL_PRICE_ENDPOINT,
   DEMO_CLI_PATH,
   fetchCliDemoSnapshot,
@@ -31,6 +34,10 @@ import { percolatorFixture } from "../src/fixtures/percolator-market.js";
 
 const cliBundleText = readFileSync(
   new URL("../examples/percolator-cli.bundle.json", import.meta.url),
+  "utf8"
+);
+const decodedLiveSourceText = readFileSync(
+  new URL("../examples/decoded-live-source.sample.json", import.meta.url),
   "utf8"
 );
 
@@ -167,6 +174,133 @@ test("loads actual public prices without claiming live protocol state", async ()
   assert.match(nextState.lastImportedInput.source.note, /not live decoded protocol state/i);
 });
 
+test("loads decoded live sources through the read-only import path", async () => {
+  let requestedUrl = "";
+  let requestedOptions = {};
+  const imported = await fetchLiveDecodedSource(async (url, options) => {
+    requestedUrl = url;
+    requestedOptions = options;
+    return {
+      ok: true,
+      headers: new Headers({ "content-type": "application/json" }),
+      text: async () => decodedLiveSourceText
+    };
+  }, "https://decoder.example/perpscope.json");
+  const nextState = createImportedSnapshotState(imported, {
+    label: "decoded live loaded",
+    detailPrefix: "decoder.example",
+    dataSourceMode: "live-decoded"
+  });
+
+  assert.equal(requestedUrl, "https://decoder.example/perpscope.json");
+  assert.equal(requestedOptions.cache, "no-store");
+  assert.equal(requestedOptions.credentials, "omit");
+  assert.equal(requestedOptions.mode, "cors");
+  assert.equal(nextState.dataSource.mode, "live-decoded");
+  assert.equal(nextState.dataSource.tone, "good");
+  assert.ok(nextState.dataSource.chips.includes("live decoded protocol state"));
+  assert.match(nextState.dataSource.note, /decoded protocol feed/);
+  assert.equal(nextState.snapshot.markets[0].name, "SOL-PERP");
+  assert.equal(nextState.lastImportedInput.source.live, true);
+});
+
+test("validates decoded live source URL configuration", () => {
+  const locationLike = {
+    href: "https://williamclay8.github.io/perpscope/?decodedSource=./examples/decoded-live-source.sample.json",
+    origin: "https://williamclay8.github.io",
+    search: "?decodedSource=./examples/decoded-live-source.sample.json"
+  };
+
+  assert.equal(
+    getLiveDecodedSourceUrl(locationLike, {}),
+    "https://williamclay8.github.io/perpscope/examples/decoded-live-source.sample.json"
+  );
+  assert.equal(
+    sanitizeLiveDecodedSourceUrl("http://127.0.0.1:4173/feed.json"),
+    "http://127.0.0.1:4173/feed.json"
+  );
+  assert.throws(
+    () => sanitizeLiveDecodedSourceUrl("javascript:alert(1)", locationLike),
+    /HTTPS or localhost/
+  );
+  assert.throws(
+    () => sanitizeLiveDecodedSourceUrl("https://user:pass@decoder.example/perpscope.json", locationLike),
+    /credentials/
+  );
+  assert.throws(
+    () => sanitizeLiveDecodedSourceUrl("https://192.168.0.2/perpscope.json", locationLike),
+    /private network/
+  );
+  assert.throws(
+    () => getLiveDecodedSourceUrl({ search: "", href: "https://perpscope.local/" }, {}),
+    /decodedSource/
+  );
+});
+
+test("rejects raw or non-live decoded source payloads", async () => {
+  await assert.rejects(
+    () => fetchLiveDecodedSource(async () => ({
+      ok: true,
+      text: async () => JSON.stringify({ source: { live: false }, markets: [] })
+    }), "https://decoder.example/perpscope.json"),
+    /source.live=true/
+  );
+
+  await assert.rejects(
+    () => fetchLiveDecodedSource(async () => ({
+      ok: true,
+      text: async () => JSON.stringify({
+        source: {
+          kind: "decoded-percolator-live-source",
+          provider: "decoder",
+          generatedAt: "2026-06-21T12:00:00.000Z",
+          live: true,
+          scope: "live decoded protocol state"
+        },
+        slab: "PERCOLAT_SOL",
+        programId: "Perco1ator111111111111111111111111111111111",
+        account: { data: ["base64bytes", "base64"] }
+      })
+    }), "https://decoder.example/perpscope.json"),
+    /decoded account sections/
+  );
+
+  await assert.rejects(
+    () => fetchLiveDecodedSource(async () => ({
+      ok: true,
+      headers: new Headers({ "content-type": "application/octet-stream" }),
+      text: async () => decodedLiveSourceText
+    }), "https://decoder.example/perpscope.json"),
+    /must return JSON/
+  );
+
+  await assert.rejects(
+    () => fetchLiveDecodedSource(async () => ({
+      ok: true,
+      headers: new Headers({ "content-type": "application/json", "content-length": "1000001" }),
+      text: async () => decodedLiveSourceText
+    }), "https://decoder.example/perpscope.json"),
+    /too large/
+  );
+
+  await assert.rejects(
+    () => fetchLiveDecodedSource(async () => ({
+      ok: true,
+      text: async () => JSON.stringify({
+        source: {
+          kind: "decoded-percolator-live-source",
+          provider: "decoder",
+          generatedAt: "2026-06-21T12:00:00.000Z",
+          live: true,
+          scope: "live decoded protocol state"
+        },
+        markets: [{ id: "sol-perp", name: "SOL-PERP", order: { side: "buy" } }]
+      })
+    }), "https://decoder.example/perpscope.json"),
+    /mutating field/
+  );
+});
+
 test("builds actual market snapshots from public price feeds", () => {
   const snapshot = createActualMarketSnapshot({
     solana: { usd: 80, usd_24h_change: 4, last_updated_at: 1782040800 }
@@ -184,11 +318,14 @@ test("builds actual market snapshots from public price feeds", () => {
 test("builds explicit data source states for cockpit disclosure", () => {
   const fixtureState = createDataSourceState("fixture", percolatorFixture, normalizePercolatorSnapshot(percolatorFixture), { shape: "perpscope-snapshot" });
   const liveState = createDataSourceState("live-read", { source: { live: true } }, { source: {}, cluster: "mainnet-beta", markets: [] }, { shape: "read-only-rpc-fetch" });
+  const decodedState = createDataSourceState("live-decoded", { source: { live: true, scope: "live decoded protocol state" } }, { source: {}, cluster: "mainnet-beta", markets: [] }, { shape: "perpscope-snapshot" });
 
   assert.equal(fixtureState.note, "default cockpit data is a local fixture");
   assert.equal(fixtureState.modes.find((mode) => mode.id === "fixture").active, true);
   assert.equal(liveState.note, "actual public prices; simulated risk context");
   assert.ok(liveState.chips.includes("live public prices"));
+  assert.equal(decodedState.note, "decoded protocol feed; read-only");
+  assert.ok(decodedState.chips.includes("live decoded protocol state"));
 });
 
 test("builds read-only Watchtower signals from normalized market data", () => {

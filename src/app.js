@@ -1,5 +1,6 @@
 import { percolatorFixture } from "./fixtures/percolator-market.js";
 import {
+  assertReadOnlySnapshot,
   buildCompatibilityRealityCheck,
   buildPercolatorCompatibilityReport,
   compareCompatibilityReports,
@@ -19,6 +20,9 @@ import { buildWatchtowerSignals } from "./lib/watchtower-signals.js";
 
 export const DEMO_CLI_PATH = "./examples/percolator-cli.bundle.json";
 export const STATIC_REAL_SNAPSHOT_PATH = "./examples/static-real-snapshot.json";
+export const LIVE_DECODED_SOURCE_PARAM = "decodedSource";
+export const LIVE_DECODED_SOURCE_GLOBAL = "PERPSCOPE_DECODED_SOURCE_URL";
+export const LIVE_DECODED_SOURCE_MAX_BYTES = 1_000_000;
 export const ACTUAL_PRICE_ENDPOINT = "https://api.coingecko.com/api/v3/simple/price?ids=solana,bitcoin,dogwifcoin&vs_currencies=usd&include_24hr_change=true&include_last_updated_at=true";
 export const ACTUAL_PRICE_MARKETS = {
   SOL: "solana",
@@ -46,6 +50,13 @@ export const DATA_SOURCE_MODES = [
     tone: "good",
     detail: "public market prices",
     status: "available"
+  },
+  {
+    id: "live-decoded",
+    label: "decoded",
+    tone: "good",
+    detail: "protocol feed",
+    status: "connectable"
   }
 ];
 export const READ_ONLY_DEPLOYMENTS = [
@@ -484,6 +495,7 @@ function render() {
   app.querySelector("#export-workbench-diff")?.addEventListener("click", exportWorkbenchDiff);
   app.querySelector("#load-static-real")?.addEventListener("click", loadStaticRealSnapshot);
   app.querySelector("#load-actual-prices")?.addEventListener("click", loadActualPricesSnapshot);
+  app.querySelector("#load-live-decoded")?.addEventListener("click", loadLiveDecodedSource);
   app.querySelector("#try-cli").addEventListener("click", loadCliDemo);
   app.querySelectorAll("[data-capture-open]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -761,6 +773,7 @@ function dataSourcePanel(dataSource) {
       <div class="data-source-actions">
         <button class="utility-button" id="load-static-real" type="button">Load Snapshot</button>
         <button class="utility-button" id="load-actual-prices" type="button">Load Live</button>
+        <button class="utility-button" id="load-live-decoded" type="button">Load Decoded</button>
         <span>${esc(dataSource.note)}</span>
       </div>
     </article>
@@ -880,6 +893,29 @@ async function loadActualPricesSnapshot() {
   render();
 }
 
+async function loadLiveDecodedSource() {
+  try {
+    const sourceUrl = getLiveDecodedSourceUrl();
+    const imported = await fetchLiveDecodedSource(fetch, sourceUrl);
+    loadImportedSnapshot(imported, {
+      label: "decoded live loaded",
+      detailPrefix: decodedSourceLabel(sourceUrl),
+      dataSourceMode: "live-decoded"
+    });
+  } catch (error) {
+    state.importStatus = {
+      tone: "danger",
+      label: error.message.slice(0, 44),
+      detail: error.message
+    };
+    state.dataSource = {
+      ...state.dataSource,
+      note: "decoded source unavailable; keeping current source"
+    };
+  }
+  render();
+}
+
 export async function fetchStaticRealSnapshot(fetcher) {
   const response = await fetcher(STATIC_REAL_SNAPSHOT_PATH);
   if (!response.ok) throw new Error("Static real snapshot unavailable.");
@@ -890,6 +926,60 @@ export async function fetchActualMarketSnapshot(fetcher, options = {}) {
   const response = await fetcher(ACTUAL_PRICE_ENDPOINT);
   if (!response.ok) throw new Error("Live public prices unavailable.");
   return createActualMarketSnapshot(JSON.parse(await response.text()), options);
+}
+
+export async function fetchLiveDecodedSource(fetcher, sourceUrl, options = {}) {
+  const endpoint = sanitizeLiveDecodedSourceUrl(sourceUrl, options.location);
+  const response = await fetcher(endpoint, { cache: "no-store", credentials: "omit", mode: "cors" });
+  if (!response.ok) throw new Error("Decoded Percolator source unavailable.");
+  const contentType = response.headers?.get?.("content-type") || "";
+  if (contentType && !/json|text\/plain/i.test(contentType)) {
+    throw new Error("Decoded Percolator source must return JSON.");
+  }
+  const contentLength = Number(response.headers?.get?.("content-length") || 0);
+  if (contentLength > LIVE_DECODED_SOURCE_MAX_BYTES) {
+    throw new Error("Decoded Percolator source is too large.");
+  }
+  const body = await response.text();
+  if (body.length > LIVE_DECODED_SOURCE_MAX_BYTES) {
+    throw new Error("Decoded Percolator source is too large.");
+  }
+  const imported = parsePercolatorJson(body);
+  assertLiveDecodedSource(imported);
+  return imported;
+}
+
+export function getLiveDecodedSourceUrl(locationLike = globalThis.location, globalLike = globalThis) {
+  const params = new URLSearchParams(locationLike?.search || "");
+  const configured = params.get(LIVE_DECODED_SOURCE_PARAM) || globalLike?.[LIVE_DECODED_SOURCE_GLOBAL] || "";
+  if (!String(configured).trim()) {
+    throw new Error(`Add ?${LIVE_DECODED_SOURCE_PARAM}=https://... to load decoded protocol state.`);
+  }
+  return sanitizeLiveDecodedSourceUrl(configured, locationLike);
+}
+
+export function sanitizeLiveDecodedSourceUrl(value, locationLike = globalThis.location) {
+  const raw = String(value || "").trim();
+  if (!raw) throw new Error("Decoded source URL is missing.");
+  let url;
+  try {
+    const base = locationLike?.href || locationLike?.origin || "https://perpscope.local/";
+    url = new URL(raw, base);
+  } catch {
+    throw new Error("Decoded source URL is invalid.");
+  }
+  if (url.username || url.password) {
+    throw new Error("Decoded source URL cannot include credentials.");
+  }
+  const localHttp = url.protocol === "http:" && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(url.hostname);
+  if (url.protocol !== "https:" && !localHttp) {
+    throw new Error("Decoded source must use HTTPS or localhost HTTP.");
+  }
+  if (!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(url.hostname) && isPrivateNetworkHost(url.hostname)) {
+    throw new Error("Decoded source cannot target private network hosts.");
+  }
+  url.hash = "";
+  return url.toString();
 }
 
 export function createActualMarketSnapshot(priceFeed, options = {}) {
@@ -978,7 +1068,7 @@ export function createDataSourceState(modeId, input, snapshot, report) {
   const source = snapshot?.source || {};
   const inputSource = input && typeof input === "object" && !Array.isArray(input) ? input.source || {} : {};
   const live = inputSource.live === true;
-  const updatedAt = Number(inputSource.lastUpdatedAt || 0);
+  const updatedAt = Number(inputSource.lastUpdatedAt || 0) || timestampSeconds(inputSource.generatedAt);
   const modes = DATA_SOURCE_MODES.map((entry) => ({
     ...entry,
     active: entry.id === mode.id
@@ -999,15 +1089,106 @@ export function createDataSourceState(modeId, input, snapshot, report) {
       ? "static sanitized snapshot; not a stream"
       : mode.id === "live-read"
         ? "actual public prices; simulated risk context"
-        : "default cockpit data is a local fixture"
+        : mode.id === "live-decoded"
+          ? "decoded protocol feed; read-only"
+          : "default cockpit data is a local fixture"
   };
 }
 
 function dataSourceModeForInput(input) {
   const source = input && typeof input === "object" && !Array.isArray(input) ? input.source || {} : {};
+  const sourceText = [
+    source.kind,
+    source.scope,
+    source.provider,
+    input?.fixtureKind
+  ].filter(Boolean).join(" ");
+  if (source.live === true && /decoded|protocol|percolator|read-only-rpc/i.test(sourceText) && !/public-market-price/i.test(sourceText)) {
+    return "live-decoded";
+  }
   if (source.live === true) return "live-read";
   if (source.realBacked || /real|static/i.test(input?.fixtureKind || "")) return "static-real";
   return "fixture";
+}
+
+function assertLiveDecodedSource(input) {
+  const shape = detectPercolatorInputShape(input);
+  const source = input && typeof input === "object" && !Array.isArray(input) ? input.source || {} : {};
+  const account = input?.account || input?.accountInfo || {};
+  assertReadOnlySnapshot(input, "decodedSource");
+  assertNoLiveDecodedMutation(input);
+  if (source.live !== true) {
+    throw new Error("Decoded source must declare source.live=true.");
+  }
+  if (!source.kind || !source.scope || !source.provider || !source.generatedAt) {
+    throw new Error("Decoded source must include kind, provider, scope, and generatedAt provenance.");
+  }
+  if (account.data && !account.decoded) {
+    throw new Error("Decoded source must include decoded account sections; raw account data alone is not enough.");
+  }
+  if (shape === "unknown") {
+    throw new Error("Decoded source has no recognized Percolator sections.");
+  }
+}
+
+function assertNoLiveDecodedMutation(value, path = "decodedSource") {
+  if (!value || typeof value !== "object") return;
+  for (const [key, child] of Object.entries(value)) {
+    const normalized = normalizeKey(key);
+    if (isLiveDecodedMutationKey(normalized)) {
+      throw new Error(`Refusing mutating field in decoded source: ${path}.${key}`);
+    }
+    if (child && typeof child === "object") assertNoLiveDecodedMutation(child, `${path}.${key}`);
+  }
+}
+
+function isLiveDecodedMutationKey(key) {
+  return [
+    "instruction",
+    "instructions",
+    "order",
+    "orders",
+    "sendtransaction",
+    "signer",
+    "signature",
+    "signtransaction",
+    "transaction",
+    "transactions",
+    "apikey",
+    "authorization"
+  ].includes(key);
+}
+
+function decodedSourceLabel(sourceUrl) {
+  try {
+    return new URL(sourceUrl).host || "decoded source";
+  } catch {
+    return "decoded source";
+  }
+}
+
+function timestampSeconds(value) {
+  if (!value) return 0;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? Math.floor(timestamp / 1000) : 0;
+}
+
+function isPrivateNetworkHost(hostname) {
+  const host = String(hostname || "").toLowerCase().replace(/^\[|\]$/g, "");
+  if (host === "0.0.0.0" || host.endsWith(".local")) return true;
+  const parts = host.split(".").map((part) => Number(part));
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
+  const [first, second] = parts;
+  return first === 10
+    || first === 0
+    || first === 127
+    || (first === 169 && second === 254)
+    || (first === 172 && second >= 16 && second <= 31)
+    || (first === 192 && second === 168);
+}
+
+function normalizeKey(value) {
+  return String(value).toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 function actualMarketFromDto(market, priceFeed, nowMs) {

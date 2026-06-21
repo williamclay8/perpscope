@@ -1,0 +1,120 @@
+{
+  "label": "Sample decoded Percolator live source / SOL",
+  "cluster": "mainnet-beta",
+  "fixtureKind": "decoded-percolator-live-source-sample",
+  "currentSlot": 346892118,
+  "source": {
+    "kind": "decoded-percolator-live-source",
+    "provider": "sample decoder endpoint",
+    "generatedAt": "2026-06-21T12:00:00.000Z",
+    "realBacked": true,
+    "live": true,
+    "scope": "live decoded protocol state",
+    "note": "Static sample payload for testing the decoded source intake contract."
+  },
+  "markets": [
+    {
+      "id": "sol-perp",
+      "name": "SOL-PERP",
+      "base": "SOL",
+      "quote": "USDC",
+      "status": "live",
+      "slab": "PERCOLAT_SOL_8k4q...Qp2",
+      "program": "Perco1ator111111111111111111111111111111111",
+      "config": {
+        "initialMarginBps": 820,
+        "maintenanceMarginBps": 500,
+        "liquidationFeeBps": 35,
+        "maxStalenessSecs": 8,
+        "confFilterBps": 45
+      },
+      "oracle": {
+        "indexPrice": 181.42,
+        "markPrice": 181.61,
+        "confidenceBps": 18,
+        "publishAgeSec": 2.1,
+        "pricePath": [179.8, 180.1, 179.6, 180.4, 181.0, 181.2, 180.9, 181.5, 181.61]
+      },
+      "engine": {
+        "lastCrankSlot": 346892086,
+        "crankAgeSlots": 24,
+        "staleAccounts": 1,
+        "fundingRateBpsPerHour": 0.82,
+        "openInterestUsd": 2430000,
+        "longOpenInterestUsd": 1320000,
+        "shortOpenInterestUsd": 1110000,
+        "stressConsumedBps": 118,
+        "stressLimitBps": 500,
+        "insuranceUsd": 148000,
+        "vaultUsd": 910000,
+        "claimUsd": 821000
+      },
+      "account": {
+        "label": "read-only observer",
+        "side": "long",
+        "positionSize": 420,
+        "entryPrice": 174.3,
+        "collateralUsd": 8400,
+        "positionNotionalUsd": 76276.2,
+        "unrealizedPnlUsd": 3067.2,
+        "realizedPnlUsd": 540.8,
+        "fundingPnlUsd": -32.4,
+        "maintenanceMarginUsd": 3813.81,
+        "initialMarginUsd": 6254.65,
+        "liquidationPrice": 162.94,
+        "pnlPath": [620, 880, 540, 1320, 1940, 2430, 2260, 2870, 3067]
+      },
+      "execution": {
+        "bestBid": 181.52,
+        "bestAsk": 181.71,
+        "impact10kBps": 8.4,
+        "impact50kBps": 31.2,
+        "markout1mBps": 4.2,
+        "markout5mBps": -1.7,
+        "fillQualityScore": 84,
+        "routeLatencyMs": 132,
+        "priorityFeeMicrolamports": 2200,
+        "receipts": [
+          {
+            "id": "SOL-346892086-1",
+            "label": "read-only fill",
+            "source": "decoded source sample",
+            "sourceTimestamp": "2026-06-21T12:00:00.000Z",
+            "slot": 346892086,
+            "side": "buy",
+            "notionalUsd": 10000,
+            "fillPriceUsd": 181.64,
+            "markPriceUsd": 181.61,
+            "bestBid": 181.52,
+            "bestAsk": 181.71,
+            "spreadBps": 10.5,
+            "impactBps": 8.4,
+            "markout1mBps": 4.2,
+            "markout5mBps": -1.7,
+            "routeLatencyMs": 132,
+            "priorityFeeMicrolamports": 2200,
+            "oracleAgeSec": 2.1,
+            "crankAgeSlots": 24,
+            "fundingBpsPerHour": 0.82,
+            "fillQualityScore": 84
+          }
+        ]
+      },
+      "history": {
+        "fundingSkew": [
+          {
+            "source": "decoded source sample",
+            "sourceTimestamp": "2026-06-21T12:00:00.000Z",
+            "slot": 346892086,
+            "fundingBpsPerHour": 0.82,
+            "longOpenInterestUsd": 1320000,
+            "shortOpenInterestUsd": 1110000,
+            "stressConsumedBps": 118,
+            "stressLimitBps": 500,
+            "oracleAgeSec": 2.1
+          }
+        ]
+      }
+    }
+  ]
+}

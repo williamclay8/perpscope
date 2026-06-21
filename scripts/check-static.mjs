@@ -30,6 +30,8 @@ const releaseV10Doc = readFileSync(new URL("../docs/release-v1.0.0.md", import.m
 const releaseV101Doc = readFileSync(new URL("../docs/release-v1.0.1.md", import.meta.url), "utf8");
 const releaseV11Doc = readFileSync(new URL("../docs/release-v1.1.0.md", import.meta.url), "utf8");
 const releaseV12Doc = readFileSync(new URL("../docs/release-v1.2.0.md", import.meta.url), "utf8");
+const releaseV13Doc = readFileSync(new URL("../docs/release-v1.3.0.md", import.meta.url), "utf8");
+const decodedLiveSourceDoc = readFileSync(new URL("../docs/decoded-live-source.md", import.meta.url), "utf8");
 const contributingDoc = readFileSync(new URL("../CONTRIBUTING.md", import.meta.url), "utf8");
 const terminalQuickstartDoc = readFileSync(new URL("../docs/terminal-builder-quickstart.md", import.meta.url), "utf8");
 const v05PlanDoc = readFileSync(new URL("../docs/v0.5-plan.md", import.meta.url), "utf8");
@@ -41,6 +43,7 @@ const driftedFixturePack = JSON.parse(readFileSync(new URL("../examples/fixture-
 const receiptHeavyFixturePack = JSON.parse(readFileSync(new URL("../examples/fixture-pack-receipt-heavy-execution.json", import.meta.url), "utf8"));
 const realSanitizedFixturePack = JSON.parse(readFileSync(new URL("../examples/fixture-pack-real-sanitized-rpc-shape.json", import.meta.url), "utf8"));
 const captureTemplate = JSON.parse(readFileSync(new URL("../examples/capture-template.json", import.meta.url), "utf8"));
+const decodedLiveSourceSample = JSON.parse(readFileSync(new URL("../examples/decoded-live-source.sample.json", import.meta.url), "utf8"));
 const decodedShapeIssueTemplate = readFileSync(new URL("../.github/ISSUE_TEMPLATE/decoded-percolator-shape.yml", import.meta.url), "utf8");
 const adapterMappingIssueTemplate = readFileSync(new URL("../.github/ISSUE_TEMPLATE/adapter-mapping-request.yml", import.meta.url), "utf8");
 const cliDoctorIssueTemplate = readFileSync(new URL("../.github/ISSUE_TEMPLATE/cli-doctor-output.yml", import.meta.url), "utf8");
@@ -127,8 +130,8 @@ if (!/reality-panel/.test(js) || !/buildCompatibilityRealityCheck/.test(js) || !
   failures.push("Cockpit should expose the reality check panel and real-backed candidate capture.");
 }
 
-if (!/data-source-panel/.test(js) || !/STATIC_REAL_SNAPSHOT_PATH/.test(js) || !/fetchStaticRealSnapshot/.test(js) || !/createDataSourceState/.test(js) || !/ACTUAL_PRICE_ENDPOINT/.test(js) || !/fetchActualMarketSnapshot/.test(js) || !/load-actual-prices/.test(js)) {
-  failures.push("Cockpit should expose fixture/static-real/live data source disclosure and actual public price loading.");
+if (!/data-source-panel/.test(js) || !/STATIC_REAL_SNAPSHOT_PATH/.test(js) || !/fetchStaticRealSnapshot/.test(js) || !/createDataSourceState/.test(js) || !/ACTUAL_PRICE_ENDPOINT/.test(js) || !/fetchActualMarketSnapshot/.test(js) || !/load-actual-prices/.test(js) || !/fetchLiveDecodedSource/.test(js) || !/load-live-decoded/.test(js) || !/LIVE_DECODED_SOURCE_PARAM/.test(js)) {
+  failures.push("Cockpit should expose fixture/static-real/live/decoded data source disclosure and actual public price loading.");
 }
 
 const dto = normalizePercolatorSnapshot(percolatorFixture);
@@ -241,6 +244,8 @@ for (const doc of [
   "docs/release-v1.0.1.md",
   "docs/release-v1.1.0.md",
   "docs/release-v1.2.0.md",
+  "docs/release-v1.3.0.md",
+  "docs/decoded-live-source.md",
   "docs/v0.5-plan.md"
 ]) {
   if (!readme.includes(doc)) {
@@ -357,6 +362,18 @@ for (const required of ["Load Live", "CoinGecko simple price", "actual public pr
   }
 }
 
+for (const required of ["Load Decoded", "?decodedSource=", "decoded live source", "raw Solana account data", "Safety"]) {
+  if (!releaseV13Doc.includes(required)) {
+    failures.push(`v1.3 release notes should include ${required}.`);
+  }
+}
+
+for (const required of ["@percolatorct/sdk", "getMultipleAccounts", "percolatorlaunch.com/api/markets", "?decodedSource=", "account.decoded", "source.live"]) {
+  if (!decodedLiveSourceDoc.includes(required)) {
+    failures.push(`Decoded live source doc should include ${required}.`);
+  }
+}
+
 for (const required of ["compatibility report", "Export", "wallet", "transaction", "npm run check", "0.5.0"]) {
   if (!v05PlanDoc.toLowerCase().includes(required.toLowerCase())) {
     failures.push(`v0.5 plan should mention ${required}.`);
@@ -407,7 +424,8 @@ for (const [name, fixture] of [
   ["drifted aliases", driftedFixturePack],
   ["receipt-heavy execution", receiptHeavyFixturePack],
   ["real-backed sanitized RPC shape", realSanitizedFixturePack],
-  ["capture template", captureTemplate]
+  ["capture template", captureTemplate],
+  ["decoded live source sample", decodedLiveSourceSample]
 ]) {
   try {
     const report = buildPercolatorCompatibilityReport(fixture);
